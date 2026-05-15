@@ -23,6 +23,7 @@ def _should_fallback(page: OcrPage, *, threshold: float, key_evidence_page: bool
 
 
 def _merge_fallback(primary: OcrPage, fallback: OcrPage) -> OcrPage:
+    """Prefer the more informative fallback text; revisit merging after evaluation data."""
     if fallback.normalized_text and len(fallback.normalized_text) > len(primary.normalized_text):
         return fallback.model_copy(update={"fallback_used": True})
     return primary.model_copy(update={"fallback_used": True, "needs_review": True})
@@ -41,6 +42,11 @@ def ocr_page(
     workspace: str | Path | None = None,
     image_dir: str | Path | None = None,
     keep_images: bool = False,
+    ocr_version: str = "PP-OCRv4",
+    det_model_name: str | None = "PP-OCRv4_mobile_det",
+    rec_model_name: str | None = "PP-OCRv4_mobile_rec",
+    rec_score_threshold: float = 0.0,
+    use_textline_orientation: bool = False,
 ) -> OcrPage:
     try:
         primary = paddle_engine.run(
@@ -52,6 +58,12 @@ def ocr_page(
             workspace=workspace,
             image_dir=image_dir,
             keep_image=keep_images,
+            review_threshold=low_confidence_threshold,
+            ocr_version=ocr_version,
+            det_model_name=det_model_name,
+            rec_model_name=rec_model_name,
+            rec_score_threshold=rec_score_threshold,
+            use_textline_orientation=use_textline_orientation,
         )
     except Exception as exc:
         primary = OcrPage(

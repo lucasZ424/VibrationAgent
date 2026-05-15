@@ -26,6 +26,10 @@ class PathSettings(BaseModel):
     exports_dir: Path
 
 
+class ClassifySettings(BaseModel):
+    ocr_text_density_threshold: float = Field(default=0.2, ge=0.0)
+
+
 class DatabaseSettings(BaseModel):
     postgres_url: str = ""
     qdrant_url: str = "http://localhost:6333"
@@ -76,6 +80,7 @@ class Settings(BaseModel):
     phase0_pipeline: list[str] = Field(default_factory=lambda: ["s2_retrieval", "s3_qa_summary", "v4_style"])
     high_risk_checks: list[str] = Field(default_factory=list)
     paths: PathSettings
+    classify: ClassifySettings = Field(default_factory=ClassifySettings)
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     ocr: OcrSettings = Field(default_factory=OcrSettings)
     chunking: ChunkingSettings = Field(default_factory=ChunkingSettings)
@@ -133,6 +138,7 @@ def load(workspace: Path | None = None) -> Settings:
     app_section = app_yaml.get("app", {})
     orchestrator_section = app_yaml.get("orchestrator", {})
     llm_section = app_yaml.get("llm", {})
+    classify_section = ingestion_yaml.get("classify", {})
     ocr_section = ingestion_yaml.get("ocr", {})
     chunking_section = ingestion_yaml.get("chunking", {})
     retrieval_top_k = retrieval_yaml.get("top_k", {})
@@ -158,6 +164,11 @@ def load(workspace: Path | None = None) -> Settings:
         phase0_pipeline=list(orchestrator_section.get("phase0_pipeline", ["s2_retrieval", "s3_qa_summary", "v4_style"])),
         high_risk_checks=list(orchestrator_section.get("high_risk_checks", [])),
         paths=paths,
+        classify=ClassifySettings(
+            ocr_text_density_threshold=float(
+                _env("OCR_TEXT_DENSITY_THRESHOLD", classify_section.get("ocr_text_density_threshold", 0.2))
+            ),
+        ),
         database=DatabaseSettings(
             postgres_url=str(_env("POSTGRES_URL", "")),
             qdrant_url=str(_env("QDRANT_URL", "http://localhost:6333")),
@@ -170,10 +181,7 @@ def load(workspace: Path | None = None) -> Settings:
             paddleocr_lang=str(_env("PADDLEOCR_LANG", ocr_section.get("paddleocr", {}).get("lang", "ch"))),
             tesseract_langs=str(_env("TESSERACT_LANGS", ocr_section.get("tesseract", {}).get("langs", "chi_sim+eng+osd"))),
             low_confidence_threshold=float(
-                _env(
-                    "OCR_LOW_CONFIDENCE_THRESHOLD",
-                    _first_fallback_threshold(ocr_section.get("fallback_triggers", [])),
-                )
+                _env("OCR_LOW_CONFIDENCE_THRESHOLD", _first_fallback_threshold(ocr_section.get("fallback_triggers", [])))
             ),
         ),
         chunking=ChunkingSettings(
@@ -195,6 +203,7 @@ def load(workspace: Path | None = None) -> Settings:
 
 
 __all__ = [
+    "ClassifySettings",
     "ChunkingSettings",
     "DatabaseSettings",
     "LlmSettings",

@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+from vibration_agent.ingestion.render import render_pdf_page
 from vibration_agent.schemas import OcrPage, PageBlock
 
 MOJIBAKE_MARKERS = (
@@ -25,13 +26,12 @@ MOJIBAKE_MARKERS = (
     "\u951f",
 )
 
-
 _cached_ocr: Any | None = None
 _cached_key: tuple[Any, ...] | None = None
 
 
 def configure_paddle_cache(workspace: str | Path | None = None) -> None:
-    """Keep Paddle/PaddleX caches under the project data directory when possible."""
+    """Keep Paddle/PaddleX caches under data/cache; caller-supplied env wins."""
     if workspace is None:
         return
     root = Path(workspace).resolve()
@@ -78,22 +78,6 @@ def _to_plain_json(value: Any) -> Any:
     return value
 
 
-def render_pdf_page(pdf_path: str | Path, page_no: int, image_path: str | Path, *, dpi: int = 220) -> Path:
-    try:
-        import fitz  # type: ignore
-    except ModuleNotFoundError as exc:
-        raise RuntimeError("PyMuPDF is required to render PDF pages for OCR.") from exc
-
-    source = Path(pdf_path).resolve()
-    target = Path(image_path).resolve()
-    target.parent.mkdir(parents=True, exist_ok=True)
-    with fitz.open(source) as doc:
-        page = doc.load_page(page_no - 1)
-        pix = page.get_pixmap(dpi=dpi, alpha=False)
-        pix.save(target)
-    return target
-
-
 def make_ocr(
     *,
     lang: str = "ch",
@@ -129,7 +113,7 @@ def make_ocr(
     return _cached_ocr
 
 
-def result_to_page(doc_id: str, page_no: int, result: Any) -> OcrPage:
+def result_to_page(doc_id: str, page_no: int, result: Any, *, review_threshold: float = 0.6) -> OcrPage:
     data = dict(result)
     raw_texts = [str(item) for item in data.get("rec_texts", []) if str(item).strip()]
     rec_texts = [repair_mojibake(text) for text in raw_texts]
@@ -153,7 +137,7 @@ def result_to_page(doc_id: str, page_no: int, result: Any) -> OcrPage:
     raw_text = "\n".join(raw_texts)
     normalized_text = normalize_ocr_text("\n".join(rec_texts))
     avg_conf = sum(scores) / len(scores) if scores else None
-    needs_review = avg_conf is None or avg_conf < 0.60 or len(normalized_text) < 20
+    needs_review = avg_conf is None or avg_conf < review_threshold or len(normalized_text) < 20
     layout_quality = "empty" if not normalized_text else ("low" if needs_review else "ok")
     return OcrPage(
         doc_id=doc_id,
@@ -179,6 +163,12 @@ def run(
     workspace: str | Path | None = None,
     image_dir: str | Path | None = None,
     keep_image: bool = False,
+    review_threshold: float = 0.6,
+    ocr_version: str = "PP-OCRv4",
+    det_model_name: str | None = "PP-OCRv4_mobile_det",
+    rec_model_name: str | None = "PP-OCRv4_mobile_rec",
+    rec_score_threshold: float = 0.0,
+    use_textline_orientation: bool = False,
 ) -> OcrPage:
     configure_paddle_cache(workspace)
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -187,7 +177,14 @@ def run(
         else:
             image_path = Path(tmpdir) / f"page_{page_no:04d}.png"
         render_pdf_page(pdf_path, page_no, image_path, dpi=dpi)
-        ocr = make_ocr(lang=lang)
+        ocr = make_ocr(
+            lang=lang,
+            ocr_version=ocr_version,
+            det_model_name=det_model_name,
+            rec_model_name=rec_model_name,
+            rec_score_threshold=rec_score_threshold,
+            use_textline_orientation=use_textline_orientation,
+        )
         results = ocr.predict(str(image_path))
         if image_dir is None or not keep_image:
             Path(image_path).unlink(missing_ok=True)
@@ -204,4 +201,4 @@ def run(
                 blocks=[],
                 needs_review=True,
             )
-        return result_to_page(doc_id, page_no, results[0])
+        return result_to_page(doc_id, page_no, results[0], review_threshold=review_threshold)

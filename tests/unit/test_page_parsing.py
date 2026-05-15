@@ -55,12 +55,17 @@ def test_parse_document_pages_writes_jsonl(tmp_path):
     assert rows[0]["primary_engine"] == "pymupdf"
 
 
-def test_ocr_router_returns_review_page_when_paddle_unavailable_or_empty(tmp_path):
+def test_ocr_router_returns_review_page_when_paddle_fails(tmp_path, monkeypatch):
     pdf = tmp_path / "scan.pdf"
     _make_blank_pdf(pdf)
 
-    page = ocr_page(pdf, 1, doc_id="scan1", image_dir=tmp_path / "images")
+    def fail_paddle(*args, **kwargs):
+        raise RuntimeError("forced paddle failure")
+
+    monkeypatch.setattr(router.paddle_engine, "run", fail_paddle)
+    page = router.ocr_page(pdf, 1, doc_id="scan1", image_dir=tmp_path / "images")
 
     assert page.page_no == 1
     assert page.needs_review is True
+    assert page.fallback_used is True
     assert page.layout_quality in {"empty", "low"}

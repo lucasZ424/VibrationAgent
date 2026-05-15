@@ -12,6 +12,24 @@ dependencies = [
     "pydantic>=2.7.0,<3.0.0",
     "pyyaml>=6.0.2,<7.0.0",
     "fastapi>=0.111.0,<1.0.0",
+    "PyMuPDF>=1.24.7,<2.0.0",
+    "Pillow>=10.3.0,<12.0.0",
+]
+
+[project.optional-dependencies]
+ocr = [
+    "paddleocr>=3.0.0,<4.0.0",
+    "paddlepaddle>=3.0.0,<4.0.0",
+    "pytesseract>=0.3.10,<1.0.0",
+]
+dev = [
+    "pytest>=8.3.2,<9.0.0",
+]
+all = [
+    "paddleocr>=3.0.0,<4.0.0",
+    "paddlepaddle>=3.0.0,<4.0.0",
+    "pytesseract>=0.3.10,<1.0.0",
+    "pytest>=8.3.2,<9.0.0",
 ]
 
 [project.scripts]

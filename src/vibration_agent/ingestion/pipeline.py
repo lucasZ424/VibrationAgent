@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from vibration_agent.config import Settings, load
-from vibration_agent.schemas import OcrPage
+from vibration_agent.schemas import DocumentClassification, OcrPage
 
-from .classify import DocumentClassification, scan_inputs
+from .classify import scan_inputs
 from .ocr.router import ocr_page
 from .pymupdf_parser import parse_native_pdf
 
@@ -20,9 +20,14 @@ def _write_jsonl(path: Path, rows: Iterable[dict[str, Any]]) -> None:
             fh.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
-def ingest(path: str | Path, *, recursive: bool = True) -> dict[str, Any]:
+def ingest(path: str | Path, *, recursive: bool = True, settings: Settings | None = None) -> dict[str, Any]:
     """Classify a file or directory and return ingestion-plan metadata."""
-    classifications = scan_inputs(path, recursive=recursive)
+    cfg = settings or load()
+    classifications = scan_inputs(
+        path,
+        recursive=recursive,
+        pdf_density_threshold=cfg.classify.ocr_text_density_threshold,
+    )
     documents = [item.to_dict() for item in classifications]
     return {
         "status": "ok" if documents else "insufficient",
@@ -103,11 +108,7 @@ def parse_document_pages(
         "processed_pages": len(pages),
         "output_path": str(output_path) if write_output else None,
         "pages": page_rows,
-        "warnings": [
-            f"Page {page.page_no} needs review"
-            for page in pages
-            if page.needs_review
-        ],
+        "warnings": [f"Page {page.page_no} needs review" for page in pages if page.needs_review],
     }
 
 
@@ -122,7 +123,11 @@ def parse_pages(
 ) -> dict[str, Any]:
     """Classify inputs, then run page-level parsing/OCR for supported PDFs."""
     cfg = settings or load()
-    classifications = scan_inputs(path, recursive=recursive)
+    classifications = scan_inputs(
+        path,
+        recursive=recursive,
+        pdf_density_threshold=cfg.classify.ocr_text_density_threshold,
+    )
     results = [
         parse_document_pages(
             document,

@@ -1,4 +1,4 @@
-"""Native-text PDF parser using PyMuPDF."""
+﻿"""Native-text PDF parser using PyMuPDF."""
 from __future__ import annotations
 
 import re
@@ -17,6 +17,12 @@ def normalize_text(text: str) -> str:
 
 
 def _block_text(block: dict[str, Any]) -> str:
+    """Extract text spans from a PyMuPDF block.
+
+    Image-only blocks are intentionally ignored in Phase-0 native parsing. They
+    will be represented later by the figures/tables asset path instead of being
+    coerced into empty text blocks.
+    """
     lines: list[str] = []
     for line in block.get("lines", []):
         spans = line.get("spans", [])

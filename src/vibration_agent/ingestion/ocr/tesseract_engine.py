@@ -7,7 +7,7 @@ from pathlib import Path
 
 from vibration_agent.schemas import OcrPage, PageBlock
 
-from .paddle_engine import render_pdf_page
+from vibration_agent.ingestion.render import render_pdf_page
 
 
 def normalize_text(text: str) -> str:

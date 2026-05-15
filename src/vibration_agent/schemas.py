@@ -24,6 +24,9 @@ Intent = Literal[
 SourceType = Literal["standard", "textbook", "review", "paper", "webpage", "book", "manual", "note"]
 AssetType = Literal["text", "formula", "figure", "table", "page_image", "unknown"]
 ChunkType = Literal["body", "section_summary", "formula_context", "figure_context", "table_context"]
+SupportedKind = Literal["pdf", "image", "text", "unsupported"]
+ProcessingStrategy = Literal["native_pdf", "ocr_pdf", "image", "text", "unknown"]
+DocumentLanguage = Literal["zh", "en", "mixed", "unknown"]
 DeferredSkill = Literal[
     "s4_engineering_analysis",
     "s5_formula_derivation",
@@ -56,7 +59,7 @@ PHASE0_DEFERRED_SKILLS: tuple[str, ...] = (
 class Citation(BaseModel):
     chunk_id: str
     doc_id: str
-    pages: list[int] | str | None = None
+    pages: list[int] | None = None
     evidence_type: EvidenceType = "documented"
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
 
@@ -79,6 +82,27 @@ class SkillOutput(BaseModel):
     handoff_recommendation: str | None = None
 
 
+class DocumentClassification(BaseModel):
+    doc_id: str
+    source_path: str
+    filename: str
+    suffix: str
+    kind: SupportedKind
+    mime_type: str | None = None
+    file_size: int = Field(ge=0)
+    sha256: str
+    page_count: int | None = Field(default=None, ge=0)
+    processing_strategy: ProcessingStrategy = "unknown"
+    language: DocumentLanguage = "unknown"
+    text_density: float | None = None
+    text_chars: int | None = Field(default=None, ge=0)
+    image_size: tuple[int, int] | None = None
+    warnings: list[str] = Field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+
 class DocumentInput(BaseModel):
     doc_id: str
     source_path: str
@@ -86,7 +110,8 @@ class DocumentInput(BaseModel):
     source_type: SourceType = "book"
     mime_type: str | None = None
     page_count: int | None = Field(default=None, ge=0)
-    processing_strategy: Literal["native_pdf", "ocr_pdf", "image", "text", "unknown"] = "unknown"
+    processing_strategy: ProcessingStrategy = "unknown"
+    language: DocumentLanguage = "unknown"
 
 
 class PageBlock(BaseModel):
@@ -145,9 +170,9 @@ class RetrievalHit(BaseModel):
     chunk_id: str
     doc_id: str
     source_type: SourceType | str
-    pages: list[int] | str | None = None
+    pages: list[int] | None = None
     score: float
-    reason: str
+    reason: str = ""
 
 
 class RetrievalOutput(BaseModel):
