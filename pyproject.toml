@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vibration-agent"
+version = "0.0.1"
+description = "Engineering-oriented vibration learning & knowledge-base agent"
+requires-python = ">=3.11"
+readme = "README.md"
+dependencies = [
+    "pydantic>=2.7.0,<3.0.0",
+    "pyyaml>=6.0.2,<7.0.0",
+    "fastapi>=0.111.0,<1.0.0",
+]
+
+[project.scripts]
+vib-agent = "apps.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

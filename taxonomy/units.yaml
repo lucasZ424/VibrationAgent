@@ -1,0 +1,21 @@
+# Canonical units per physical quantity. Used to flag unit conflicts at ingestion time.
+- quantity: frequency
+  canonical_units: Hz
+  aliases: [cps]
+
+- quantity: angular_frequency
+  canonical_units: rad/s
+
+- quantity: acceleration
+  canonical_units: m/s^2
+  aliases: [g]
+  warning_notes: "1 g = 9.80665 m/s^2 — legacy datasheets often mix g and m/s²"
+
+- quantity: displacement
+  canonical_units: m
+  aliases: [mm, µm, mil]
+  warning_notes: "Bently Nevada / vibration monitoring datasheets frequently use mil (thousandths of an inch)"
+
+- quantity: velocity
+  canonical_units: m/s
+  aliases: [mm/s, in/s]

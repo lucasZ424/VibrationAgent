@@ -1,0 +1,21 @@
+# canonical term dictionary (zh + en + aliases)
+# This is a sample seed — extend as you sink domain knowledge into the KB.
+
+- term: transmissibility
+  zh: 传递率
+  aliases: [传递系数, 响应传递率]
+  note: 需要区分位移传递率与力传递率
+
+- term: damping_ratio
+  zh: 阻尼比
+  aliases: [相对阻尼比, damping factor]
+  symbol: zeta
+
+- term: natural_frequency
+  zh: 固有频率
+  aliases: [自然频率]
+  symbol: omega_n
+
+- term: critical_speed
+  zh: 临界转速
+  related: [rotor_unbalance, synchronous_response]

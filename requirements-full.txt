@@ -1,0 +1,111 @@
+# Vibration knowledge-base agent: full-scope dependency set
+# The root-level `requirements.txt` can be treated as the initial / urgent minimum set.
+#
+# This file extends that baseline toward the full design scope:
+# - richer ingestion and OCR
+# - PostgreSQL metadata store
+# - Qdrant vector retrieval
+# - Redis cache / task state
+# - background jobs
+# - reranking / local embedding support
+# - research-assistant integrations
+#
+# Python: 3.11+ recommended
+#
+# System tools to install separately (not pip packages):
+# - Tesseract OCR
+# - Poppler
+# - qpdf
+# - Ghostscript
+# - LibreOffice
+# - PostgreSQL
+# - Qdrant
+# - Redis
+
+# Core LLM / orchestration
+openai>=1.30.0,<2.0.0
+tiktoken>=0.7.0,<1.0.0
+pydantic>=2.7.0,<3.0.0
+pydantic-settings>=2.2.1,<3.0.0
+python-dotenv>=1.0.1,<2.0.0
+tenacity>=8.3.0,<9.0.0
+httpx>=0.27.0,<1.0.0
+orjson>=3.10.5,<4.0.0
+
+# API / service layer
+fastapi>=0.111.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+python-multipart>=0.0.9,<1.0.0
+aiofiles>=23.2.1,<25.0.0
+sse-starlette>=2.1.2,<3.0.0
+
+# Database / persistence
+sqlalchemy>=2.0.31,<3.0.0
+alembic>=1.13.2,<2.0.0
+psycopg[binary]>=3.2.1,<4.0.0
+redis>=5.0.7,<6.0.0
+
+# Background tasks / worker
+celery>=5.4.0,<6.0.0
+flower>=2.0.1,<3.0.0
+
+# PDF / DOCX / structured document extraction
+PyMuPDF>=1.24.7,<2.0.0
+pymupdf4llm>=1.27.0,<2.0.0
+pypdf>=4.2.0,<6.0.0
+pdfplumber>=0.11.0,<1.0.0
+pdf2image>=1.17.0,<2.0.0
+python-docx>=1.1.2,<2.0.0
+docx2txt>=0.8,<1.0.0
+mammoth>=1.8.0,<2.0.0
+markdown>=3.6,<4.0.0
+beautifulsoup4>=4.12.3,<5.0.0
+lxml>=5.2.2,<6.0.0
+Pillow>=10.3.0,<12.0.0
+chardet>=5.2.0,<6.0.0
+
+# OCR / image preprocessing
+# Note: PaddleOCR needs a matching `paddlepaddle` runtime build for the platform.
+# Tesseract is reserved for fallback OCR, not the primary OCR path.
+# Recommended Tesseract language assets for this project: `chi_sim`, `eng`, `osd`.
+# Prepare `tessdata_best` as the preferred fallback model set. No custom training planned.
+paddleocr>=3.0.0,<4.0.0
+paddlepaddle>=3.2.0,<4.0.0
+pytesseract>=0.3.10,<1.0.0
+ocrmypdf>=16.4.0,<17.0.0
+opencv-python-headless>=4.10.0.84,<5.0.0
+
+# Retrieval / embeddings / reranking
+qdrant-client>=1.9.1,<2.0.0
+sentence-transformers>=3.0.1,<4.0.0
+transformers>=4.44.0,<5.0.0
+FlagEmbedding>=1.2.10,<2.0.0
+rank-bm25>=0.2.2,<1.0.0
+faiss-cpu>=1.8.0.post1,<2.0.0
+numpy>=1.26.4,<3.0.0
+scikit-learn>=1.5.1,<2.0.0
+scipy>=1.14.0,<2.0.0
+
+# Chinese / multilingual text processing
+jieba>=0.42.1,<1.0.0
+langdetect>=1.0.9,<2.0.0
+rapidfuzz>=3.9.4,<4.0.0
+
+# Data processing / exports
+pandas>=2.2.2,<3.0.0
+openpyxl>=3.1.5,<4.0.0
+pyyaml>=6.0.2,<7.0.0
+
+# Research / literature tooling for later skills
+arxiv>=2.1.3,<3.0.0
+habanero>=1.2.6,<2.0.0
+semanticscholar>=0.8.4,<1.0.0
+
+# CLI / logging / quality of life
+typer>=0.12.3,<1.0.0
+rich>=13.7.1,<14.0.0
+loguru>=0.7.2,<1.0.0
+
+# Testing / validation
+pytest>=8.3.2,<9.0.0
+pytest-asyncio>=0.23.8,<1.0.0

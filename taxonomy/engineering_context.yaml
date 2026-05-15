@@ -1,0 +1,13 @@
+# Topic map: ties concepts to real-world engineering outputs and common models.
+- topic: rotor_unbalance
+  related_topics: [critical_speed, synchronous_response, balancing]
+  typical_outputs: [振幅, 相位, 临界转速区间]
+  common_models: [Jeffcott rotor]
+
+- topic: misalignment
+  related_topics: [coupling, 2x_component, axial_vibration]
+  typical_outputs: [1x/2x 振幅比, 相位差]
+
+- topic: bearing_fault
+  related_topics: [envelope_analysis, BPFO, BPFI, FTF, BSF]
+  typical_outputs: [包络谱峰, 故障频率匹配]

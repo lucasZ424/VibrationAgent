@@ -1,0 +1,73 @@
+# Vibration knowledge-base agent: initial urgent scope
+# Goal: ingest local files, extract text, run OCR when needed, chunk/index content,
+# summarize documents, and answer questions over the knowledge base.
+#
+# Python: 3.11+ recommended
+#
+# System tools to install separately (not pip packages):
+# - Tesseract OCR: fallback OCR engine used by `pytesseract`
+# - Poppler: PDF rendering / page conversion tools
+# - qpdf + Ghostscript: recommended when using `ocrmypdf`
+# - LibreOffice: optional, useful for DOCX/PPT conversion in batch pipelines
+#
+# Suggested Windows tools:
+# - Tesseract OCR
+# - Poppler for Windows
+# - Ghostscript
+
+# Core LLM / agent orchestration
+openai>=1.30.0,<2.0.0
+tiktoken>=0.7.0,<1.0.0
+pydantic>=2.7.0,<3.0.0
+pydantic-settings>=2.2.1,<3.0.0
+python-dotenv>=1.0.1,<2.0.0
+tenacity>=8.3.0,<9.0.0
+httpx>=0.27.0,<1.0.0
+
+# API / service layer
+fastapi>=0.111.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+python-multipart>=0.0.9,<1.0.0
+aiofiles>=23.2.1,<25.0.0
+
+# PDF / DOCX / text extraction
+PyMuPDF>=1.24.7,<2.0.0
+pypdf>=4.2.0,<6.0.0
+pdfplumber>=0.11.0,<1.0.0
+python-docx>=1.1.2,<2.0.0
+docx2txt>=0.8,<1.0.0
+Pillow>=10.3.0,<12.0.0
+chardet>=5.2.0,<6.0.0
+
+# OCR pipeline
+# Note: `paddlepaddle` is the runtime for PaddleOCR.
+# On some environments you may need to install a platform-specific build manually.
+# Tesseract is reserved for fallback OCR, not the primary OCR path.
+# Recommended Tesseract language assets for this project: `chi_sim`, `eng`, `osd`.
+# Prepare `tessdata_best` as the preferred fallback model set. No custom training planned.
+paddleocr>=3.0.0,<4.0.0
+paddlepaddle>=3.2.0,<4.0.0
+pytesseract>=0.3.10,<1.0.0
+ocrmypdf>=16.4.0,<17.0.0
+opencv-python-headless>=4.10.0.84,<5.0.0
+
+# Retrieval / indexing
+qdrant-client>=1.9.1,<2.0.0
+sentence-transformers>=3.0.1,<4.0.0
+rank-bm25>=0.2.2,<1.0.0
+numpy>=1.26.4,<3.0.0
+scikit-learn>=1.5.1,<2.0.0
+
+# Text processing / utilities
+orjson>=3.10.5,<4.0.0
+markdown>=3.6,<4.0.0
+beautifulsoup4>=4.12.3,<5.0.0
+lxml>=5.2.2,<6.0.0
+rapidfuzz>=3.9.4,<4.0.0
+loguru>=0.7.2,<1.0.0
+typer>=0.12.3,<1.0.0
+rich>=13.7.1,<14.0.0
+
+# Optional but useful if you later add lightweight local persistence / caching
+redis>=5.0.7,<6.0.0
+pyyaml>=6.0.2,<7.0.0

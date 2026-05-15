@@ -1,0 +1,15 @@
+app:
+  name: vibration-agent
+  log_level: INFO
+  default_user_mode: engineering      # engineering | definition | derivation | research
+
+orchestrator:
+  phase0_pipeline: [s2_retrieval, s3_qa_summary, v4_style]
+  high_risk_checks: [v2_citation_check, v3_reviewer]   # deferred: activated for flagged answers
+
+llm:
+  providers:
+    main_answer:     anthropic:claude-opus-4-7
+    coder:           anthropic:claude-sonnet-4-6
+    reviewer:        anthropic:claude-sonnet-4-6
+    citation_checker: anthropic:claude-haiku-4-5-20251001

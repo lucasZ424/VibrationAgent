@@ -1,0 +1,22 @@
+mode: hybrid                       # bm25 | dense | hybrid
+top_k:
+  bm25: 50
+  dense: 50
+  final: 10
+
+fusion:
+  method: rrf                      # rrf | weighted
+  weights:
+    bm25: 0.4
+    dense: 0.6
+
+rerank:
+  enabled: false                   # turn on after phase-0 wiring is working
+  model: null
+
+source_priority:                   # ties broken by rank; multiplier applied pre-rerank
+  standard: 5
+  textbook: 4
+  review: 3
+  paper: 2
+  webpage: 1

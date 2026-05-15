@@ -1,0 +1,25 @@
+classify:
+  ocr_text_density_threshold: 0.2   # chars/area below which a PDF page is deemed scanned
+
+ocr:
+  primary: paddleocr
+  fallback: tesseract
+  paddleocr:
+    lang: ch
+    use_angle_cls: true
+  tesseract:
+    langs: chi_sim+eng+osd
+  fallback_triggers:
+    - low_confidence_below: 0.6
+    - empty_output
+    - key_evidence_page
+    - scan_heavy_page
+
+chunking:
+  target_tokens: 600
+  overlap_tokens: 60
+  preserve_anchors: true           # never split across a section boundary without recording it
+
+indexing:
+  embedding_model: bge-m3          # placeholder
+  batch_size: 64

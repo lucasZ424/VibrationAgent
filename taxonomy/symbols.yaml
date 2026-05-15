@@ -1,0 +1,22 @@
+# Canonical symbols. Conflicts between textbooks are the whole point of this table.
+- symbol: omega_n
+  latex: \omega_n
+  meaning: undamped natural angular frequency
+  unit: rad/s
+  avoid_confusion_with: [\omega_d, \Omega, f_n]
+
+- symbol: omega_d
+  latex: \omega_d
+  meaning: damped natural angular frequency
+  unit: rad/s
+
+- symbol: zeta
+  latex: \zeta
+  meaning: damping ratio
+  unit: dimensionless
+
+- symbol: Q
+  latex: Q
+  meaning: quality factor
+  unit: dimensionless
+  note: "Q ≈ 1/(2 zeta) for light damping"

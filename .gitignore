@@ -1,0 +1,27 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+.env.local
+
+# Data artifacts — keep directory, ignore contents
+data/raw/*
+data/ocr/*
+data/extracted/*
+data/chunks/*
+data/embeddings/*
+data/exports/*
+!data/**/.gitkeep
+
+# DB local state
+db/postgres/pgdata/
+db/qdrant/storage/
+
+# Tooling
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+node_modules/
+apps/ui/.next/
