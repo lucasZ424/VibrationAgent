@@ -1,4 +1,4 @@
-﻿import json
+import json
 from pathlib import Path
 
 import fitz
@@ -54,8 +54,13 @@ def test_book_workflow_uses_package_ocr_and_writes_outputs(tmp_path, monkeypatch
 
     assert len(warmup_calls) == 1
     assert len(calls) == 2
+    assert manifest["type"] == "document_ingestion_manifest"
+    assert manifest["input"]["source_path"] == str(raw_pdf.resolve())
+    assert manifest["input"]["doc_id_mode"] == "legacy-path"
+    assert manifest["counts"]["processed_pages"] == 2
     assert manifest["processed_pages"] == 2
     assert manifest["chunk_count"] >= 1
+    assert Path(manifest["outputs"]["pages_jsonl"]).exists()
     assert Path(manifest["outputs"]["ocr_pages_jsonl"]).exists()
     assert Path(manifest["outputs"]["chunks_jsonl"]).exists()
     assert Path(manifest["outputs"]["api_context_json"]).exists()

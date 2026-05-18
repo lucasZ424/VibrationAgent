@@ -215,18 +215,48 @@ class ApiContextPack(BaseModel):
     chunks: list[dict[str, Any]] = Field(default_factory=list)
 
 
-class IngestionManifest(BaseModel):
-    schema_version: str = "0.1"
-    input_path: str
-    doc_id: str
-    title: str | None = None
-    source_type: SourceType = "book"
+class IngestionManifestInput(BaseModel):
+    source_path: str
+    filename: str | None = None
+    kind: SupportedKind | str
+    sha256: str | None = None
+    language: DocumentLanguage = "unknown"
+    doc_id_mode: str = "content"
+    processing_strategy: ProcessingStrategy | str = "unknown"
+    document_page_count: int | None = Field(default=None, ge=0)
+
+
+class IngestionManifestCounts(BaseModel):
     page_count: int = Field(ge=0)
     processed_pages: int = Field(ge=0)
     chunk_count: int = Field(ge=0)
+    needs_review_page_count: int = Field(ge=0)
     total_token_estimate: int = Field(ge=0)
+
+
+class IngestionManifestQuality(BaseModel):
+    page_ocr_confidence_min: float | None = Field(default=None, ge=0.0, le=1.0)
+    page_ocr_confidence_avg: float | None = Field(default=None, ge=0.0, le=1.0)
+    chunk_ocr_confidence_min: float | None = Field(default=None, ge=0.0, le=1.0)
+    chunk_ocr_confidence_avg: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class IngestionManifest(BaseModel):
+    schema_version: str = "0.1"
+    type: Literal["document_ingestion_manifest"] = "document_ingestion_manifest"
+    created_at: str | None = None
+    status: SkillStatus = "ok"
+    doc_id: str
+    title: str | None = None
+    source_type: SourceType = "book"
+    input: IngestionManifestInput
+    counts: IngestionManifestCounts
+    quality: IngestionManifestQuality = Field(default_factory=IngestionManifestQuality)
     needs_review_pages: list[int] = Field(default_factory=list)
-    outputs: dict[str, str] = Field(default_factory=dict)
+    outputs: dict[str, str | None] = Field(default_factory=dict)
+    output_formats: dict[str, str] = Field(default_factory=dict)
+    downstream_use: list[str] = Field(default_factory=list)
+    markdown_outputs: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
 
 

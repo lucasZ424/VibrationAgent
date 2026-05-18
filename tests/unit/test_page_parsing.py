@@ -1,4 +1,4 @@
-﻿import json
+import json
 from pathlib import Path
 
 import fitz
@@ -6,8 +6,9 @@ import fitz
 from vibration_agent.config import load
 from vibration_agent.ingestion.classify import classify_document
 from vibration_agent.ingestion.ocr import router
-from vibration_agent.ingestion.pipeline import chunk_document_pages, parse_document_pages
+from vibration_agent.ingestion.pipeline import chunk_document_pages, chunk_documents, parse_document_pages
 from vibration_agent.ingestion.pymupdf_parser import parse_native_pdf
+from vibration_agent.schemas import IngestionManifest
 
 
 def _make_text_pdf(path: Path) -> None:
@@ -83,11 +84,71 @@ def test_chunk_document_pages_writes_formal_chunk_outputs(tmp_path):
 
     result = chunk_document_pages(doc, settings=settings, max_pages=1, write_output=True)
 
-    assert result["stage"] == "page_parse_chunk"
+    assert result["stage"] == "document_structured_export"
     assert result["chunk_count"] >= 1
     assert Path(result["chunks_output_path"]).exists()
     assert Path(result["api_context_output_path"]).exists()
+    assert Path(result["manifest_output_path"]).exists()
     chunk = json.loads(Path(result["chunks_output_path"]).read_text(encoding="utf-8").splitlines()[0])
     assert chunk["assets"][0]["object_type"] == "body"
     assert chunk["pages"] == [1]
 
+
+
+def test_chunk_document_pages_writes_objective9_manifest(tmp_path):
+    pdf = tmp_path / "native.pdf"
+    _make_text_pdf(pdf)
+    doc = classify_document(pdf)
+    settings = load()
+    settings.paths.ocr_dir = tmp_path / "ocr"
+    settings.paths.chunks_dir = tmp_path / "chunks"
+    settings.paths.exports_dir = tmp_path / "exports"
+    settings.paths.extracted_dir = tmp_path / "extracted"
+
+    result = chunk_document_pages(doc, settings=settings, max_pages=1, write_output=True)
+    manifest_path = Path(result["manifest_output_path"])
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["type"] == "document_ingestion_manifest"
+    assert manifest["doc_id"] == doc.doc_id
+    assert manifest["input"]["source_path"] == doc.source_path
+    assert manifest["input"]["sha256"] == doc.sha256
+    assert manifest["input"]["language"] == doc.language
+    assert manifest["input"]["doc_id_mode"] == "content"
+    assert manifest["counts"]["processed_pages"] == 1
+    assert manifest["counts"]["chunk_count"] == result["chunk_count"]
+    assert manifest["needs_review_pages"] == []
+    assert "quality" in manifest
+    assert manifest["quality"]["page_ocr_confidence_min"] == 1.0
+    assert manifest["markdown_outputs"] == []
+    assert set(manifest["outputs"]) == {"pages_jsonl", "chunks_jsonl", "api_context_json", "manifest_json"}
+    assert all(Path(path).exists() for path in manifest["outputs"].values())
+    assert Path(manifest["outputs"]["pages_jsonl"]).parent == tmp_path / "ocr" / "book" / doc.doc_id
+    assert not list(tmp_path.rglob("*.md"))
+
+    page_row = json.loads(Path(manifest["outputs"]["pages_jsonl"]).read_text(encoding="utf-8").splitlines()[0])
+    chunk_row = json.loads(Path(manifest["outputs"]["chunks_jsonl"]).read_text(encoding="utf-8").splitlines()[0])
+    assert page_row["schema_version"] == "0.1"
+    assert chunk_row["schema_version"] == "0.1"
+    assert chunk_row["doc_id"] == doc.doc_id
+
+def test_chunk_documents_batch_writes_manifests(tmp_path):
+    raw_dir = tmp_path / "raw"
+    raw_dir.mkdir()
+    pdf = raw_dir / "native.pdf"
+    _make_text_pdf(pdf)
+    settings = load()
+    settings.paths.ocr_dir = tmp_path / "ocr"
+    settings.paths.chunks_dir = tmp_path / "chunks"
+    settings.paths.exports_dir = tmp_path / "exports"
+    settings.paths.extracted_dir = tmp_path / "extracted"
+
+    result = chunk_documents(raw_dir, settings=settings, max_pages=1, write_output=True)
+
+    assert result["stage"] == "document_structured_export_batch"
+    assert result["document_count"] == 1
+    manifest_path = Path(result["documents"][0]["manifest_output_path"])
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["outputs"]["manifest_json"] == str(manifest_path)
+    assert IngestionManifest.model_validate(manifest).counts.chunk_count == result["documents"][0]["chunk_count"]

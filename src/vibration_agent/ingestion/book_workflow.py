@@ -1,4 +1,4 @@
-﻿"""File-based scanned-book workflow used by the migration CLI.
+"""File-based scanned-book workflow used by the migration CLI.
 
 This module keeps the emergency book workflow available while moving the actual
 implementation into the package. It intentionally remains file-based: no
@@ -21,6 +21,7 @@ import fitz  # type: ignore
 from vibration_agent.ingestion.chunking import chunk_pages, estimate_tokens, write_api_context_json, write_jsonl
 from vibration_agent.ingestion.classify import classify_document, slugify_filename
 from vibration_agent.ingestion.ocr import paddle_engine
+from vibration_agent.ingestion.pipeline import build_document_manifest
 from vibration_agent.ingestion.ocr.router import ocr_page as routed_ocr_page
 from vibration_agent.schemas import OcrPage
 
@@ -160,9 +161,9 @@ def process_pdf(*, pdf_path: str | Path, workspace: str | Path, options: BookWor
     doc_id = resolve_doc_id(source, options.doc_id_mode)
     title = source.stem
 
-    ocr_dir = root / "data" / "ocr" / "book" / doc_id
-    chunk_dir = root / "data" / "chunks" / "book" / doc_id
-    export_dir = root / "data" / "exports" / "book" / doc_id
+    ocr_dir = root / "data" / "ocr" / options.source_type / doc_id
+    chunk_dir = root / "data" / "chunks" / options.source_type / doc_id
+    export_dir = root / "data" / "exports" / options.source_type / doc_id
     image_dir = ocr_dir / "page_images"
     for output_dir in (ocr_dir, chunk_dir, export_dir):
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -225,25 +226,40 @@ def process_pdf(*, pdf_path: str | Path, workspace: str | Path, options: BookWor
     write_jsonl(chunk_dir / "chunks.jsonl", chunks)
     write_api_context_json(export_dir / "api_context.json", doc_id=doc_id, title=title, chunks=chunks)
 
-    manifest = {
-        "schema_version": SCHEMA_VERSION,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "input_pdf": str(source),
-        "doc_id": doc_id,
-        "doc_id_mode": options.doc_id_mode,
-        "title": title,
-        "source_type": options.source_type,
+    classification = classify_document(source).model_copy(update={"doc_id": doc_id, "processing_strategy": "ocr_pdf"})
+    page_result = {
+        "status": "ok" if pages else "insufficient",
         "page_count": page_count,
         "processed_pages": len(pages),
-        "chunk_count": len(chunks),
-        "total_token_estimate": sum(chunk["token_estimate"] for chunk in chunks),
-        "needs_review_pages": [page.page_no for page in pages if page.needs_review],
-        "outputs": {
-            "ocr_pages_jsonl": str(pages_path),
-            "chunks_jsonl": str(chunk_dir / "chunks.jsonl"),
-            "api_context_json": str(export_dir / "api_context.json"),
-            "manifest_json": str(export_dir / "manifest.json"),
-        },
+        "pages": [page_to_json_row(page) for page in pages],
+        "warnings": [f"Page {page.page_no} needs review" for page in pages if page.needs_review],
+    }
+    manifest = build_document_manifest(
+        document=classification,
+        title=title,
+        source_type=options.source_type,
+        page_result=page_result,
+        chunks=chunks,
+        pages_path=pages_path,
+        chunks_path=chunk_dir / "chunks.jsonl",
+        api_context_path=export_dir / "api_context.json",
+        manifest_path=export_dir / "manifest.json",
+        write_output=True,
+        doc_id_mode=options.doc_id_mode,
+    )
+    manifest.update(
+        {
+            "input_pdf": str(source),
+            "doc_id_mode": options.doc_id_mode,
+            "page_count": manifest["counts"]["page_count"],
+            "processed_pages": manifest["counts"]["processed_pages"],
+            "chunk_count": manifest["counts"]["chunk_count"],
+            "total_token_estimate": manifest["counts"]["total_token_estimate"],
+        }
+    )
+    manifest["outputs"] = {
+        **manifest["outputs"],
+        "ocr_pages_jsonl": str(pages_path),
     }
     (export_dir / "manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
