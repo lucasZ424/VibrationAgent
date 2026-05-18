@@ -1,4 +1,4 @@
-﻿"""Shared Pydantic schemas for vibration_agent.
+"""Shared Pydantic schemas for vibration_agent.
 
 This module is the single source of truth for Phase-0 skill I/O and the
 file-level objects produced by ingestion. Update schemas here before changing
@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 UserMode = Literal["engineering", "definition", "derivation", "research"]
 SkillStatus = Literal["ok", "insufficient", "fail"]
@@ -23,6 +23,7 @@ Intent = Literal[
 ]
 SourceType = Literal["standard", "textbook", "review", "paper", "webpage", "book", "manual", "note"]
 AssetType = Literal["body", "title", "text", "formula", "figure", "table", "page_image", "unknown"]
+AssetObjectType = Literal["body", "formula", "figure", "table", "page_image"]
 ChunkType = Literal["body", "section_summary", "formula_context", "figure_context", "table_context"]
 SupportedKind = Literal["pdf", "image", "text", "unsupported"]
 ProcessingStrategy = Literal["native_pdf", "ocr_pdf", "image", "text", "unknown"]
@@ -118,7 +119,7 @@ class DocumentAsset(BaseModel):
     asset_id: str
     doc_id: str
     page_no: int = Field(ge=1)
-    object_type: AssetType
+    object_type: AssetObjectType
     asset_path: str | None = None
     bbox: list[float] | list[list[float]] | None = None
     text: str = ""
@@ -126,6 +127,8 @@ class DocumentAsset(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 class PageBlock(BaseModel):
+    model_config = ConfigDict(validate_assignment=True)
+
     block_id: str
     text: str = ""
     bbox: list[float] | list[list[float]] | None = None
@@ -134,6 +137,16 @@ class PageBlock(BaseModel):
     asset_id: str | None = None
     asset_path: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
+
+    def validated_copy(self, **updates: Any) -> "PageBlock":
+        """Return a copy with updates validated against PageBlock invariants."""
+        return type(self).model_validate({**self.model_dump(mode="python"), **updates})
+
+    @model_validator(mode="after")
+    def asset_blocks_must_have_asset_id(self) -> "PageBlock":
+        if self.block_type in {"formula", "figure", "table", "page_image"} and not self.asset_id:
+            raise ValueError(f"{self.block_type} blocks must carry asset_id")
+        return self
 
 
 class OcrPage(BaseModel):
@@ -222,3 +235,5 @@ class PhaseScope(BaseModel):
         "signal_analysis",
         "standards_interpretation",
     )
+
+

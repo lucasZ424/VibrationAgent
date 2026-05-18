@@ -1,0 +1,104 @@
+Fair point. Here is a senior-review pass on obj 6 + 7 implementation — bugs and design holes the tests don't catch.
+
+## Correctness issues
+
+### B1 — `_looks_like_formula` false-positive blast radius
+[layout.py:21](src/vibration_agent/ingestion/layout.py:21) — `_FORMULA_TOKENS_RE` includes `-`, `+`, `*`, `/` as raw chars and needs only **2 matches** to flip a block to formula. Real text that will be misclassified:
+- `"rotor-bearing-system"` → 2 hyphens, 3 letters → **formula**
+- `"pp. 12-15, 18-20"` → 2 hyphens, 4 digits → **formula**
+- `"Bently-Nevada / GE Vibration"` → hyphen + slash → **formula**
+- Bulleted lines with `"* a * b"`
+
+This will leak body text into the formula asset bucket on Chinese textbooks where compound names and page-range references are common. Tests use clean `"m x + c v + k x = F"` so it never hits.
+
+### B2 — `_TITLE_RE` matches any numbered list item
+[layout.py:20](src/vibration_agent/ingestion/layout.py:20) — third alternative `[\d一二三四五六七八九十]+[\.、]\s*\S+` matches:
+- `"10. Smith, J. et al., 1998."` (a reference list entry) → **title**
+- `"1, 2, 3 are integers"` → **title** (comma works as `、`? No, only `、`. OK.)
+- `"2.1 转子动力学"` → **title** (probably correct, but the rest of the line is consumed by `\S+` matching one token only)
+
+In any document with a references section, bibliography, or numbered list, every entry becomes a title.
+
+### B3 — `early_block` title fallback pollutes running headers
+[layout.py:87–89](src/vibration_agent/ingestion/layout.py:87) — the first block on a page with ≤16 words and ≤80 chars becomes a title unconditionally. Real consequences:
+- Running headers (`"第三章 转子动力学"`) repeated on every page → marked as title every single page
+- Page numbers as the first block (common in scanned PDFs) → titles
+- Continuation paragraphs that happen to be short (last sentence of a previous page rolled over) → titles
+
+The body/title separation will look correct in isolation but inflate the title count dramatically at corpus scale.
+
+### B4 — Asset-only page silently reverts to including captions in body text
+[layout.py:153–154](src/vibration_agent/ingestion/layout.py:153):
+```python
+body_text = "\n".join(block.text for block in blocks if block.block_type in {"body", "title"} ...)
+return page.model_copy(update={..., "normalized_text": body_text.strip() or page.normalized_text})
+```
+The `or page.normalized_text` fallback fires whenever a page has only figures/tables/formulas (body_text == ""), restoring the *original* normalized_text which contains the caption text the function was supposed to filter out. The "图表公式不强行写入正文" criterion silently fails for asset-only pages — and there's no warning.
+
+### B5 — Body asset duplicates the chunk text
+[chunking.py:75–86](src/vibration_agent/ingestion/chunking.py:75):
+```python
+def _chunk_body_asset(..., text: str) -> DocumentAsset:
+    return DocumentAsset(..., text=text, ...)
+```
+Then `_chunk_assets` returns `_asset_ref(body)` which dumps the full `text` field. The same text already lives at `chunk["text"]`. Every JSONL row carries the body twice — for a 600-token chunk that's ~2.5 KB duplicated per chunk × ~600 chunks on the Bently book ≈ 1.5 MB of pure duplication, growing with corpus. Body asset's `text` should be `""` (the chunk owns the text).
+
+### B6 — `pages: [page_start, page_end]` semantic mismatch with `Citation.pages`
+[evidence.py:42](src/vibration_agent/knowledge/evidence.py:42) and [evidence.py:79](src/vibration_agent/knowledge/evidence.py:79) — `chunk_text_evidence_row` and `citation_from_chunk` set `pages = [page_start, page_end]`. But `Citation.pages: list[int]` is typed as a page enumeration. A chunk on pages 4–7 will surface as `Citation(pages=[4, 7])` — a consumer that does `4 in cite.pages` will say true; for page 5 it will say false. This was just fixed in M8 to remove the `| str` form precisely because mixed semantics caused bugs — and the new code reintroduces a different mixed semantic.
+
+## Design holes
+
+### D1 — Main pipeline still doesn't produce chunks with assets
+[pipeline.py](src/vibration_agent/ingestion/pipeline.py) ends at `parse_document_pages` writing `pages.jsonl`. Chunking with the new asset model only happens through `scripts/ocr_raw_books_with_paddle.py` → `book_workflow.py`. So after obj 7, the formal pipeline produces pages with assets but never chunks with assets. End-to-end validation against the existing Bently export (noted in handoff) can't be done through the package path until pipeline calls `chunk_pages`.
+
+### D2 — `AssetType` carries both `"body"` and `"text"` with no migration
+[schemas.py:25](src/vibration_agent/schemas.py:25) — added `"body"` and `"title"` but kept `"text"`. `PageBlock.block_type: AssetType = "text"` still defaults to the old value. Post-classification, a finished PageBlock should never have `"text"` — but any code path that constructs a PageBlock without calling enrichment yields `"text"`. There's no invariant that `enrich_page_layout` must be called before persistence. Consider:
+- Drop `"text"` from the literal and force callers to specify, or
+- Add a Pydantic validator that rejects `"text"` on serialization, or
+- Map `"text"` → `"body"` at validate time.
+
+### D3 — No invariant that asset-bearing blocks have `asset_id`
+[schemas.py:117](src/vibration_agent/schemas.py:117) — `PageBlock(block_type="figure", asset_id=None)` is currently a valid model. The native parser and `enrich_page_layout` both populate `asset_id` for non-body types, but nothing in the schema enforces it. A future code path that forgets will produce orphan figure blocks that retrieval can't resolve. Add a `model_validator` that asserts `if block_type in {figure, table, formula, page_image} then asset_id is not None`.
+
+### D4 — `api_context.json` carries `text_preview` only; full asset content unreachable
+[chunking.py:218–231](src/vibration_agent/ingestion/chunking.py:218) — exported asset refs include `text_preview[:160]` but no link to a full-asset record. An LLM reading `api_context.json` has only a 160-char preview of a formula or table caption; the full caption (or image path) is in `pages.jsonl` (page-level assets) or buried in `chunks.jsonl` chunk-level assets. There's no `assets.jsonl` joining them. The API context as exported is not self-sufficient.
+
+### D5 — Per-page OCR confidence dropped when building evidence rows
+[evidence.py:35–48](src/vibration_agent/knowledge/evidence.py:35) — `chunk_text_evidence_row` hardcodes `"confidence": 1.0`. The originating page might have `ocr_confidence=0.55` with `needs_review=True`, but evidence rows present uniform high confidence. Retrieval ranking that wants to penalize low-OCR-quality content cannot, because the signal was thrown away at chunking time and again at evidence time. Either propagate `ocr_confidence` into chunk dict + evidence row, or aggregate per-chunk (min/avg of source page confidences).
+
+## Medium
+
+- **M1** — Native parser: image-only page → `needs_review=False, layout_quality="ok"` ([pymupdf_parser.py:184](src/vibration_agent/ingestion/pymupdf_parser.py:184)). A scanned full-page diagram with no text gets through review even though there's nothing to chunk. Add `needs_review=True` when `not normalized_text and assets`.
+- **M2** — Image clip dpi hardcoded 220 ([pymupdf_parser.py:62](src/vibration_agent/ingestion/pymupdf_parser.py:62)); should pull from `cfg.ocr` or a new `cfg.parsing.figure_dpi`.
+- **M3** — Cross-chunk asset duplication in `api_context.json`: overlap window means the same figure asset appears in N consecutive chunks. Asset count and `text_preview` strings are emitted N times. Acceptable for retrieval recall but document it; consider a top-level `chunks[].asset_ids[]` (refs only) with a single `assets[]` keyed by asset_id.
+- **M4** — Asset metadata inconsistency: native parser adds `metadata.source = "pymupdf_image_block"` / `"pymupdf_text_block"`; `enrich_page_layout` produces no `source` key. Downstream provenance queries break.
+- **M5** — `_FIGURE_CAPTION_RE` / `_TABLE_CAPTION_RE` require a numeral. Captions like `"图：转子轨迹示意"`, `"Figure (a)"`, `"表（续）"` won't match. Loosen to `[\d... ]*` (zero-or-more).
+- **M6** — `attach_citations` silently drops hits missing `chunk_id`/`doc_id` ([evidence.py:96](src/vibration_agent/knowledge/evidence.py:96)). Log a warning at minimum.
+- **M7** — `polygon bbox` (OCR's 4-corner form) never produces `top_ratio` because `isinstance(bbox[0], float)` is False ([layout.py:84](src/vibration_agent/ingestion/layout.py:84)). When/if you pass `page_height` for OCR pages, polygon bbox blocks won't benefit. Compute polygon centroid → y_top.
+
+## Low
+
+- **L1** — `_save_block_clip` re-imports `fitz` inside the function despite parent function importing it.
+- **L2** — Body asset id `{chunk_id}_body_0001` always ends in `_0001`. The suffix index is dead weight.
+- **L3** — `chunk_index` is 1-based and resets per `chunk_paragraphs` call. Batch ingestion will collide.
+- **L4** — `bbox: list[float] | list[list[float]]` is an untagged union; consumers must introspect.
+- **L5** — `DocumentAsset.object_type` accepts `"title"`, `"text"`, `"unknown"` — nonsensical asset categories. Tighten to `Literal["body", "formula", "figure", "table", "page_image"]`.
+
+## Recommendation
+
+Block obj 8 on at least **B4, B5, B6, D1**:
+- B4 corrupts the body/asset separation on the very pages that motivate the asset model
+- B5 doubles export size for no information gain
+- B6 breaks the page-citation contract just reintroduced
+- D1 means obj 7 hasn't actually been exercised end-to-end through the formal pipeline — and the obj 8 chunking strategy work will rest on whatever D1 ends up wiring
+
+B1–B3 are tunable later but you should at least know they're misclassifying at scale before judging obj 8 chunk quality. Run the Bently book through the native parser + `enrich_page_layout` and spot-check the block_type distribution — I'd expect a suspicious title rate.
+
+Residual minor concerns (do NOT block obj 8)
+Body assets still flow into top-level _collect_api_assets — each chunk's {chunk_id}_body asset (empty text, just metadata) joins the asset table. N redundant rows. Consider filtering object_type == "body" out of _collect_api_assets; the body is already in chunk.text.
+_CHAPTER_TITLE_RE bypasses the position gate. A running header like "第三章 转子动力学" would be classified as title on every page where it appears. Section titles get the top_ratio ≤ 0.45 gate; chapter titles don't. Real-corpus impact will be a duplicate-title-per-page pattern. Either tighten the gate or plan to dedupe titles by (text, top_ratio) during obj-8 section detection.
+block_count parameter on classify_text_block is dead (del block_count inside). Cosmetic — drop from signature.
+_REFERENCE_LIKE_RE heuristic-narrow — a ref like "1. Title without commas or year" would fall through and be classified as title. Edge case; real bibliographies almost always have year or comma.
+model_copy(update=…) bypasses Pydantic validators. D3's invariant only fires on construction / model_validate. All current call sites set asset_id and block_type together → consistent in practice, but if a future code path mutates only one field, the invariant breaks silently.
+chunk_document_pages doesn't write a manifest.json the way book_workflow.py does. Obj 7's formal path produces chunks.jsonl + api_context.json but not the manifest the Bently export carries. Reconcile in obj 9 (data layer) or earlier when you wire end-to-end Bently validation.
+Strong-formula symbol coverage omits ≡ ∝ ⇒ ⇔ ∈ ∑ ∏ ∫ ∂. Add as you see misses in real corpora.

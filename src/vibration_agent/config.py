@@ -1,4 +1,4 @@
-"""Runtime configuration for vibration_agent.
+﻿"""Runtime configuration for vibration_agent.
 
 Configuration is loaded from configs/*.yaml and then overridden by environment
 variables. Code should depend on Settings instead of reading environment values
@@ -43,6 +43,7 @@ class OcrSettings(BaseModel):
     paddleocr_lang: str = "ch"
     tesseract_langs: str = "chi_sim+eng+osd"
     low_confidence_threshold: float = Field(default=0.6, ge=0.0, le=1.0)
+    render_dpi: int = Field(default=220, ge=72)
 
 
 class ChunkingSettings(BaseModel):
@@ -183,6 +184,7 @@ def load(workspace: Path | None = None) -> Settings:
             low_confidence_threshold=float(
                 _env("OCR_LOW_CONFIDENCE_THRESHOLD", _first_fallback_threshold(ocr_section.get("fallback_triggers", [])))
             ),
+            render_dpi=int(_env("OCR_RENDER_DPI", ocr_section.get("render_dpi", 220))),
         ),
         chunking=ChunkingSettings(
             target_tokens=int(_env("CHUNK_TARGET_TOKENS", chunking_section.get("target_tokens", 600))),

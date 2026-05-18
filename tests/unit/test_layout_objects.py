@@ -1,8 +1,8 @@
-﻿from pathlib import Path
+from pathlib import Path
 
 import fitz
 
-from vibration_agent.ingestion.layout import enrich_page_layout
+from vibration_agent.ingestion.layout import classify_text_block, enrich_page_layout
 from vibration_agent.ingestion.pymupdf_parser import parse_native_pdf
 from vibration_agent.schemas import OcrPage, PageBlock
 
@@ -56,5 +56,60 @@ def test_parse_native_pdf_exports_image_block_as_figure_asset(tmp_path):
     assert Path(figure_assets[0].asset_path).exists()
 
 
+def test_layout_avoids_common_formula_and_title_false_positives():
+    page = enrich_page_layout(
+        OcrPage(
+            doc_id="doc1",
+            page_no=1,
+            primary_engine="paddleocr",
+            normalized_text="",
+            blocks=[
+                PageBlock(block_id="p0001_b0001", text="123", bbox=[72, 20, 90, 35]),
+                PageBlock(block_id="p0001_b0002", text="rotor-bearing-system", bbox=[72, 70, 250, 90]),
+                PageBlock(block_id="p0001_b0003", text="pp. 12-15, 18-20", bbox=[72, 100, 250, 120]),
+                PageBlock(block_id="p0001_b0004", text="10. Smith, J. et al., 1998.", bbox=[72, 130, 300, 150]),
+                PageBlock(block_id="p0001_b0005", text="Figure (a): rotor orbit", bbox=[72, 160, 300, 180]),
+            ],
+        )
+    )
+
+    assert [block.block_type for block in page.blocks] == ["body", "body", "body", "body", "figure"]
+    assert page.normalized_text == "123\nrotor-bearing-system\npp. 12-15, 18-20\n10. Smith, J. et al., 1998."
+
+
+def test_chapter_running_header_is_not_classified_as_title_when_too_close_to_top():
+    running_header = classify_text_block(
+        "第三章 转子动力学",
+        block_index=1,
+        bbox=[72, 20, 300, 40],
+        page_height=1000,
+    )
+    chapter_title = classify_text_block(
+        "第三章 转子动力学",
+        block_index=1,
+        bbox=[72, 120, 300, 150],
+        page_height=1000,
+    )
+
+    assert running_header == "body"
+    assert chapter_title == "title"
+
+
+def test_asset_only_page_does_not_restore_caption_text_to_body():
+    page = enrich_page_layout(
+        OcrPage(
+            doc_id="doc1",
+            page_no=2,
+            primary_engine="paddleocr",
+            normalized_text="图 2. 转子轨迹\n表 2. 参数",
+            blocks=[
+                PageBlock(block_id="p0002_b0001", text="图 2. 转子轨迹", bbox=[10, 10, 200, 30]),
+                PageBlock(block_id="p0002_b0002", text="表 2. 参数", bbox=[10, 50, 200, 70]),
+            ],
+        )
+    )
+
+    assert page.normalized_text == ""
+    assert [asset.object_type for asset in page.assets] == ["figure", "table"]
 
 

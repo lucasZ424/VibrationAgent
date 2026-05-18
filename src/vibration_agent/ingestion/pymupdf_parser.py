@@ -1,4 +1,4 @@
-﻿"""Native-text PDF parser using PyMuPDF."""
+"""Native-text PDF parser using PyMuPDF."""
 from __future__ import annotations
 
 import re
@@ -65,6 +65,7 @@ def parse_native_pdf(
     doc_id: str,
     asset_dir: str | Path | None = None,
     extract_image_assets: bool = True,
+    image_dpi: int = 220,
 ) -> list[OcrPage]:
     """Parse a PDF text layer into the common page-level schema.
 
@@ -99,7 +100,7 @@ def parse_native_pdf(
                     output_path = _image_asset_path(resolved_asset_dir, asset_id)
                     asset_path = logical_asset_path(doc_id, page_index, block_id)
                     if extract_image_assets and output_path is not None and isinstance(bbox, list) and bbox and isinstance(bbox[0], float):
-                        asset_path = str(_save_block_clip(page, bbox, output_path))  # type: ignore[arg-type]
+                        asset_path = str(_save_block_clip(page, bbox, output_path, dpi=image_dpi))  # type: ignore[arg-type]
                     asset = DocumentAsset(
                         asset_id=asset_id,
                         doc_id=doc_id,
@@ -133,7 +134,6 @@ def parse_native_pdf(
                 object_type = classify_text_block(
                     normalized,
                     block_index=block_index,
-                    block_count=len(source_blocks),
                     bbox=bbox,
                     page_height=float(page.rect.height),
                 )
@@ -185,12 +185,12 @@ def parse_native_pdf(
                     primary_engine="pymupdf",
                     fallback_used=False,
                     ocr_confidence=1.0 if normalized_text or assets else None,
-                    layout_quality="ok" if normalized_text or assets else "empty",
+                    layout_quality="ok" if normalized_text else ("low" if assets else "empty"),
                     raw_text=raw_text,
                     normalized_text=normalized_text,
                     blocks=blocks,
                     assets=assets,
-                    needs_review=not bool(normalized_text or assets),
+                    needs_review=not bool(normalized_text),
                 )
             )
     return pages
@@ -200,3 +200,6 @@ def parse(pdf_path: Path, doc_id: str | None = None) -> list[dict]:
     """Backward-compatible parser returning dictionaries."""
     resolved_doc_id = doc_id or Path(pdf_path).stem
     return [page.model_dump(mode="json") for page in parse_native_pdf(pdf_path, doc_id=resolved_doc_id)]
+
+
+

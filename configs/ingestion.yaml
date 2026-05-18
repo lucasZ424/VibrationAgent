@@ -1,9 +1,10 @@
-classify:
+﻿classify:
   ocr_text_density_threshold: 0.2   # chars per 1000 PDF pt^2; sparse text layer below this is treated as scanned
 
 ocr:
   primary: paddleocr
   fallback: tesseract
+  render_dpi: 220
   paddleocr:
     lang: ch
     use_angle_cls: true

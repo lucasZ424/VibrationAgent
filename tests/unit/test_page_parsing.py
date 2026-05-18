@@ -1,4 +1,4 @@
-import json
+﻿import json
 from pathlib import Path
 
 import fitz
@@ -6,7 +6,7 @@ import fitz
 from vibration_agent.config import load
 from vibration_agent.ingestion.classify import classify_document
 from vibration_agent.ingestion.ocr import router
-from vibration_agent.ingestion.pipeline import parse_document_pages
+from vibration_agent.ingestion.pipeline import chunk_document_pages, parse_document_pages
 from vibration_agent.ingestion.pymupdf_parser import parse_native_pdf
 
 
@@ -69,3 +69,25 @@ def test_ocr_router_returns_review_page_when_paddle_fails(tmp_path, monkeypatch)
     assert page.needs_review is True
     assert page.fallback_used is True
     assert page.layout_quality in {"empty", "low"}
+
+
+def test_chunk_document_pages_writes_formal_chunk_outputs(tmp_path):
+    pdf = tmp_path / "native.pdf"
+    _make_text_pdf(pdf)
+    doc = classify_document(pdf)
+    settings = load()
+    settings.paths.ocr_dir = tmp_path / "ocr"
+    settings.paths.chunks_dir = tmp_path / "chunks"
+    settings.paths.exports_dir = tmp_path / "exports"
+    settings.paths.extracted_dir = tmp_path / "extracted"
+
+    result = chunk_document_pages(doc, settings=settings, max_pages=1, write_output=True)
+
+    assert result["stage"] == "page_parse_chunk"
+    assert result["chunk_count"] >= 1
+    assert Path(result["chunks_output_path"]).exists()
+    assert Path(result["api_context_output_path"]).exists()
+    chunk = json.loads(Path(result["chunks_output_path"]).read_text(encoding="utf-8").splitlines()[0])
+    assert chunk["assets"][0]["object_type"] == "body"
+    assert chunk["pages"] == [1]
+
