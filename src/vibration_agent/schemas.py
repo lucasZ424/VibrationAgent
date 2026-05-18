@@ -1,4 +1,4 @@
-"""Shared Pydantic schemas for vibration_agent.
+﻿"""Shared Pydantic schemas for vibration_agent.
 
 This module is the single source of truth for Phase-0 skill I/O and the
 file-level objects produced by ingestion. Update schemas here before changing
@@ -22,7 +22,7 @@ Intent = Literal[
     "unknown",
 ]
 SourceType = Literal["standard", "textbook", "review", "paper", "webpage", "book", "manual", "note"]
-AssetType = Literal["text", "formula", "figure", "table", "page_image", "unknown"]
+AssetType = Literal["body", "title", "text", "formula", "figure", "table", "page_image", "unknown"]
 ChunkType = Literal["body", "section_summary", "formula_context", "figure_context", "table_context"]
 SupportedKind = Literal["pdf", "image", "text", "unsupported"]
 ProcessingStrategy = Literal["native_pdf", "ocr_pdf", "image", "text", "unknown"]
@@ -114,12 +114,26 @@ class DocumentInput(BaseModel):
     language: DocumentLanguage = "unknown"
 
 
+class DocumentAsset(BaseModel):
+    asset_id: str
+    doc_id: str
+    page_no: int = Field(ge=1)
+    object_type: AssetType
+    asset_path: str | None = None
+    bbox: list[float] | list[list[float]] | None = None
+    text: str = ""
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
 class PageBlock(BaseModel):
     block_id: str
     text: str = ""
     bbox: list[float] | list[list[float]] | None = None
     block_type: AssetType = "text"
     confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    asset_id: str | None = None
+    asset_path: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class OcrPage(BaseModel):
@@ -132,19 +146,10 @@ class OcrPage(BaseModel):
     raw_text: str = ""
     normalized_text: str = ""
     blocks: list[PageBlock] = Field(default_factory=list)
+    assets: list[DocumentAsset] = Field(default_factory=list)
     needs_review: bool = False
 
 
-class DocumentAsset(BaseModel):
-    asset_id: str
-    doc_id: str
-    page_no: int = Field(ge=1)
-    object_type: AssetType
-    asset_path: str | None = None
-    bbox: list[float] | list[list[float]] | None = None
-    text: str = ""
-    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
-    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class MemoryChunk(BaseModel):

@@ -1,4 +1,4 @@
-"""Unified ingestion pipeline."""
+﻿"""Unified ingestion pipeline."""
 from __future__ import annotations
 
 import json
@@ -9,6 +9,7 @@ from vibration_agent.config import Settings, load
 from vibration_agent.schemas import DocumentClassification, OcrPage
 
 from .classify import scan_inputs
+from .layout import enrich_page_layout
 from .ocr.router import ocr_page
 from .pymupdf_parser import parse_native_pdf
 
@@ -65,24 +66,24 @@ def parse_document_pages(
     pages: list[OcrPage] = []
 
     if document.processing_strategy == "native_pdf":
-        native_pages = parse_native_pdf(source, doc_id=document.doc_id)
+        asset_dir = cfg.paths.extracted_dir / document.doc_id
+        native_pages = parse_native_pdf(source, doc_id=document.doc_id, asset_dir=asset_dir)
         pages = native_pages[:page_limit]
     elif document.processing_strategy == "ocr_pdf":
         image_dir = cfg.paths.ocr_dir / document.doc_id / "page_images"
         for page_no in range(1, page_limit + 1):
-            pages.append(
-                ocr_page(
-                    source,
-                    page_no,
-                    doc_id=document.doc_id,
-                    lang=cfg.ocr.paddleocr_lang,
-                    tesseract_langs=cfg.ocr.tesseract_langs,
-                    low_confidence_threshold=cfg.ocr.low_confidence_threshold,
-                    workspace=cfg.paths.workspace,
-                    image_dir=image_dir,
-                    keep_images=keep_images,
-                )
+            page = ocr_page(
+                source,
+                page_no,
+                doc_id=document.doc_id,
+                lang=cfg.ocr.paddleocr_lang,
+                tesseract_langs=cfg.ocr.tesseract_langs,
+                low_confidence_threshold=cfg.ocr.low_confidence_threshold,
+                workspace=cfg.paths.workspace,
+                image_dir=image_dir,
+                keep_images=keep_images,
             )
+            pages.append(enrich_page_layout(page))
     else:
         return {
             "status": "insufficient",
@@ -155,3 +156,4 @@ __all__ = [
     "parse_pages",
     "scan_inputs",
 ]
+
