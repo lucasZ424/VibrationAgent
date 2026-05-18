@@ -1,6 +1,6 @@
-﻿# Phase 1 Progress
+# Phase 1 Progress
 
-Updated: 2026-05-15
+Updated: 2026-05-18
 
 ## Objective Status
 
@@ -11,6 +11,7 @@ Updated: 2026-05-15
 5. Page-level OCR and parsing: done; render helper decoupled and OCR thresholds routed
 6. Layout-object recognition: done; lightweight block classification and native PDF image assets active
 7. Unified asset model: done; chunks carry structured body/formula/figure/table assets
+8. Chunking strategy: done; section-aware page/paragraph chunking with stable IDs and boundary metadata
 
 ## Notes
 
@@ -21,4 +22,4 @@ Updated: 2026-05-15
 - Objective 6 complete: page JSON now carries block types (`body`, `title`, `formula`, `figure`, `table`) and page-level `assets[]`; native PyMuPDF image blocks are exported under `data/extracted/` when parsing through the pipeline.
 - Objective 7 complete: `chunk_pages()` now attaches a body asset plus page-range formula/figure/table assets to each chunk; `api_context.json` exports structured `assets[]`; `knowledge/evidence.py` can emit separate text and asset evidence rows.
 - Issues OJ6-7 resolved: fixed formula/title false positives, asset-only body fallback, body text duplication, page enumeration, formal parse-to-chunk pipeline wiring, schema asset invariants, API asset index, OCR confidence propagation, native image-page review flag, configurable render DPI, and citation warnings.
-
+- Objective 8 complete: chunking now preserves title-derived section boundaries, keeps page enumeration, records boundary metadata, supports structured `chunk_sections()`, and keeps repeat runs stable for the same document.

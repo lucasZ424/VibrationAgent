@@ -174,6 +174,7 @@ class MemoryChunk(BaseModel):
     chunk_index: int = Field(ge=1)
     page_start: int = Field(ge=1)
     page_end: int = Field(ge=1)
+    pages: list[int] = Field(default_factory=list)
     chunk_type: ChunkType = "body"
     topic: str | None = None
     token_estimate: int = Field(ge=0)
@@ -181,7 +182,11 @@ class MemoryChunk(BaseModel):
     citation_anchor: str | None = None
     text: str
     assets: list[DocumentAsset] = Field(default_factory=list)
+    ocr_confidence_min: float | None = Field(default=None, ge=0.0, le=1.0)
+    ocr_confidence_avg: float | None = Field(default=None, ge=0.0, le=1.0)
+    needs_review_pages: list[int] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    api_context: str | None = None
 
 
 class RetrievalHit(BaseModel):
