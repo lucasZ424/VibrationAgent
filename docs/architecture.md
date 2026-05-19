@@ -51,3 +51,107 @@ Targets 1-3 establish the control plane for later work:
 3. `src/vibration_agent/config.py` is the single entry point for runtime settings. Business modules should not read `configs/*.yaml` or environment variables directly.
 
 Emergency scripts under `scripts/` can be used as migration references, but stable behavior should move into `src/vibration_agent/` modules.
+
+## Model Orchestration And Agent-Owned Skills
+
+Detailed control-plane design is also recorded in `docs/model_orchestration.md`.
+
+### Binding Decision
+
+The agent uses a vendor-neutral skill system owned by this project. Model vendors
+are reasoning/execution backends, not the source of truth for skills.
+
+Two layers must remain separate:
+
+- `agent_skills/<skill_id>/SKILL.md`: agent-facing skill package. This layer
+  defines when a skill should be used, required inputs, allowed outputs, failure
+  behavior, and references. It is intended to be readable by any capable model.
+- `src/vibration_agent/skills/*.py`: deterministic runtime implementation. This
+  layer executes stable Python code and returns `SkillInput` / `SkillOutput`
+  compatible results.
+
+Claude-native Skills and OpenAI tools are integration mechanisms, not project
+architecture. The project should be able to expose the same skill package to
+OpenAI, Anthropic, or a local orchestrator without rewriting the domain logic.
+
+### Dual-API Routing Policy
+
+The default model path is GPT-first. Low, medium, and high difficulty tasks are
+handled end-to-end by the GPT model path unless a stakeholder-defined routing
+policy explicitly marks the task as extreme.
+
+Opus is reserved for extreme tasks because of its higher latency and token cost.
+It is not part of the default path for ordinary high-complexity work.
+
+The difficulty router must be policy-driven, not left to unrestricted model
+self-judgment. A model may produce a routing recommendation, but the final
+thresholds should come from project configuration and stakeholder-defined rules.
+
+Recommended difficulty actions:
+
+| Difficulty | Default owner | Notes |
+| --- | --- | --- |
+| low | GPT | Simple QA, small edits, narrow checks. |
+| medium | GPT | Normal implementation and documentation work. |
+| high | GPT | Complex but bounded engineering tasks; optional local review only. |
+| extreme | Opus-supervised loop | Architecture, math, safety, schema, or persistent failure risk. |
+
+### Extreme Task Loop
+
+Extreme tasks use a senior-supervisor loop:
+
+```text
+User task
+  -> policy router marks task as extreme
+  -> Claude Opus: framework design, decomposition, risk definition
+  -> GPT: implementation, tests, candidate answer
+  -> Claude Opus: senior supervisor review
+  -> if no issues: final answer
+  -> if issues and loop_count < 2: GPT correction, then Opus review again
+  -> if issues remain after two review loops: Opus takes ownership
+```
+
+The loop limit is binding. After two failed GPT correction loops, continuing to
+ask GPT to patch the same issue is considered low-value iteration; ownership
+moves to Opus or the task is paused for human clarification.
+
+### Extreme Triggers
+
+The exact triggers should live in configuration later, but the design baseline is:
+
+- cross-cutting architecture changes affecting multiple layers or contracts
+- mathematical derivation or engineering reasoning where a wrong conclusion has
+  high downstream cost
+- schema, database, retrieval, or citation-contract changes with long-term
+  compatibility impact
+- tasks explicitly marked by the stakeholder as extreme
+- repeated failure: the same issue remains after two GPT correction attempts
+- review-sensitive work where a senior framework critique is more valuable than
+  fast execution
+
+Non-triggers:
+
+- ordinary high-complexity implementation that is well scoped
+- adding tests for known behavior
+- normal refactors with clear acceptance criteria
+- routine documentation updates
+
+### Phase-0 Implication
+
+Phase-0 remains GPT-first and keeps S1/S2/S3/V4 as the only active domain chain.
+The dual-API supervisor loop is a control-plane design addition. It should not
+cause S4-S8 or V1-V3 to be implemented early.
+
+Before implementing the dual-API runtime, add a small control-plane objective:
+
+```text
+Obj11.5 - Agent-owned skill registry and model routing design
+```
+
+Acceptance should require:
+
+- a vendor-neutral `agent_skills/` package layout
+- a difficulty enum and stakeholder-owned routing policy
+- a model registry abstraction for GPT and Opus clients
+- an extreme-task supervisor-loop schema
+- no mandatory Opus call for low, medium, or high tasks

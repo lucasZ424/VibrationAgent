@@ -1,4 +1,4 @@
-﻿"""Runtime configuration for vibration_agent.
+"""Runtime configuration for vibration_agent.
 
 Configuration is loaded from configs/*.yaml and then overridden by environment
 variables. Code should depend on Settings instead of reading environment values
@@ -52,6 +52,13 @@ class ChunkingSettings(BaseModel):
     preserve_anchors: bool = True
 
 
+class RoutingSettings(BaseModel):
+    default_owner: str = "gpt"
+    opus_difficulties: list[str] = Field(default_factory=lambda: ["extreme"])
+    repeated_failure_threshold: int = Field(default=2, ge=1)
+    explicit_extreme_markers: list[str] = Field(default_factory=lambda: ["extreme", "opus", "senior_supervisor"])
+
+
 class RetrievalSettings(BaseModel):
     mode: str = "hybrid"
     bm25_top_k: int = Field(default=50, ge=1)
@@ -86,6 +93,7 @@ class Settings(BaseModel):
     ocr: OcrSettings = Field(default_factory=OcrSettings)
     chunking: ChunkingSettings = Field(default_factory=ChunkingSettings)
     retrieval: RetrievalSettings = Field(default_factory=RetrievalSettings)
+    routing: RoutingSettings = Field(default_factory=RoutingSettings)
     llm: LlmSettings = Field(default_factory=LlmSettings)
 
 
@@ -142,6 +150,7 @@ def load(workspace: Path | None = None) -> Settings:
     classify_section = ingestion_yaml.get("classify", {})
     ocr_section = ingestion_yaml.get("ocr", {})
     chunking_section = ingestion_yaml.get("chunking", {})
+    routing_section = app_yaml.get("routing", {})
     retrieval_top_k = retrieval_yaml.get("top_k", {})
     retrieval_fusion = retrieval_yaml.get("fusion", {})
     rerank_section = retrieval_yaml.get("rerank", {})
@@ -200,6 +209,12 @@ def load(workspace: Path | None = None) -> Settings:
             rerank_enabled=bool(rerank_section.get("enabled", False)),
             source_priority=dict(retrieval_yaml.get("source_priority", {})) or RetrievalSettings().source_priority,
         ),
+        routing=RoutingSettings(
+            default_owner=str(_env("ROUTING_DEFAULT_OWNER", routing_section.get("default_owner", "gpt"))),
+            opus_difficulties=list(routing_section.get("opus_difficulties", ["extreme"])),
+            repeated_failure_threshold=int(routing_section.get("repeated_failure_threshold", 2)),
+            explicit_extreme_markers=list(routing_section.get("explicit_extreme_markers", ["extreme", "opus", "senior_supervisor"])),
+        ),
         llm=LlmSettings(providers=dict(llm_section.get("providers", {}))),
     )
 
@@ -212,6 +227,7 @@ __all__ = [
     "OcrSettings",
     "PathSettings",
     "RetrievalSettings",
+    "RoutingSettings",
     "Settings",
     "load",
 ]

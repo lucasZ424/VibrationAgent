@@ -8,7 +8,7 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE TABLE documents (
     id            BIGSERIAL PRIMARY KEY,
     title         TEXT NOT NULL,
-    type          TEXT NOT NULL,                  -- textbook | standard | paper | review | datasheet | note
+    type          TEXT NOT NULL,                  -- standard | textbook | review | paper | webpage | book | manual | note
     source        TEXT,
     language      TEXT,
     year          INT,

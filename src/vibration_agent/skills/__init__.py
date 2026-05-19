@@ -1,4 +1,4 @@
-"""Skill registry.
+﻿"""Skill registry.
 
 URGENT (phase-0):
   S1 ingestion, S2 retrieval, S3 qa_summary, V4 style
@@ -9,5 +9,6 @@ Deferred:
   V1 term_normalize, V2 citation_check, V3 reviewer
 """
 from .base import Skill
+from .s1_ingestion import IngestionSkill
 
-__all__ = ["Skill"]
+__all__ = ["IngestionSkill", "Skill"]

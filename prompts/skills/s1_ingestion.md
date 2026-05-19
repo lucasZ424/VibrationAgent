@@ -1,17 +1,21 @@
-# S1 — Document ingestion & parsing (prompt template)
+﻿# S1 - Document ingestion & parsing
 
-You process one document at a time. For each page emit the block schema defined in
-§十 of the design doc:
+S1 converts supported source documents into structured Phase-0 exports. It does
+not interpret document content and must not guess missing OCR text.
 
-```
-{
-  "doc_id": "...", "page_no": N, "primary_engine": "paddleocr|tesseract",
-  "fallback_used": bool, "ocr_confidence": float, "layout_quality": "low|medium|high",
-  "raw_text": "...", "normalized_text": "...",
-  "blocks": [{"block_id": "...", "text": "...", "bbox": [x1,y1,x2,y2]}],
-  "needs_review": bool
-}
-```
+Input is a `SkillInput`. Provide the source through `constraints.input_path` or
+`context.input_path`; `source_path`, `raw_path`, `path`, and `raw_dir` are accepted
+aliases. Optional constraints:
 
-Do **not** try to interpret content. Do **not** guess missing text. Flag the page for
-human review instead.
+- `recursive`: scan directories recursively; default `true`
+- `max_pages`: page limit for validation or partial ingestion
+- `write_output`: write structured files; default `true`
+- `keep_images`: keep rendered OCR page images; default `false`
+- `source_type`: one of the Phase-0 source types; default `book`
+
+Output is a `SkillOutput` whose `structured_result.documents[]` contains `doc_id`,
+`processed_pages`, `chunk_count`, `needs_review_pages`, quality summary, and paths
+to `pages.jsonl`, `chunks.jsonl`, `api_context.json`, and `manifest.json`.
+
+Do not generate Markdown as an ingestion artifact. Flag low-confidence or empty
+pages through warnings and `needs_review_pages` instead of filling gaps.

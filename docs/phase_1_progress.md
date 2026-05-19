@@ -13,6 +13,9 @@ Updated: 2026-05-18
 7. Unified asset model: done; chunks carry structured body/formula/figure/table assets
 8. Chunking strategy: done; section-aware page/paragraph chunking with stable IDs and boundary metadata
 9. Structured document export: done; pages/chunks/api_context/manifest outputs active in formal pipeline
+10. Storage write preparation: done; Postgres/Qdrant/Redis mapping plans and dry-runs active
+11. S1 document ingestion skill: done; SkillInput/SkillOutput wrapper around structured ingestion exports active
+11.5. Agent-owned skill registry and model routing design: done; GPT-first routing and Opus-only extreme supervisor schemas active
 
 ## Notes
 
@@ -25,3 +28,6 @@ Updated: 2026-05-18
 - Issues OJ6-7 resolved: fixed formula/title false positives, asset-only body fallback, body text duplication, page enumeration, formal parse-to-chunk pipeline wiring, schema asset invariants, API asset index, OCR confidence propagation, native image-page review flag, configurable render DPI, and citation warnings.
 - Objective 8 complete: chunking now preserves title-derived section boundaries, keeps page enumeration, records boundary metadata, supports structured `chunk_sections()`, and keeps repeat runs stable for the same document.
 - Objective 9 complete: `chunk_document_pages()` now writes `pages.jsonl`, `chunks.jsonl`, `api_context.json`, and `manifest.json`; `scripts/ingest_folder.py --chunk-documents` exposes the full structured export path.
+- Objective 10 complete: storage adapters now prepare dry-run write plans for Postgres rows, Qdrant chunk payloads, and Redis cache items without inline DDL or runtime DB dependencies.
+- Objective 11 complete: `IngestionSkill` now wraps the formal structured ingestion pipeline, returns document/chunk/output-path summaries, and converts missing inputs or pipeline failures into `SkillOutput` statuses instead of leaking raw exceptions.
+- Objective 11.5 complete: project-owned `agent_skills/` packages, GPT-first difficulty routing, model role registry, and extreme-task supervisor-loop schemas are in place without real API calls.

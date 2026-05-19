@@ -1,4 +1,4 @@
-app:
+﻿app:
   name: vibration-agent
   log_level: INFO
   default_user_mode: engineering      # engineering | definition | derivation | research
@@ -7,9 +7,21 @@ orchestrator:
   phase0_pipeline: [s2_retrieval, s3_qa_summary, v4_style]
   high_risk_checks: [v2_citation_check, v3_reviewer]   # deferred: activated for flagged answers
 
+routing:
+  default_owner: gpt
+  opus_difficulties: [extreme]
+  repeated_failure_threshold: 2
+  explicit_extreme_markers: [extreme, opus, senior_supervisor]
+
 llm:
   providers:
-    main_answer:     anthropic:claude-opus-4-7
-    coder:           anthropic:claude-sonnet-4-6
-    reviewer:        anthropic:claude-sonnet-4-6
-    citation_checker: anthropic:claude-haiku-4-5-20251001
+    interaction_main: openai:gpt-5.5
+    task_router: openai:gpt-5.5
+    executor: openai:gpt-5.5
+    senior_planner: anthropic:claude-opus
+    senior_reviewer: anthropic:claude-opus
+    emergency_owner: anthropic:claude-opus
+    main_answer: openai:gpt-5.5
+    coder: openai:gpt-5.5
+    reviewer: anthropic:claude-opus
+    citation_checker: openai:gpt-5.5
