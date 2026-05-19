@@ -10,5 +10,6 @@ Deferred:
 """
 from .base import Skill
 from .s1_ingestion import IngestionSkill
+from .s2_retrieval import RetrievalSkill
 
-__all__ = ["IngestionSkill", "Skill"]
+__all__ = ["IngestionSkill", "RetrievalSkill", "Skill"]

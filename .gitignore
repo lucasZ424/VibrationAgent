@@ -1,4 +1,4 @@
-__pycache__/
+﻿__pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
@@ -7,7 +7,7 @@ __pycache__/
 API_key.txt
 data/
 
-# Data artifacts — keep directory, ignore contents
+# Data artifacts 鈥?keep directory, ignore contents
 data/raw/*
 data/ocr/*
 data/extracted/*
@@ -27,3 +27,7 @@ db/qdrant/storage/
 .ipynb_checkpoints/
 node_modules/
 apps/ui/.next/
+
+# Local issue review logs
+docs/issue_log/issues*
+

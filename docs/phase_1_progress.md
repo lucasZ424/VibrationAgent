@@ -1,6 +1,6 @@
-# Phase 1 Progress
+﻿# Phase 1 Progress
 
-Updated: 2026-05-18
+Updated: 2026-05-19
 
 ## Objective Status
 
@@ -16,6 +16,7 @@ Updated: 2026-05-18
 10. Storage write preparation: done; Postgres/Qdrant/Redis mapping plans and dry-runs active
 11. S1 document ingestion skill: done; SkillInput/SkillOutput wrapper around structured ingestion exports active
 11.5. Agent-owned skill registry and model routing design: done; GPT-first routing and Opus-only extreme supervisor schemas active
+12. S2 hybrid retrieval skill: done; local chunk-export retrieval with query normalization, BM25, dense-like recall, RRF fusion, source priority, and insufficient recall handling active
 
 ## Notes
 
@@ -31,3 +32,4 @@ Updated: 2026-05-18
 - Objective 10 complete: storage adapters now prepare dry-run write plans for Postgres rows, Qdrant chunk payloads, and Redis cache items without inline DDL or runtime DB dependencies.
 - Objective 11 complete: `IngestionSkill` now wraps the formal structured ingestion pipeline, returns document/chunk/output-path summaries, and converts missing inputs or pipeline failures into `SkillOutput` statuses instead of leaking raw exceptions.
 - Objective 11.5 complete: project-owned `agent_skills/` packages, GPT-first difficulty routing, model role registry, and extreme-task supervisor-loop schemas are in place without real API calls.
+- Objective 12 complete: `RetrievalSkill` wraps the hybrid retrieval pipeline over S1 `chunks.jsonl` exports, returns `RetrievalOutput` fields plus `retrieval_context`, emits citations from real hits, and returns `insufficient` without invented chunk ids when recall is weak.
