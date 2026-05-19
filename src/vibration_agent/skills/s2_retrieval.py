@@ -1,4 +1,4 @@
-﻿"""S2 knowledge-base retrieval skill.
+"""S2 knowledge-base retrieval skill.
 
 This wraps the Phase-0 hybrid retrieval pipeline in the shared SkillInput /
 SkillOutput contract. It retrieves only from supplied S1 chunk exports and never
@@ -10,8 +10,8 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from vibration_agent.config import Settings, load
-from vibration_agent.retrieval.hybrid import search as hybrid_search
+from vibration_agent.config import Settings
+from vibration_agent.retrieval.hybrid import default_retrieval_settings, search as hybrid_search
 from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 
 from .base import Skill
@@ -122,7 +122,7 @@ class RetrievalSkill(Skill):
     name = "s2_retrieval"
 
     def __init__(self, *, settings: Settings | None = None, runner: RetrievalRunner | None = None) -> None:
-        self.settings = settings or load()
+        self.settings = settings or default_retrieval_settings()
         self._runner = runner or hybrid_search
 
     def run(self, payload: SkillInput) -> SkillOutput:

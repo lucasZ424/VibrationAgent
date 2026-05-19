@@ -1,4 +1,4 @@
-﻿import json
+import json
 from pathlib import Path
 
 from vibration_agent.retrieval.bm25 import tokenize
@@ -123,6 +123,7 @@ def test_hybrid_search_uses_source_priority_as_tie_boost():
 
 def test_load_chunks_dir_uses_only_chunk_jsonl_and_drops_rows_without_chunk_id(tmp_path):
     _write_jsonl(tmp_path / "pages.jsonl", [{"doc_id": "doc1", "page_no": 1, "normalized_text": "page text"}])
+    _write_jsonl(tmp_path / "chunksomething.jsonl", [_chunk("wrong", "should not load")])
     _write_jsonl(tmp_path / "chunks.jsonl", [_chunk("c1", "critical speed"), {"doc_id": "doc1", "text": "no id"}])
 
     chunks = load_chunks(chunks_dir=tmp_path)

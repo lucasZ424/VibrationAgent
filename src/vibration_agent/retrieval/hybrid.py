@@ -1,4 +1,4 @@
-"""Hybrid retrieval over Phase-0 chunk exports.
+﻿"""Hybrid retrieval over Phase-0 chunk exports.
 
 Runtime Postgres/Qdrant reads are deferred. This module consumes S1 `chunks.jsonl`
 rows and preserves the production retrieval shape: normalize -> BM25 + dense lane
@@ -19,6 +19,7 @@ from . import bm25, dense, query_normalize, rerank
 
 RRF_K = 60
 SOURCE_PRIORITY_BOOST = 0.0001
+_CHUNK_FILE_PATTERNS = ("**/chunks.jsonl", "**/chunks_*.jsonl")
 SOURCE_PRIORITY = {
     "standard": 5,
     "textbook": 4,
@@ -34,6 +35,10 @@ SOURCE_PRIORITY = {
 @lru_cache(maxsize=1)
 def _default_settings() -> Settings:
     return load()
+
+
+def default_retrieval_settings() -> Settings:
+    return _default_settings()
 
 
 def clear_default_settings_cache() -> None:
@@ -57,6 +62,15 @@ def read_chunks_jsonl(path: str | Path) -> list[dict[str, Any]]:
     return rows
 
 
+def _chunk_files(root: str | Path) -> list[Path]:
+    paths: dict[str, Path] = {}
+    root_path = Path(root)
+    for pattern in _CHUNK_FILE_PATTERNS:
+        for path in root_path.glob(pattern):
+            paths[str(path.resolve())] = path
+    return [paths[key] for key in sorted(paths)]
+
+
 def load_chunks(
     *,
     chunks: Sequence[Mapping[str, Any]] | None = None,
@@ -67,7 +81,7 @@ def load_chunks(
     for path in chunk_paths or []:
         loaded.extend(read_chunks_jsonl(path))
     if chunks_dir is not None:
-        for path in sorted(Path(chunks_dir).glob("**/chunks*.jsonl")):
+        for path in _chunk_files(chunks_dir):
             loaded.extend(read_chunks_jsonl(path))
     return _dedupe_chunks(loaded)
 
@@ -86,16 +100,23 @@ def _source_priority(chunk: Mapping[str, Any], configured: Mapping[str, int]) ->
     return int(configured.get(source_type, SOURCE_PRIORITY.get(source_type, 0)))
 
 
-
-def _order_lane_results(results: Sequence[Mapping[str, Any]], source_priority: Mapping[str, int]) -> list[Mapping[str, Any]]:
+def _order_lane_results(
+    results: Sequence[Mapping[str, Any]],
+    source_priority: Mapping[str, int],
+) -> list[Mapping[str, Any]]:
     return sorted(
         results,
         key=lambda item: (
             float(item.get("score") or 0.0),
-            _source_priority(item.get("chunk", {}) if isinstance(item.get("chunk"), Mapping) else {}, source_priority),
+            _source_priority(
+                item.get("chunk", {}) if isinstance(item.get("chunk"), Mapping) else {},
+                source_priority,
+            ),
         ),
         reverse=True,
     )
+
+
 def _rrf_candidates(
     *,
     bm25_results: Sequence[Mapping[str, Any]],
@@ -103,7 +124,10 @@ def _rrf_candidates(
     source_priority: Mapping[str, int],
 ) -> list[dict[str, Any]]:
     candidates: dict[str, dict[str, Any]] = {}
-    lanes = (("bm25", _order_lane_results(bm25_results, source_priority)), ("dense", _order_lane_results(dense_results, source_priority)))
+    lanes = (
+        ("bm25", _order_lane_results(bm25_results, source_priority)),
+        ("dense", _order_lane_results(dense_results, source_priority)),
+    )
     for lane_name, results in lanes:
         max_lane_score = max((float(item.get("score") or 0.0) for item in results), default=0.0)
         for rank, result in enumerate(results, start=1):
