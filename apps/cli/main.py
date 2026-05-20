@@ -7,16 +7,9 @@ import sys
 from pathlib import Path
 from typing import Any
 
+from apps._bootstrap import ensure_local_imports
 
-def _ensure_local_src_importable() -> None:
-    root = Path(__file__).resolve().parents[2]
-    src = root / "src"
-    for path in (root, src):
-        if str(path) not in sys.path:
-            sys.path.insert(0, str(path))
-
-
-_ensure_local_src_importable()
+ensure_local_imports(__file__)
 
 from vibration_agent.config import Settings, load  # noqa: E402
 from vibration_agent.ingestion.pipeline import chunk_documents, ingest as plan_ingestion  # noqa: E402

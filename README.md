@@ -84,6 +84,45 @@ CLI exit codes:
 - `2`: insufficient, including out-of-scope or missing evidence
 
 
+## Phase-0 API
+
+The API is a localhost development entry point for Phase-0. It does not yet include CORS, auth, rate limiting, path sandboxing, or downstream dependency readiness checks.
+
+Start the local FastAPI server:
+
+```powershell
+.\.venv\Scripts\uvicorn.exe apps.api.main:app --reload
+```
+
+Check runtime status:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/health
+```
+
+Build ingestion exports through the API:
+
+```powershell
+$body = @{
+  path = "data/raw/book"
+  source_type = "book"
+} | ConvertTo-Json
+Invoke-RestMethod http://127.0.0.1:8000/ingest -Method Post -ContentType "application/json" -Body $body
+```
+
+Ask against exported chunks:
+
+```powershell
+$body = @{
+  query = "阻尼比如何影响转子振动？"
+  chunks_jsonl = @("data/chunks/book/<doc_id>/chunks.jsonl")
+  top_k = 4
+} | ConvertTo-Json
+Invoke-RestMethod http://127.0.0.1:8000/query -Method Post -ContentType "application/json" -Body $body
+```
+
+HTTP `2xx` means the API call itself was handled. Agent-level outcomes are still reported in the JSON body as `status: ok | insufficient | fail`.
+
 Legacy compatibility:
 
 - `scripts/ingest_folder.py` is deprecated as a primary interface. It remains as a thin wrapper around `python -m apps.cli.main` for older commands.

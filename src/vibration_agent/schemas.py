@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 
 UserMode = Literal["engineering", "definition", "derivation", "research"]
 SkillStatus = Literal["ok", "insufficient", "fail"]
@@ -260,6 +260,79 @@ class IngestionManifest(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class ApiHealthResponse(BaseModel):
+    status: Literal["ok"] = "ok"
+    app: str
+    workspace: str
+    default_user_mode: UserMode
+    phase0_pipeline: list[str]
+
+
+class ApiScopeResponse(BaseModel):
+    active_skills: list[str] = Field(default_factory=lambda: list(PHASE0_ACTIVE_SKILLS))
+    deferred_skills: list[str] = Field(default_factory=lambda: list(PHASE0_DEFERRED_SKILLS))
+    phase0_pipeline: list[str]
+
+
+class ApiErrorItem(BaseModel):
+    loc: list[str]
+    reason: str
+    error_type: str | None = None
+
+
+class ApiErrorResponse(BaseModel):
+    status: Literal["fail"] = "fail"
+    detail: list[ApiErrorItem]
+
+
+class ApiIngestionRequest(BaseModel):
+    path: str = Field(min_length=1)
+    workspace: str | None = None
+    source_type: SourceType = "book"
+    max_pages: int | None = Field(default=None, ge=1)
+    recursive: bool = True
+    write_output: bool = True
+    keep_images: bool = False
+    plan_only: bool = False
+
+
+class ApiIngestionResult(BaseModel):
+    status: SkillStatus
+    stage: str | None = None
+    input_path: str | None = None
+    document_count: int | None = Field(default=None, ge=0)
+    documents: list[dict[str, Any]] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ApiIngestionResponse(BaseModel):
+    workspace: str
+    status: SkillStatus
+    result: ApiIngestionResult
+
+
+class ApiQueryRequest(BaseModel):
+    query: str = Field(min_length=1)
+    workspace: str | None = None
+    context: dict[str, Any] = Field(default_factory=dict)
+    constraints: dict[str, Any] = Field(default_factory=dict)
+    chunks_jsonl: list[str] = Field(default_factory=list)
+    chunks_dir: str | None = None
+    top_k: int | None = Field(default=None, ge=1)
+    scope: Literal["in_scope", "out_of_scope"] | None = Field(
+        default=None,
+        validation_alias=AliasChoices("scope", "domain_scope"),
+    )
+    user_mode: UserMode = "engineering"
+    task_id: str | None = None
+
+
+class ApiQueryResponse(BaseModel):
+    workspace: str
+    status: SkillStatus
+    task_id: str | None = None
+    output: SkillOutput
+
 class PhaseScope(BaseModel):
     active_skills: tuple[str, ...] = PHASE0_ACTIVE_SKILLS
     deferred_skills: tuple[str, ...] = PHASE0_DEFERRED_SKILLS
@@ -270,5 +343,3 @@ class PhaseScope(BaseModel):
         "signal_analysis",
         "standards_interpretation",
     )
-
-

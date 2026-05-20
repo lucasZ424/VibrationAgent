@@ -1,6 +1,6 @@
 # Phase 1 Progress
 
-Updated: 2026-05-19
+Updated: 2026-05-20
 
 ## Objective Status
 
@@ -21,6 +21,7 @@ Updated: 2026-05-19
 14. V4 output style shaping: done; engineering template rendering, empty-section omission, and citation-preserving evidence section active
 15. Tutor-Orchestrator minimal loop: done; scope check plus S2 -> S3 -> V4 chain active
 16. CLI minimal runtime path: done; structured ingest, ask, JSON output, and status exit codes active
+17. API minimal runtime path: done; health, scope, ingestion, and query endpoints active with Pydantic request/response contracts
 
 ## Notes
 
@@ -44,3 +45,9 @@ Updated: 2026-05-19
 - Objective 15 complete: `TutorOrchestrator` now rejects out-of-scope queries with localized text, executes the Phase-0 S2 -> S3 -> V4 chain for in-scope queries, short-circuits on S2/S3 fail or insufficient, records per-skill chain status, and groups nested results under `skill_results`.
 
 - Objective 16 complete: `apps.cli.main` now writes structured ingestion exports through `chunk_documents`, queries the Tutor-Orchestrator through `ask`, emits structured JSON with consistent workspace fields, maps statuses to exit codes 0/1/2, and owns the canonical CLI surface while `scripts/ingest_folder.py` remains a compatibility shim.
+
+- Objective 17 complete: `apps.api.main` now exposes `/health`, `/scope`, `/ingest`, and `/query`; API contracts live in `schemas.py`, ingestion/query reuse the formal Phase-0 pipeline, and runtime errors return JSON with locatable `detail[].loc` reasons.
+
+- Objective 17 issue review complete: API settings now load through cached dependency helpers with optional workspace overrides, Tutor-Orchestrator is cached, request validation uses the project error envelope, common exceptions map to 4xx where appropriate, `source_type` is strongly typed, ingestion responses use a typed result wrapper, and README marks the API as localhost-only development surface.
+
+- Objective 17 remaining polish complete: shared app bootstrap replaces duplicated import setup, `domain_scope` is now only a validation alias for `scope`, `_status_from_result()` no longer uses `cast`, and API endpoints return concrete success models while `ApiHandledError` handlers own error JSON responses.
