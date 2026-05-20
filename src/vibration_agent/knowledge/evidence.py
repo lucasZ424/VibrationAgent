@@ -1,4 +1,4 @@
-﻿"""Evidence mapping helpers for chunks, pages, and assets.
+"""Evidence mapping helpers for chunks, pages, and assets.
 
 Target 7 gives retrieval and answer layers a single representation for text and
 visual evidence. The helpers here intentionally stay deterministic: they do not
@@ -7,7 +7,7 @@ perform claim extraction or model-based citation checking yet.
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 from vibration_agent.schemas import Citation, DocumentAsset
 
@@ -18,7 +18,7 @@ def _as_asset(value: DocumentAsset | dict[str, Any]) -> DocumentAsset:
     return value if isinstance(value, DocumentAsset) else DocumentAsset.model_validate(value)
 
 
-def _pages_from_chunk(chunk: dict[str, Any]) -> list[int] | None:
+def _pages_from_chunk(chunk: Mapping[str, Any]) -> list[int] | None:
     pages = chunk.get("pages")
     if isinstance(pages, list):
         return [int(page) for page in pages]
@@ -27,11 +27,13 @@ def _pages_from_chunk(chunk: dict[str, Any]) -> list[int] | None:
     return None
 
 
-def _chunk_confidence(chunk: dict[str, Any]) -> float:
+def _chunk_confidence(chunk: Mapping[str, Any]) -> float:
     if chunk.get("confidence") is not None:
         return float(chunk["confidence"])
     if chunk.get("ocr_confidence_min") is not None:
         return float(chunk["ocr_confidence_min"])
+    if chunk.get("score") is not None:
+        return max(0.0, min(float(chunk["score"]), 1.0))
     return 1.0
 
 
@@ -79,6 +81,32 @@ def chunk_text_evidence_row(chunk: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def retrieval_evidence_row(item: Mapping[str, Any]) -> dict[str, Any] | None:
+    """Normalize one S2 hit/context row into answer-ready text evidence."""
+    source = item.get("chunk") if isinstance(item.get("chunk"), Mapping) else item
+    chunk_id = source.get("chunk_id")
+    doc_id = source.get("doc_id")
+    if not chunk_id or not doc_id:
+        logger.warning("Skipping evidence row without chunk_id/doc_id: %s", item)
+        return None
+    text = str(source.get("text") or source.get("api_context") or "").strip()
+    return {
+        "evidence_kind": "text",
+        "chunk_id": str(chunk_id),
+        "doc_id": str(doc_id),
+        "pages": _pages_from_chunk(source),
+        "source_type": source.get("source_type"),
+        "topic": source.get("topic"),
+        "language": source.get("language") or source.get("doc_language") or source.get("source_language"),
+        "text": text,
+        "reason": source.get("reason") or item.get("reason", ""),
+        "evidence_type": "documented",
+        "confidence": _chunk_confidence(source),
+        "metadata": source.get("metadata", {}) if isinstance(source.get("metadata"), Mapping) else {},
+        "assets": source.get("assets", []) if isinstance(source.get("assets"), list) else [],
+    }
+
+
 def chunk_asset_evidence_rows(chunk: dict[str, Any], *, include_body_asset: bool = False) -> list[dict[str, Any]]:
     """Return asset evidence rows attached to a chunk."""
     rows: list[dict[str, Any]] = []
@@ -104,15 +132,20 @@ def filter_assets_by_type(
     return [asset for asset in (_as_asset(item) for item in assets) if asset.object_type in object_types]
 
 
-def citation_from_chunk(chunk: dict[str, Any], *, evidence_type: str = "documented") -> Citation:
+def citation_from_chunk(chunk: Mapping[str, Any], *, evidence_type: str = "documented") -> Citation:
     """Build the current Phase-0 Citation model from a chunk or retrieval hit."""
     return Citation(
-        chunk_id=chunk["chunk_id"],
-        doc_id=chunk["doc_id"],
+        chunk_id=str(chunk["chunk_id"]),
+        doc_id=str(chunk["doc_id"]),
         pages=_pages_from_chunk(chunk),
         evidence_type=evidence_type,  # type: ignore[arg-type]
-        confidence=_chunk_confidence(chunk),
+        confidence=max(0.0, min(_chunk_confidence(chunk), 1.0)),
     )
+
+
+def citation_from_evidence(evidence: Mapping[str, Any], *, evidence_type: str = "documented") -> Citation:
+    """Build a citation from normalized retrieval evidence."""
+    return citation_from_chunk(evidence, evidence_type=evidence_type)
 
 
 def attach_citations(answer_text: str, hits: list[dict]) -> list[dict]:

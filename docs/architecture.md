@@ -42,6 +42,8 @@ Reserved but inactive skills are:
 
 Deferred skills may appear in registries or scope declarations, but they must not be implemented inside S3 or called by the Phase-0 orchestrator.
 
+Phase-0 S3 produces cited sentence selections from retrieved chunks. It deliberately avoids LLM synthesis so it cannot fill evidence gaps with model-world knowledge. Synthesized answer generation is deferred until the model/API integration objective.
+
 ## Development Order Rule
 
 Targets 1-3 establish the control plane for later work:

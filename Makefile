@@ -2,7 +2,7 @@
 
 install:
 	pip install -e .
-	pip install -r requirements_min.txt
+	pip install -r requirements_full.txt
 
 bootstrap:
 	python scripts/bootstrap_db.py

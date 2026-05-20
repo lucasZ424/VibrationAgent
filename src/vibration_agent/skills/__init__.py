@@ -11,5 +11,6 @@ Deferred:
 from .base import Skill
 from .s1_ingestion import IngestionSkill
 from .s2_retrieval import RetrievalSkill
+from .s3_qa_summary import QASummarySkill
 
-__all__ = ["IngestionSkill", "RetrievalSkill", "Skill"]
+__all__ = ["IngestionSkill", "QASummarySkill", "RetrievalSkill", "Skill"]

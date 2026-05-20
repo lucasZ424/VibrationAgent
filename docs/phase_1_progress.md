@@ -17,6 +17,7 @@ Updated: 2026-05-19
 11. S1 document ingestion skill: done; SkillInput/SkillOutput wrapper around structured ingestion exports active
 11.5. Agent-owned skill registry and model routing design: done; GPT-first routing and Opus-only extreme supervisor schemas active
 12. S2 hybrid retrieval skill: done; local chunk-export retrieval with query normalization, BM25, dense-like recall, RRF fusion, source priority, and insufficient recall handling active
+13. S3 QA/summary skill: done; evidence-bound QA, section summary, whole-document summary, language matching, and citation emission active
 
 ## Notes
 
@@ -33,3 +34,4 @@ Updated: 2026-05-19
 - Objective 11 complete: `IngestionSkill` now wraps the formal structured ingestion pipeline, returns document/chunk/output-path summaries, and converts missing inputs or pipeline failures into `SkillOutput` statuses instead of leaking raw exceptions.
 - Objective 11.5 complete: project-owned `agent_skills/` packages, GPT-first difficulty routing, model role registry, and extreme-task supervisor-loop schemas are in place without real API calls.
 - Objective 12 complete: `RetrievalSkill` wraps the hybrid retrieval pipeline over S1 `chunks.jsonl` exports, returns `RetrievalOutput` fields plus `retrieval_context`, emits citations from real hits, and returns `insufficient` without invented chunk ids when recall is weak.
+- Objective 13 complete: `QASummarySkill` now produces deterministic evidence-bound QA/summary outputs from S2 `retrieval_context`, returns `insufficient` without retrieved evidence, matches dominant source language, and binds every extracted claim to documented citations.
