@@ -1,4 +1,4 @@
-﻿# Phase 1 Progress
+# Phase 1 Progress
 
 Updated: 2026-05-19
 
@@ -18,6 +18,7 @@ Updated: 2026-05-19
 11.5. Agent-owned skill registry and model routing design: done; GPT-first routing and Opus-only extreme supervisor schemas active
 12. S2 hybrid retrieval skill: done; local chunk-export retrieval with query normalization, BM25, dense-like recall, RRF fusion, source priority, and insufficient recall handling active
 13. S3 QA/summary skill: done; evidence-bound QA, section summary, whole-document summary, language matching, and citation emission active
+14. V4 output style shaping: done; engineering template rendering, empty-section omission, and citation-preserving evidence section active
 
 ## Notes
 
@@ -35,3 +36,5 @@ Updated: 2026-05-19
 - Objective 11.5 complete: project-owned `agent_skills/` packages, GPT-first difficulty routing, model role registry, and extreme-task supervisor-loop schemas are in place without real API calls.
 - Objective 12 complete: `RetrievalSkill` wraps the hybrid retrieval pipeline over S1 `chunks.jsonl` exports, returns `RetrievalOutput` fields plus `retrieval_context`, emits citations from real hits, and returns `insufficient` without invented chunk ids when recall is weak.
 - Objective 13 complete: `QASummarySkill` now produces deterministic evidence-bound QA/summary outputs from S2 `retrieval_context`, returns `insufficient` without retrieved evidence, matches dominant source language, and binds every extracted claim to documented citations.
+
+- Objective 14 complete: `OutputStyleSkill` renders upstream S3 results into the fixed engineering template, omits unavailable sections, preserves citations, and keeps all new engineering analysis deferred.

@@ -1,4 +1,4 @@
-﻿"""Skill registry.
+"""Skill registry.
 
 URGENT (phase-0):
   S1 ingestion, S2 retrieval, S3 qa_summary, V4 style
@@ -12,5 +12,6 @@ from .base import Skill
 from .s1_ingestion import IngestionSkill
 from .s2_retrieval import RetrievalSkill
 from .s3_qa_summary import QASummarySkill
+from .v4_style import OutputStyleSkill
 
-__all__ = ["IngestionSkill", "QASummarySkill", "RetrievalSkill", "Skill"]
+__all__ = ["IngestionSkill", "OutputStyleSkill", "QASummarySkill", "RetrievalSkill", "Skill"]

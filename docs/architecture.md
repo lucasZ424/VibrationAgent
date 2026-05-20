@@ -1,6 +1,6 @@
 # Architecture Notes
 
-This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `vibration_agent_design.docx`; this file records the decisions that are already binding for code layout and Phase-0 development.
+This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `docs/vibration_agent_design.md`; this file records the decisions that are already binding for code layout and Phase-0 development.
 
 ## Layer To Code Map
 
@@ -43,6 +43,8 @@ Reserved but inactive skills are:
 Deferred skills may appear in registries or scope declarations, but they must not be implemented inside S3 or called by the Phase-0 orchestrator.
 
 Phase-0 S3 produces cited sentence selections from retrieved chunks. It deliberately avoids LLM synthesis so it cannot fill evidence gaps with model-world knowledge. Synthesized answer generation is deferred until the model/API integration objective.
+
+Phase-0 V4 is a formatting layer. It can reorder and render upstream S3 content into the engineering answer template, preserve citations, and omit empty sections. It must not invent engineering meaning, assumptions, failure modes, formulas, or next actions; those belong to later deferred skills or future model-backed synthesis.
 
 ## Development Order Rule
 

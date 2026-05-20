@@ -1,6 +1,8 @@
 # Engineering answer template
 
-```
+Render sections in this order and omit empty sections:
+
+```text
 结论:
 {conclusion}
 
@@ -10,10 +12,10 @@
 适用前提:
 {premises}
 
-失效条件 / 常见误区:
+失效条件/常见误区:
 {failure_modes}
 
-最简模型 / 公式:
+最简模型/公式:
 {minimal_model}
 
 下一步建议:
