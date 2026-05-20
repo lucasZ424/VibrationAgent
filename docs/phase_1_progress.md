@@ -19,6 +19,7 @@ Updated: 2026-05-19
 12. S2 hybrid retrieval skill: done; local chunk-export retrieval with query normalization, BM25, dense-like recall, RRF fusion, source priority, and insufficient recall handling active
 13. S3 QA/summary skill: done; evidence-bound QA, section summary, whole-document summary, language matching, and citation emission active
 14. V4 output style shaping: done; engineering template rendering, empty-section omission, and citation-preserving evidence section active
+15. Tutor-Orchestrator minimal loop: done; scope check plus S2 -> S3 -> V4 chain active
 
 ## Notes
 
@@ -38,3 +39,5 @@ Updated: 2026-05-19
 - Objective 13 complete: `QASummarySkill` now produces deterministic evidence-bound QA/summary outputs from S2 `retrieval_context`, returns `insufficient` without retrieved evidence, matches dominant source language, and binds every extracted claim to documented citations.
 
 - Objective 14 complete: `OutputStyleSkill` renders upstream S3 results into the fixed engineering template, omits unavailable sections, preserves citations, and keeps all new engineering analysis deferred.
+
+- Objective 15 complete: `TutorOrchestrator` now rejects out-of-scope queries with localized text, executes the Phase-0 S2 -> S3 -> V4 chain for in-scope queries, short-circuits on S2/S3 fail or insufficient, records per-skill chain status, and groups nested results under `skill_results`.

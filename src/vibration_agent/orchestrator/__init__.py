@@ -1,3 +1,3 @@
-from .tutor import handle_query
+from .tutor import TutorOrchestrator, handle_query, is_in_scope
 
-__all__ = ["handle_query"]
+__all__ = ["TutorOrchestrator", "handle_query", "is_in_scope"]
