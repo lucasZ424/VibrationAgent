@@ -63,6 +63,33 @@ python -m apps.cli.main scope
 python -m apps.cli.main config
 ```
 
+## Phase-0 CLI
+
+Build structured ingestion exports for books under `data/raw/book`:
+
+```bash
+python -m apps.cli.main ingest data/raw/book --source-type book
+```
+
+Ask against an exported chunk file:
+
+```bash
+python -m apps.cli.main ask "阻尼比如何影响转子振动？" --chunks-jsonl data/chunks/book/<doc_id>/chunks.jsonl --top-k 4
+```
+
+CLI exit codes:
+
+- `0`: ok
+- `1`: fail
+- `2`: insufficient, including out-of-scope or missing evidence
+
+
+Legacy compatibility:
+
+- `scripts/ingest_folder.py` is deprecated as a primary interface. It remains as a thin wrapper around `python -m apps.cli.main` for older commands.
+API keys should not be pasted into chat or committed. When model-backed API work
+is activated, put provider keys in local environment variables or `.env.local`.
+
 ## Development Start Points
 
 1. `src/vibration_agent/schemas.py`: Pydantic contracts.

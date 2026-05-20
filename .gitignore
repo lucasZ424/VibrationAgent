@@ -1,4 +1,4 @@
-﻿__pycache__/
+__pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
@@ -23,6 +23,7 @@ db/qdrant/storage/
 # Tooling
 .ruff_cache/
 .pytest_cache/
+.pytest_tmp/
 .mypy_cache/
 .ipynb_checkpoints/
 node_modules/
