@@ -14,7 +14,10 @@ pytestmark = pytest.mark.integration
 
 
 def _isolated_settings(tmp_path):
-    return load(tmp_path)
+    workspace = tmp_path / "workspace"
+    (workspace / "configs").mkdir(parents=True, exist_ok=True)
+    (workspace / "src" / "vibration_agent").mkdir(parents=True, exist_ok=True)
+    return load(workspace)
 
 
 def test_phase0_fixture_runs_s1_to_s2_s3_v4(tmp_path):

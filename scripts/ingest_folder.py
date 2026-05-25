@@ -25,6 +25,10 @@ from apps.cli.main import main as cli_main  # noqa: E402
 
 
 def _forward_args(args: argparse.Namespace) -> list[str]:
+    prefix: list[str] = []
+    if args.workspace is not None:
+        prefix.extend(["--workspace", str(args.workspace)])
+
     if args.chunk_documents:
         forwarded = ["ingest", args.src]
     elif args.parse_pages:
@@ -42,7 +46,7 @@ def _forward_args(args: argparse.Namespace) -> list[str]:
         forwarded.append("--no-write")
     if args.keep_images:
         forwarded.append("--keep-images")
-    return forwarded
+    return [*prefix, *forwarded]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -50,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
         description="Deprecated compatibility wrapper. Prefer `python -m apps.cli.main ingest ...`."
     )
     parser.add_argument("--src", required=True, help="Input file or directory")
+    parser.add_argument("--workspace", type=Path, default=None, help="Project workspace root")
     parser.add_argument("--no-recursive", action="store_true", help="Only scan the top-level directory")
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--parse-pages", action="store_true", help="Run native parsing/OCR after classification")

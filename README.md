@@ -138,13 +138,19 @@ Install test dependencies:
 .\.venv\Scripts\python.exe -m pip install -e ".[dev]"
 ```
 
-Run the regression suite:
+Run only fast tests:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not integration"
+```
+
+Run the full regression suite, including Phase-0 end-to-end checks:
 
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests -q
 ```
 
-Reusable small fixtures live under `tests/fixtures/`; they are intentionally independent of the full book corpus.
+Reusable small fixtures live under `tests/fixtures/`; they are intentionally independent of the full book corpus. Obj19 end-to-end tests use the same fixture to validate CLI, API, and legacy ingestion paths.
 
 ## Development Start Points
 

@@ -25,6 +25,12 @@ def _fixture_chunk() -> dict:
     return _jsonl(FIXTURES / "chunks" / "sample_chunks.jsonl")[0]
 
 
+def _project_workspace(path: Path) -> Path:
+    (path / "configs").mkdir(parents=True, exist_ok=True)
+    (path / "src" / "vibration_agent").mkdir(parents=True, exist_ok=True)
+    return path
+
+
 def test_small_pdf_fixture_classifies_as_native_pdf():
     pdf = FIXTURES / "raw" / "small_vibration_native.pdf"
 
@@ -84,7 +90,7 @@ def test_chunker_regression_matches_page_and_chunk_fixtures():
 def test_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
     pdf = FIXTURES / "raw" / "small_vibration_native.pdf"
     document = classify_document(pdf)
-    settings = load(tmp_path)
+    settings = load(_project_workspace(tmp_path / "workspace"))
 
     result = chunk_document_pages(document, settings=settings, max_pages=1, write_output=True)
     produced = _jsonl(Path(result["chunks_output_path"]))[0]

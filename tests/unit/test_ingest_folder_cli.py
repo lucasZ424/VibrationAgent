@@ -24,3 +24,17 @@ def test_ingest_folder_plan_mode_delegates_to_canonical_cli(tmp_path, capsys):
     assert payload["status"] == "insufficient"
     assert payload["stage"] == "input_classification"
     assert payload["workspace"]
+
+def test_ingest_folder_forwards_workspace_to_canonical_cli(tmp_path, capsys):
+    source = tmp_path / "empty"
+    workspace = tmp_path / "workspace"
+    (workspace / "configs").mkdir(parents=True)
+    (workspace / "src" / "vibration_agent").mkdir(parents=True)
+    source.mkdir()
+
+    code = main(["--workspace", str(workspace), "--src", str(source)])
+    payload = _stdout_json(capsys)
+
+    assert code == 2
+    assert payload["workspace"] == str(workspace.resolve())
+    assert payload["status"] == "insufficient"
