@@ -278,6 +278,12 @@ def _section_title_for_header(section_title: str | None, limit: int = 60) -> str
     return normalized[: limit - 1].rstrip() + "..."
 
 
+def _citation_anchor(title: str, page_start: int, page_end: int) -> str:
+    if page_start == page_end:
+        return f"{title}, p. {page_start}"
+    return f"{title}, pp. {page_start}-{page_end}"
+
+
 def _api_context_text(*, chunk_id: str, doc_id: str, page_start: int, page_end: int, section_meta: dict[str, Any], text: str) -> str:
     section_title = _section_title_for_header(section_meta.get("section_title"))
     header_parts = [
@@ -350,7 +356,7 @@ def chunk_paragraphs(
                 "topic": section_meta["section_title"],
                 "token_estimate": estimate_tokens(text),
                 "char_count": len(text),
-                "citation_anchor": f"{title}, pp. {page_start}-{page_end}",
+                "citation_anchor": _citation_anchor(title, page_start, page_end),
                 "text": text,
                 "assets": assets,
                 "ocr_confidence_min": quality["ocr_confidence_min"],

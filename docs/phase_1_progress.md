@@ -22,6 +22,7 @@ Updated: 2026-05-20
 15. Tutor-Orchestrator minimal loop: done; scope check plus S2 -> S3 -> V4 chain active
 16. CLI minimal runtime path: done; structured ingest, ask, JSON output, and status exit codes active
 17. API minimal runtime path: done; health, scope, ingestion, and query endpoints active with Pydantic request/response contracts
+18. Test fixtures and regression samples: done; small PDF, OCR JSONL, chunk JSONL, retrieval JSON, and S1 -> S2 -> S3 -> V4 integration fixture active
 
 ## Notes
 
@@ -51,3 +52,7 @@ Updated: 2026-05-20
 - Objective 17 issue review complete: API settings now load through cached dependency helpers with optional workspace overrides, Tutor-Orchestrator is cached, request validation uses the project error envelope, common exceptions map to 4xx where appropriate, `source_type` is strongly typed, ingestion responses use a typed result wrapper, and README marks the API as localhost-only development surface.
 
 - Objective 17 remaining polish complete: shared app bootstrap replaces duplicated import setup, `domain_scope` is now only a validation alias for `scope`, `_status_from_result()` no longer uses `cast`, and API endpoints return concrete success models while `ApiHandledError` handlers own error JSON responses.
+
+- Objective 18 complete: `tests/fixtures/` now contains a small native-text PDF plus page/chunk/retrieval fixtures; unit tests validate fixture schemas, query normalization, search, and evidence helpers; integration tests exercise S1 ingestion through the Tutor-Orchestrator S2 -> S3 -> V4 chain without requiring the full book corpus.
+
+- Objective 18 issue review complete: fixture regression tests now call the real chunker and PDF pipeline to detect golden-file drift, fixture paths are portable, single-page citation anchors render as `p. N`, integration tests use an isolated workspace and skip cleanly without PyMuPDF, pytest strict markers are enabled, and fixture provenance/regeneration policy is documented.

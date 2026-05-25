@@ -129,6 +129,23 @@ Legacy compatibility:
 API keys should not be pasted into chat or committed. When model-backed API work
 is activated, put provider keys in local environment variables or `.env.local`.
 
+
+## Testing
+
+Install test dependencies:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -e ".[dev]"
+```
+
+Run the regression suite:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q
+```
+
+Reusable small fixtures live under `tests/fixtures/`; they are intentionally independent of the full book corpus.
+
 ## Development Start Points
 
 1. `src/vibration_agent/schemas.py`: Pydantic contracts.
