@@ -1,8 +1,11 @@
 """Shared Pydantic schemas for vibration_agent.
 
 This module is the single source of truth for Phase-0 skill I/O and the
-file-level objects produced by ingestion. Update schemas here before changing
-skills, storage adapters, or API contracts.
+file-level objects produced by ingestion.
+
+Phase-1 Interface Freeze (2026-05-26): these contracts are stable for Phase-0 consumers.
+Any Phase-2 schema change must start here, update fixtures/tests, and be
+recorded in docs/phase_1_interface_freeze.md before callers are changed.
 """
 from __future__ import annotations
 

@@ -2,6 +2,12 @@
 
 This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `docs/vibration_agent_design.md`; this file records the decisions that are already binding for code layout and Phase-0 development.
 
+## Product Positioning
+
+The product target is local personal deployment: one trusted user, local corpus files, localhost CLI/API access, and private engineering notes/exports. This positioning is binding for prioritization: retrieval quality, evidence traceability, bilingual engineering usability, and reproducible local workflows come before multi-user deployment hardening.
+
+If the product moves to shared, remote, or public access, API path safety, authentication, authorization, rate limiting, and persistence readiness become new scope rather than implicit Phase-1 requirements.
+
 ## Layer To Code Map
 
 | Layer | Code Location |
@@ -159,3 +165,15 @@ Acceptance should require:
 - a model registry abstraction for GPT and Opus clients
 - an extreme-task supervisor-loop schema
 - no mandatory Opus call for low, medium, or high tasks
+
+## Phase-1 Interface Freeze
+
+Phase 1 is frozen as a Phase-0 implementation. The running chain is:
+
+```text
+S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style
+```
+
+The user query path is `TutorOrchestrator -> S2 -> S3 -> V4`. S1 is invoked explicitly by ingestion entry points and prepares file-backed knowledge exports for S2.
+
+The frozen contract list, accepted limits, and Phase-2 candidate backlog are recorded in `docs/phase_1_interface_freeze.md`. Deferred skills S4-S8 and V1-V3 remain registry/documentation names only and are not called by the Phase-1 runtime.

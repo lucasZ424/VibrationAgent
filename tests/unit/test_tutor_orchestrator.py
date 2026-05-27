@@ -1,8 +1,10 @@
 import json
+import sys
 from pathlib import Path
 
 from vibration_agent.orchestrator import TutorOrchestrator, handle_query, is_in_scope
 from vibration_agent.schemas import SkillInput, SkillOutput
+from vibration_agent.skills import OutputStyleSkill, QASummarySkill, RetrievalSkill
 from vibration_agent.skills.base import Skill
 
 
@@ -47,6 +49,29 @@ class RecordingSkill(Skill):
     def run(self, payload: SkillInput) -> SkillOutput:
         self.calls.append(payload)
         return self.output
+
+
+def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
+    orchestrator = TutorOrchestrator()
+
+    active_skills = [
+        orchestrator.retrieval_skill,
+        orchestrator.qa_summary_skill,
+        orchestrator.style_skill,
+    ]
+    active_names = {skill.name for skill in active_skills}
+    deferred_prefixes = ("s4_", "s5_", "s6_", "s7_", "s8_", "v1_", "v2_", "v3_")
+
+    assert type(orchestrator.retrieval_skill) is RetrievalSkill
+    assert type(orchestrator.qa_summary_skill) is QASummarySkill
+    assert type(orchestrator.style_skill) is OutputStyleSkill
+    assert active_names == {"s2_retrieval", "s3_qa_summary", "v4_style"}
+    assert all(not name.startswith(deferred_prefixes) for name in active_names)
+    assert not any(
+        module_name.startswith(f"vibration_agent.skills.{prefix}")
+        for module_name in sys.modules
+        for prefix in deferred_prefixes
+    )
 
 
 def test_scope_detection_accepts_vibration_terms_and_rejects_general_topics():

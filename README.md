@@ -2,6 +2,12 @@
 
 `vibration_agent` is a personal, engineering-oriented vibration-learning and knowledge-base agent. It is designed for real industrial use cases such as rotating machinery, condition monitoring, signal analysis, and standards interpretation.
 
+## Product Positioning
+
+This product is designed for local, personal deployment by one engineering user. The default operating model is trusted local files, localhost API/CLI access, and a private knowledge base; it is not a multi-user SaaS or public web service.
+
+Development should prioritize corpus quality, retrieval reliability, citation traceability, Chinese/English engineering usability, and local reproducibility before production API hardening. Shared, remote, or public deployment changes the security model and must be treated as explicit hardening work.
+
 ## Phase-0 Scope
 
 Only four skills ship in the first milestone.
@@ -150,7 +156,12 @@ Run the full regression suite, including Phase-0 end-to-end checks:
 .\.venv\Scripts\python.exe -m pytest tests -q
 ```
 
-Reusable small fixtures live under `tests/fixtures/`; they are intentionally independent of the full book corpus. Obj19 end-to-end tests use the same fixture to validate CLI, API, and legacy ingestion paths.
+Reusable small fixtures live under `tests/fixtures/`; they are intentionally independent of the full book corpus. Obj19 end-to-end tests use the same fixture to validate CLI, API, and legacy ingestion paths. Phase-1 deferred/polish decisions are tracked in `docs/phase_1_deferred_and_polish_audit.md`.
+
+
+## Phase-1 Interface Freeze
+
+Phase 1 is frozen as the Phase-0 implementation. The stable runtime chain is `S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style`. Interface freeze details are recorded in `docs/phase_1_interface_freeze.md`; deferred/polish decisions are recorded in `docs/phase_1_deferred_and_polish_audit.md`.
 
 ## Development Start Points
 

@@ -1,6 +1,6 @@
 # Phase 1 Progress
 
-Updated: 2026-05-20
+Updated: 2026-05-26
 
 ## Objective Status
 
@@ -24,6 +24,7 @@ Updated: 2026-05-20
 17. API minimal runtime path: done; health, scope, ingestion, and query endpoints active with Pydantic request/response contracts
 18. Test fixtures and regression samples: done; small PDF, OCR JSONL, chunk JSONL, retrieval JSON, and S1 -> S2 -> S3 -> V4 integration fixture active
 19. End-to-end validation: done; fixture PDF ingestion, chunk export, CLI/API query, evidence citations, insufficient recall, and out-of-scope paths are covered
+20. Interface freeze and Phase-2 planning: done; schemas, runtime chain, entry points, structured outputs, deferred scope, and Phase-2 candidate backlog are documented
 
 ## Notes
 
@@ -59,3 +60,7 @@ Updated: 2026-05-20
 - Objective 18 issue review complete: fixture regression tests now call the real chunker and PDF pipeline to detect golden-file drift, fixture paths are portable, single-page citation anchors render as `p. N`, integration tests use an isolated workspace and skip cleanly without PyMuPDF, pytest strict markers are enabled, and fixture provenance/regeneration policy is documented.
 
 - Objective 19 complete: `tests/integration/test_obj19_end_to_end.py` validates raw PDF -> chunks/manifest/api_context exports through the canonical CLI, real in-scope question -> engineering answer with citation, in-scope evidence gap -> insufficient, out-of-scope query -> out_of_scope, API ingest/query parity, and the deprecated `scripts/ingest_folder.py` shim chunk-export path.
+
+- Phase 1 deferred/polish audit complete: `docs/phase_1_deferred_and_polish_audit.md` consolidates resolved issues, explicit Phase-2 deferrals, accepted Phase-1 tradeoffs, and Obj20 preconditions.
+
+- Objective 20 complete: `docs/phase_1_interface_freeze.md` freezes the Phase-1 interface and runtime chain, `schemas.py` carries the freeze note, architecture/README/development-order docs point to the freeze record, and Phase-2 candidates are documented without changing Phase-1 scope.

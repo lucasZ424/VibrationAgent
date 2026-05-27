@@ -422,3 +422,16 @@
 33. `tests/unit/`
 34. `tests/integration/`
 35. `docs/architecture.md`
+
+---
+
+## 一阶段冻结结果
+
+Obj20 完成后，一阶段接口冻结为 Phase-1 Interface Freeze 后的 Phase-0 最小闭环：`S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style`。
+
+冻结依据：
+- `src/vibration_agent/schemas.py` 是一阶段接口唯一来源。
+- `docs/phase_1_interface_freeze.md` 记录冻结接口、入口、产物和 Phase2 候选范围。
+- `docs/phase_1_deferred_and_polish_audit.md` 记录 deferred/polish 分类，明确哪些不阻塞 Phase1 完成。
+- 主链路不调用 S4-S8 或 V1-V3。
+- 默认测试夹具不依赖整本大书，完整回归由 `pytest tests -q` 验证。
