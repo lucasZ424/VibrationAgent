@@ -6,7 +6,19 @@
 
 二阶段不实现：S6 文献搜索、S7 模型选择、S8 实验建议（统一推迟到三阶段）、Web 前端、k8s 部署、多租户、可观察性栈。后续能力只保留注册名称或占位，不进入二阶段主链路。
 
-二阶段不破坏一阶段冻结接口。所有 `schemas.py` 中已冻结契约的变更必须先在 `src/vibration_agent/schemas.py` 起手，同步更新 `docs/phase_1_interface_freeze.md` 的迁移说明，再改下游调用方。新增字段优先以 optional 形式追加；废弃字段需在二阶段冻结时统一处理。
+二阶段不破坏一阶段冻结接口。所有 `schemas.py` 中已冻结契约的变更必须先在 `src/vibration_agent/schemas.py` 起手，并按 `docs/phase_2_migrations.md` 中的 canonical schema-change checklist 记录迁移说明、更新 fixtures/tests、再改下游调用方。新增字段优先以 optional 形式追加；废弃字段需在二阶段冻结时统一处理。
+
+## 执行模型与风险控制
+
+二阶段保持一个连续阶段，不再拆分为 Phase-2A/2B/2C。执行粒度固定为单个 Obj：每个 Obj 独立定义成功标准、完成实现、跑对应验证，并在进入下一个 Obj 前做评估。评估未通过时，不继续推进后续目标。
+
+风险控制原则：
+
+1. 不跨 Obj 批量合并能力。尤其是 embeddings、Qdrant、Postgres、LLM S3、V2、S4、S5，必须逐项落地、逐项验证。
+2. 所有外部依赖能力必须保留一阶段降级路径。缺少模型、Qdrant、Postgres、在线 LLM 或 Opus 时，fast suite 和本地基础问答仍可运行。
+3. 高风险能力默认通过 feature flag 或显式配置启用。未完成配套校验前，不替换一阶段默认确定性链路。
+4. S3 LLM 综合与 V2 引用核对视为强耦合交付面。可以分 Obj 实现，但 S3 LLM 默认启用前必须已有 V2 或等价引用拦截保护。
+5. 每个 Obj 完成后更新 `docs/phase_2_progress.md`，记录已验证命令、残留风险、是否允许进入下一 Obj。
 
 ## 排序原则
 
@@ -129,7 +141,7 @@
 
 验收标准：
 - 集成测试需 Qdrant 实例（docker-compose / `pytest.importorskip("qdrant_client")`），缺失时 skip。
-- 任何 Qdrant 操作失败不阻塞 CLI/API：转 `insufficient` + `warnings`。
+- 任何 Qdrant 操作失败不阻塞 CLI/API：dense lane 降级到一阶段 token-feature 逻辑并记录 `warnings`；只有所有检索通道均无可用证据时才返回 `insufficient`。
 - 一阶段不依赖 Qdrant 的回归套件仍然通过（fast suite 不要求 Qdrant）。
 
 ### 7. Postgres 实时写入与 qa_logs 持久化
@@ -149,6 +161,7 @@
 验收标准：
 - 迁移脚本可重放（idempotent），与一阶段 storage/mappings.py 的 schema 对齐。
 - `pytest.importorskip("psycopg")` 守卫集成测试。
+- `qa_logs` 写入是可选 side effect；写入失败只产生 warning，不改变 Tutor-Orchestrator 的主返回状态。
 - qa_logs 不持久 API key 或长文本原文，只保留可定位的引用与摘要。
 
 ### 8. 大语料冷启动与回归基线
@@ -183,6 +196,7 @@
 - 一阶段 routing 已在 GPT 优先 / Opus 仅 extreme 升级；S3 默认走 GPT。
 
 验收标准：
+- V2 或等价引用拦截未完成前，LLM-backed S3 只能通过 feature flag 手动启用，不能替换默认 S3 路径。
 - 无 evidence 时不调用 LLM，直接返回 `insufficient`。
 - LLM 失败 / timeout / quota 用 `warnings` 记录并降级到一阶段确定性逻辑。
 - 单元测试通过 mock 客户端覆盖 ok / insufficient / fail / timeout 四条路径。
@@ -201,6 +215,7 @@
 - 主链路扩展为 `S2 → S3 → V2 → V4`，但 V2 不被算作"新链路"——在冻结文档中标注为质量层。
 
 验收标准：
+- V2 至少覆盖引用存在性、chunk 可见性、无引用 claim 拦截、明显词面不匹配拦截；语义蕴含级核对不作为二阶段强制验收。
 - V2 拦截率 ≥ 90% 的人为构造伪引用（单元测试样本）。
 - 端到端：在 S3 故意 mock 出未引用的 claim 时，最终答案中不会出现该 claim。
 - V2 失败本身不让主链路 fail，降级到 `warnings` + 透传 S3 原答案。
@@ -220,6 +235,7 @@
 
 验收标准：
 - 单元测试覆盖术语映射、缺失术语穿透、单位归一化。
+- V1 的输入侧规范化和输出侧渲染可以共用词表，但必须保持两个调用点可独立关闭，避免隐式改写 evidence 原文。
 - V1 改写不破坏 citation 锚点（`[chunk_id]` 必须保留）。
 - 关闭 V1 时（feature flag）主链路依然通过——V1 不是必经节点。
 
@@ -311,6 +327,7 @@
 - `ApiHealthResponse.status` 扩展为 `ok | degraded | fail`。
 
 验收标准：
+- 路径白名单校验优先于认证/CORS/rate limiting 落地；除非产品定位从本地个人部署变为共享/远程访问，否则认证/CORS/rate limiting 不得阻塞检索与引用质量目标。
 - 单元测试覆盖：无 token、错 token、对 token、路径越权、降级 health。
 - localhost 默认行为不变（开关默认关闭以保持 dev 体验）。
 - 一阶段冻结的 API 字段不破坏；新增字段全部 optional。

@@ -10,6 +10,8 @@ Development should prioritize corpus quality, retrieval reliability, citation tr
 
 ## Phase-0 Scope
 
+This is the frozen Phase-1 runtime state. Active development is Phase 2; see the Phase-2 Development Plan below.
+
 Only four skills ship in the first milestone.
 
 | ID | Skill | Status |
@@ -162,6 +164,14 @@ Reusable small fixtures live under `tests/fixtures/`; they are intentionally ind
 ## Phase-1 Interface Freeze
 
 Phase 1 is frozen as the Phase-0 implementation. The stable runtime chain is `S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style`. Interface freeze details are recorded in `docs/phase_1_interface_freeze.md`; deferred/polish decisions are recorded in `docs/phase_1_deferred_and_polish_audit.md`.
+
+## Phase-2 Development Plan
+
+Phase 2 is now the active development plan for turning the frozen Phase-1 skeleton into a locally usable personal knowledge-base Agent. The approved development order is recorded in `docs/phase_2_development_order.md`.
+
+In short, Phase 2 makes the local knowledge-base path usable: stronger fixtures and document ingestion, real retrieval/storage, citation-guarded model synthesis, selected quality and engineering skills, targeted API hardening, CI, and a Phase-2 interface freeze. It still excludes later-phase product surfaces such as literature search, model selection, experiment advice, Web UI, k8s, multi-tenant operation, and a full observability stack.
+
+Work proceeds one Obj at a time, with review before the next Obj starts. Phase-1 frozen contracts remain valid until a documented Phase-2 migration updates them through `docs/phase_2_migrations.md`.
 
 ## Development Start Points
 

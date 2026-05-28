@@ -1,6 +1,6 @@
 # Architecture Notes
 
-This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `docs/vibration_agent_design.md`; this file records the decisions that are already binding for code layout and Phase-0 development.
+This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `docs/vibration_agent_design.md`; this file records the decisions that are already binding for code layout, Phase-0 runtime, and approved Phase-2 development.
 
 ## Product Positioning
 
@@ -177,3 +177,11 @@ S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style
 The user query path is `TutorOrchestrator -> S2 -> S3 -> V4`. S1 is invoked explicitly by ingestion entry points and prepares file-backed knowledge exports for S2.
 
 The frozen contract list, accepted limits, and Phase-2 candidate backlog are recorded in `docs/phase_1_interface_freeze.md`. Deferred skills S4-S8 and V1-V3 remain registry/documentation names only and are not called by the Phase-1 runtime.
+
+## Phase-2 Development Boundary
+
+The approved Phase-2 development order is recorded in `docs/phase_2_development_order.md`. Phase 2 keeps the Phase-1 frozen interfaces as the migration base while moving the product toward a locally usable personal knowledge-base Agent.
+
+At architecture level, Phase 2 activates three kinds of work: local-corpus usability, real retrieval/storage, and citation-guarded reasoning/quality layers. Later product surfaces remain outside Phase 2 unless a new boundary decision changes the scope.
+
+Phase-2 execution is Obj-based. Each Obj must define verification, preserve a fallback path for external dependencies, update progress notes, and pass review before the next Obj starts. Schema or API contract changes follow the canonical process in `docs/phase_2_migrations.md`; until a specific Obj completes that process, the Phase-1 runtime chain remains the stable baseline.

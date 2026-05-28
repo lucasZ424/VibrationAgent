@@ -1,6 +1,6 @@
 # Phase-1 Interface Freeze
 
-Updated: 2026-05-26
+Updated: 2026-05-28
 
 ## Freeze Decision
 
@@ -141,16 +141,8 @@ The following are explicitly outside the Phase-1 freeze:
 
 See `docs/phase_1_deferred_and_polish_audit.md` for the detailed deferred/polish ledger.
 
-## Phase 2 Candidate Scope
+## Phase 2 Approved Development Boundary
 
-Phase 2 may consider:
+Phase 2 is now governed by `docs/phase_2_development_order.md`. It extends the Phase-1 skeleton toward a locally usable personal knowledge-base Agent, but it does not retroactively change the frozen Phase-1 chain.
 
-- real embedding generation and Qdrant integration
-- Postgres writes and QA log persistence
-- V1/V2/V3 quality layer activation
-- S4/S5 engineering reasoning and derivation
-- model-backed answer synthesis with citation checking
-- production API hardening
-- large-corpus validation suites
-
-None of these candidates changes the Phase-1 frozen chain until explicitly accepted in a new design/update objective.
+The authoritative Phase-2 scope, exclusions, order, and risk controls live in `docs/phase_2_development_order.md`. This freeze document only records the compatibility rule: none of the Phase-2 scope changes the Phase-1 frozen chain until a specific Obj completes the canonical schema-change process in `docs/phase_2_migrations.md`. Work proceeds one Obj at a time, with review before the next Obj starts.
