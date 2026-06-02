@@ -1,0 +1,19 @@
+{
+  "normalized_query": "阻尼比 临界转速 转子振动 damping ratio zeta ζ 阻尼比 相对阻尼 critical speed 临界转速 临界速度",
+  "intent": "engineering",
+  "status": "ok",
+  "warnings": [],
+  "hits": [
+    {
+      "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+      "doc_id": "fixture_rotor_zh_doc",
+      "source_type": "book",
+      "pages": [
+        1,
+        2
+      ],
+      "score": 0.053187,
+      "reason": "bm25+dense match; matched: 阻, 尼, 比, 阻尼; source priority 4"
+    }
+  ]
+}
