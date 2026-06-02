@@ -118,6 +118,22 @@ class DocumentInput(BaseModel):
     language: DocumentLanguage = "unknown"
 
 
+class DocumentBibliography(BaseModel):
+    """Bibliographic metadata extracted from PDF metadata and first-page text.
+
+    Phase-2 Obj3 addition. Every field falls back to empty/None when nothing is
+    found, so Phase-1 citation behavior is preserved when no bibliography exists.
+    Maps to the future `documents` table (year/authors/publisher columns).
+    """
+
+    year: int | None = None
+    authors: list[str] = Field(default_factory=list)
+    publisher: str | None = None
+
+    def has_author_year(self) -> bool:
+        return bool(self.authors) and self.year is not None
+
+
 class DocumentAsset(BaseModel):
     asset_id: str
     doc_id: str

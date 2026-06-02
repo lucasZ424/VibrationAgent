@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Sequence
 
-from vibration_agent.schemas import DocumentAsset, OcrPage
+from vibration_agent.ingestion.section_hierarchy import build_hierarchy_warnings, build_parent_map
+from vibration_agent.schemas import DocumentAsset, DocumentBibliography, OcrPage
 
 SCHEMA_VERSION = "0.1"
 FRONT_MATTER_SECTION_KEY = "front_matter"
@@ -254,19 +255,38 @@ def _chunk_assets(
     return [_asset_ref(asset) for asset in assets]
 
 
-def _section_metadata(paragraphs: Sequence[Paragraph]) -> dict[str, Any]:
+def _section_metadata(
+    paragraphs: Sequence[Paragraph],
+    parent_map: dict[str, list[str]] | None = None,
+    hierarchy_warnings: dict[str, list[str]] | None = None,
+) -> dict[str, Any]:
     section_keys = list(dict.fromkeys(paragraph.section_key for paragraph in paragraphs))
     section_titles = list(dict.fromkeys(paragraph.section_title for paragraph in paragraphs if paragraph.section_title))
     section_levels = [paragraph.section_level for paragraph in paragraphs if paragraph.section_level]
+    primary_key = section_keys[0] if section_keys else FRONT_MATTER_SECTION_KEY
     return {
-        "section_key": section_keys[0] if section_keys else FRONT_MATTER_SECTION_KEY,
+        "section_key": primary_key,
         "section_keys": section_keys,
+        "section_parent_keys": (parent_map or {}).get(primary_key, []),
+        "section_hierarchy_source": "heading_level" if section_levels else "unsectioned",
+        "section_hierarchy_warnings": (hierarchy_warnings or {}).get(primary_key, []),
         "section_title": section_titles[0] if section_titles else None,
         "section_level": section_levels[0] if section_levels else 0,
         "section_boundary_crossed": len(section_keys) > 1,
         "section_boundary_policy": "flush_before_new_section",
         "title_in_text": any(paragraph.block_type == "title" for paragraph in paragraphs),
         "paragraph_count": len(paragraphs),
+    }
+
+
+def _bibliography_metadata(bibliography: DocumentBibliography | None) -> dict[str, Any]:
+    """Serialize bibliography for chunk metadata; empty/None when unavailable."""
+    if bibliography is None:
+        return {"year": None, "authors": [], "publisher": None}
+    return {
+        "year": bibliography.year,
+        "authors": list(bibliography.authors),
+        "publisher": bibliography.publisher,
     }
 
 def _section_title_for_header(section_title: str | None, limit: int = 60) -> str | None:
@@ -278,10 +298,19 @@ def _section_title_for_header(section_title: str | None, limit: int = 60) -> str
     return normalized[: limit - 1].rstrip() + "..."
 
 
-def _citation_anchor(title: str, page_start: int, page_end: int) -> str:
-    if page_start == page_end:
-        return f"{title}, p. {page_start}"
-    return f"{title}, pp. {page_start}-{page_end}"
+def _citation_anchor(
+    title: str,
+    page_start: int,
+    page_end: int,
+    bibliography: DocumentBibliography | None = None,
+) -> str:
+    page_part = f"p. {page_start}" if page_start == page_end else f"pp. {page_start}-{page_end}"
+    if bibliography is not None and bibliography.has_author_year():
+        lead = bibliography.authors[0]
+        if len(bibliography.authors) > 1:
+            lead = f"{lead} et al."
+        return f"{lead} ({bibliography.year}), {page_part}"
+    return f"{title}, {page_part}"
 
 
 def _api_context_text(*, chunk_id: str, doc_id: str, page_start: int, page_end: int, section_meta: dict[str, Any], text: str) -> str:
@@ -306,10 +335,17 @@ def chunk_paragraphs(
     target_tokens: int,
     overlap_tokens: int,
     pages: Sequence[OcrPage] | None = None,
+    bibliography: DocumentBibliography | None = None,
 ) -> list[dict]:
     chunks: list[dict] = []
     current: list[Paragraph] = []
     current_tokens = 0
+    parent_map = build_parent_map(
+        (paragraph.section_key, paragraph.section_level) for paragraph in paragraphs
+    )
+    hierarchy_warnings = build_hierarchy_warnings(
+        (paragraph.section_key, paragraph.section_level) for paragraph in paragraphs
+    )
 
     def flush(*, keep_overlap: bool) -> None:
         nonlocal current, current_tokens
@@ -331,12 +367,13 @@ def chunk_paragraphs(
             page_end=page_end,
             confidence=confidence,
         )
-        section_meta = _section_metadata(current)
+        section_meta = _section_metadata(current, parent_map=parent_map, hierarchy_warnings=hierarchy_warnings)
         metadata = {
             "asset_policy": "body asset is a reference; chunk.text owns full body text",
             "page_boundary_crossed": page_start != page_end,
             "target_tokens": target_tokens,
             "overlap_tokens": overlap_tokens,
+            "bibliography": _bibliography_metadata(bibliography),
             **section_meta,
         }
         chunks.append(
@@ -356,7 +393,7 @@ def chunk_paragraphs(
                 "topic": section_meta["section_title"],
                 "token_estimate": estimate_tokens(text),
                 "char_count": len(text),
-                "citation_anchor": _citation_anchor(title, page_start, page_end),
+                "citation_anchor": _citation_anchor(title, page_start, page_end, bibliography),
                 "text": text,
                 "assets": assets,
                 "ocr_confidence_min": quality["ocr_confidence_min"],
@@ -400,6 +437,7 @@ def chunk_pages(
     source_type: str,
     target_tokens: int,
     overlap_tokens: int,
+    bibliography: DocumentBibliography | None = None,
 ) -> list[dict]:
     return chunk_paragraphs(
         pages_to_paragraphs(pages),
@@ -410,6 +448,7 @@ def chunk_pages(
         target_tokens=target_tokens,
         overlap_tokens=overlap_tokens,
         pages=pages,
+        bibliography=bibliography,
     )
 
 
@@ -492,6 +531,7 @@ def chunk_sections(
     target_tokens: int = 600,
     overlap_tokens: int = 60,
     pages: Sequence[OcrPage] | None = None,
+    bibliography: DocumentBibliography | None = None,
 ) -> list[dict]:
     """Chunk structured sections without crossing section boundaries."""
     paragraphs: list[Paragraph] = []
@@ -506,6 +546,7 @@ def chunk_sections(
         target_tokens=target_tokens,
         overlap_tokens=overlap_tokens,
         pages=pages,
+        bibliography=bibliography,
     )
 
 

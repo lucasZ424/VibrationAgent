@@ -20,4 +20,28 @@ Default policy: add fields as optional unless the Obj explicitly approves a brea
 
 ## Migration Log
 
-No Phase-2 schema migrations have been applied yet.
+### Obj3 — bibliography metadata + section parent linking (2026-06-02)
+
+Additive / optional only. No frozen field renamed, removed, or retyped; Phase-1
+contracts are byte-compatible when the new data is absent.
+
+- `schemas.py`: new `DocumentBibliography` model (`year: int | None`,
+  `authors: list[str]`, `publisher: str | None`). Standalone — not embedded in
+  any frozen model. Maps to the future `documents` table columns.
+- `MemoryChunk.metadata` (free-form `dict[str, Any]`, so no model change) gains
+  four optional keys:
+  - `bibliography`: `{"year", "authors", "publisher"}`, defaulting to
+    `{null, [], null}` when no bibliography is extracted.
+  - `section_parent_keys`: `list[str]` of ancestor section keys (root → parent),
+    `[]` for front-matter / top-level / heading-less content.
+  - `section_hierarchy_source`: `"heading_level"` or `"unsectioned"`, documenting
+    that parent links come from heading-level heuristics.
+  - `section_hierarchy_warnings`: `list[str]` of non-blocking hierarchy warnings,
+    currently including `section_level_gap`.
+- `citation_anchor` display string: now renders `"Author (Year), p. N"` when the
+  chunk's document has **both** author and year; otherwise the Phase-1
+  `"Title, p. N"` / `"pp. N-M"` form is unchanged. The frozen `Citation` model is
+  untouched (it never carried the anchor; `citation_anchor` is a display field).
+
+Rollback: dropping the two metadata keys and reverting `_citation_anchor`
+restores Phase-1 output exactly; no stored frozen field depends on them.

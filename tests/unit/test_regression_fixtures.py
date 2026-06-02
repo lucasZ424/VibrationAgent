@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 from vibration_agent.config import load
+from vibration_agent.ingestion.bibliography import extract_bibliography
 from vibration_agent.ingestion.chunking import chunk_pages
 from vibration_agent.ingestion.classify import classify_document
 from vibration_agent.ingestion.pipeline import chunk_document_pages
@@ -120,6 +121,13 @@ def test_chunker_regression_matches_page_and_chunk_fixtures():
     assert chunks[0]["text"] == expected["text"]
     assert chunks[0]["metadata"]["section_key"] == expected["metadata"]["section_key"]
     assert chunks[0]["citation_anchor"] == "Rotor Vibration Fixture, p. 1"
+    # Obj3 keys: chunker emits them, committed fixture carries them, they agree.
+    assert chunks[0]["metadata"]["section_parent_keys"] == expected["metadata"]["section_parent_keys"] == []
+    assert (
+        chunks[0]["metadata"]["bibliography"]
+        == expected["metadata"]["bibliography"]
+        == {"year": None, "authors": [], "publisher": None}
+    )
 
 
 def test_chunker_regression_matches_zh_cross_page_fixture():
@@ -141,6 +149,13 @@ def test_chunker_regression_matches_zh_cross_page_fixture():
     assert chunks[0]["pages"] == [1, 2]
     assert chunks[0]["metadata"]["page_boundary_crossed"] is True
     assert chunks[0]["text"] == expected["text"]
+    # Heading-less zh front matter -> no parents; no bibliography passed -> defaults.
+    assert chunks[0]["metadata"]["section_parent_keys"] == expected["metadata"]["section_parent_keys"] == []
+    assert (
+        chunks[0]["metadata"]["bibliography"]
+        == expected["metadata"]["bibliography"]
+        == {"year": None, "authors": [], "publisher": None}
+    )
 
 
 def test_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
@@ -175,6 +190,49 @@ def test_zh_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
     assert produced["text"] == fixture["text"]
     assert produced["metadata"]["section_key"] == fixture["metadata"]["section_key"]
     assert produced["metadata"]["page_boundary_crossed"] is True
+
+
+def test_fixture_pdfs_have_no_recoverable_bibliography():
+    # The committed fixture PDFs carry no author/year, which is *why* their chunk
+    # fixtures hold empty bibliography defaults and Phase-1 citation anchors. Pin
+    # it so a future PDF that gains metadata flags the now-stale fixtures.
+    for name in ("small_vibration_native.pdf", "small_vibration_zh.pdf"):
+        bib = extract_bibliography(FIXTURES / "raw" / name)
+        assert bib.has_author_year() is False
+        assert bib.year is None
+        assert bib.authors == []
+        assert bib.publisher is None
+
+
+def test_pdf_pipeline_threads_bibliography_into_chunk_metadata_and_anchor(tmp_path):
+    import fitz  # type: ignore
+
+    pdf = tmp_path / "bibliography_fixture.pdf"
+    doc = fitz.open()
+    page = doc.new_page()
+    page.insert_text(
+        (72, 72),
+        "Chapter 1 Rotor Dynamics\n"
+        "Rotor vibration evidence near critical speed needs enough text for native parsing.\n"
+        "Condition monitoring records amplitude, phase, orbit, damping, and speed trends.",
+        fontsize=12,
+    )
+    doc.set_metadata({"author": "Bently; Hatch", "creationDate": "D:20200101000000"})
+    doc.save(pdf)
+    doc.close()
+
+    document = classify_document(pdf)
+    settings = load(_project_workspace(tmp_path / "workspace"))
+    result = chunk_document_pages(document, settings=settings, max_pages=1, write_output=True)
+    produced = _jsonl(Path(result["chunks_output_path"]))[0]
+
+    assert result["status"] == "ok"
+    assert produced["metadata"]["bibliography"] == {
+        "year": 2020,
+        "authors": ["Bently", "Hatch"],
+        "publisher": None,
+    }
+    assert produced["citation_anchor"] == "Bently et al. (2020), p. 1"
 
 
 def test_fixture_chunk_supports_query_normalize():

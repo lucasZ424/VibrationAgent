@@ -7,8 +7,9 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from vibration_agent.config import Settings, load
-from vibration_agent.schemas import DocumentClassification, OcrPage
+from vibration_agent.schemas import DocumentBibliography, DocumentClassification, OcrPage
 
+from .bibliography import extract_bibliography
 from .chunking import SCHEMA_VERSION, chunk_pages, write_api_context_json, write_jsonl
 from .classify import scan_inputs
 from .layout import enrich_page_layout
@@ -212,6 +213,24 @@ def parse_document_pages(
     }
 
 
+def _document_bibliography(
+    document: DocumentClassification,
+    pages: list[OcrPage],
+) -> DocumentBibliography:
+    """Extract bibliography for a parsed PDF; empty defaults when unavailable.
+
+    Reuses the already-parsed first page text so OCR'd documents (whose embedded
+    text layer is empty) still get author/year inference. Non-PDF or unparsed
+    documents yield the empty bibliography, preserving Phase-1 citation output.
+    """
+    if document.kind != "pdf" or not pages:
+        return DocumentBibliography()
+    return extract_bibliography(
+        document.source_path,
+        first_page_text=pages[0].normalized_text or None,
+    )
+
+
 def chunk_document_pages(
     document: DocumentClassification,
     *,
@@ -234,6 +253,7 @@ def chunk_document_pages(
     )
     pages = [OcrPage.model_validate(row) for row in page_result.get("pages", [])]
     resolved_title = title or Path(document.source_path).stem
+    bibliography = _document_bibliography(document, pages)
     chunks = chunk_pages(
         pages,
         doc_id=document.doc_id,
@@ -242,6 +262,7 @@ def chunk_document_pages(
         source_type=source_type,
         target_tokens=cfg.chunking.target_tokens,
         overlap_tokens=cfg.chunking.overlap_tokens,
+        bibliography=bibliography,
     )
 
     paths = document_output_paths(cfg, source_type=source_type, doc_id=document.doc_id)

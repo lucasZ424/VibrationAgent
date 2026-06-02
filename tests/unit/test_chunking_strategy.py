@@ -1,7 +1,7 @@
 import pytest
 
 from vibration_agent.ingestion.chunking import chunk_pages, chunk_sections
-from vibration_agent.schemas import MemoryChunk, OcrPage, PageBlock
+from vibration_agent.schemas import DocumentBibliography, MemoryChunk, OcrPage, PageBlock
 
 
 def _body(prefix: str, count: int) -> str:
@@ -192,3 +192,130 @@ def test_chunk_sections_requires_page_information(tmp_path):
             title="Rotor Book",
             source_path=tmp_path / "book.pdf",
         )
+
+
+def _single_section_page() -> OcrPage:
+    return OcrPage(
+        doc_id="doc1",
+        page_no=1,
+        primary_engine="pymupdf",
+        blocks=[
+            PageBlock(block_id="p0001_b0001", text="Chapter 1 Rotor Dynamics", block_type="title"),
+            PageBlock(block_id="p0001_b0002", text="Rotor response body text.", block_type="body"),
+        ],
+    )
+
+
+def test_citation_anchor_uses_author_year_when_bibliography_present(tmp_path):
+    # Obj3 acceptance: when the document has BOTH author and year, the anchor
+    # cites by author/year; multiple authors collapse to "First et al.".
+    multi = chunk_pages(
+        [_single_section_page()],
+        doc_id="doc1",
+        title="Rotor Book",
+        source_path=tmp_path / "book.pdf",
+        source_type="book",
+        target_tokens=600,
+        overlap_tokens=60,
+        bibliography=DocumentBibliography(year=2020, authors=["Bently", "Hatch"]),
+    )[0]
+    single = chunk_pages(
+        [_single_section_page()],
+        doc_id="doc1",
+        title="Rotor Book",
+        source_path=tmp_path / "book.pdf",
+        source_type="book",
+        target_tokens=600,
+        overlap_tokens=60,
+        bibliography=DocumentBibliography(year=2020, authors=["Bently"]),
+    )[0]
+
+    assert multi["citation_anchor"] == "Bently et al. (2020), p. 1"
+    assert single["citation_anchor"] == "Bently (2020), p. 1"
+
+
+def test_citation_anchor_falls_back_to_title_without_author_year(tmp_path):
+    # No bibliography, or author-without-year, must reproduce the Phase-1 anchor
+    # so citation output is byte-compatible when no bibliography is recoverable.
+    no_bib = chunk_pages(
+        [_single_section_page()],
+        doc_id="doc1",
+        title="Rotor Book",
+        source_path=tmp_path / "book.pdf",
+        source_type="book",
+        target_tokens=600,
+        overlap_tokens=60,
+    )[0]
+    author_only = chunk_pages(
+        [_single_section_page()],
+        doc_id="doc1",
+        title="Rotor Book",
+        source_path=tmp_path / "book.pdf",
+        source_type="book",
+        target_tokens=600,
+        overlap_tokens=60,
+        bibliography=DocumentBibliography(year=None, authors=["Bently"]),
+    )[0]
+
+    assert no_bib["citation_anchor"] == "Rotor Book, p. 1"
+    assert author_only["citation_anchor"] == "Rotor Book, p. 1"
+
+
+def test_section_parent_keys_reflect_section_nesting(tmp_path):
+    # End-to-end wiring check: the chunker must feed (section_key, level) pairs to
+    # the hierarchy builder so each chunk carries its ancestor chain.
+    page = OcrPage(
+        doc_id="doc1",
+        page_no=1,
+        primary_engine="pymupdf",
+        blocks=[
+            PageBlock(block_id="b1", text="Chapter 1 Rotor Dynamics", block_type="title"),
+            PageBlock(block_id="b2", text="Chapter body about rotors.", block_type="body"),
+            PageBlock(block_id="b3", text="1.1 Modal Analysis", block_type="title"),
+            PageBlock(block_id="b4", text="Section body about modes.", block_type="body"),
+            PageBlock(block_id="b5", text="1.1.1 Damping Ratio", block_type="title"),
+            PageBlock(block_id="b6", text="Subsection body about damping.", block_type="body"),
+        ],
+    )
+
+    chunks = chunk_pages(
+        [page],
+        doc_id="doc1",
+        title="Rotor Book",
+        source_path=tmp_path / "book.pdf",
+        source_type="book",
+        target_tokens=600,
+        overlap_tokens=60,
+    )
+
+    parents = {chunk["metadata"]["section_key"]: chunk["metadata"]["section_parent_keys"] for chunk in chunks}
+    assert parents == {"s0001": [], "s0002": ["s0001"], "s0003": ["s0001", "s0002"]}
+
+
+def test_section_hierarchy_warnings_surface_level_gaps(tmp_path):
+    page = OcrPage(
+        doc_id="doc1",
+        page_no=1,
+        primary_engine="pymupdf",
+        blocks=[
+            PageBlock(block_id="b1", text="Chapter 1 Rotor Dynamics", block_type="title"),
+            PageBlock(block_id="b2", text="Chapter body.", block_type="body"),
+            PageBlock(block_id="b3", text="1.1.1 Damping Ratio", block_type="title"),
+            PageBlock(block_id="b4", text="Skipped level body.", block_type="body"),
+        ],
+    )
+
+    chunks = chunk_pages(
+        [page],
+        doc_id="doc1",
+        title="Rotor Book",
+        source_path=tmp_path / "book.pdf",
+        source_type="book",
+        target_tokens=600,
+        overlap_tokens=60,
+    )
+
+    by_section = {chunk["metadata"]["section_key"]: chunk["metadata"] for chunk in chunks}
+    assert by_section["s0001"]["section_hierarchy_source"] == "heading_level"
+    assert by_section["s0002"]["section_parent_keys"] == ["s0001"]
+    assert by_section["s0002"]["section_hierarchy_warnings"] == ["section_level_gap"]
