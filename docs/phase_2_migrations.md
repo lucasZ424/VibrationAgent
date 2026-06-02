@@ -45,3 +45,20 @@ contracts are byte-compatible when the new data is absent.
 
 Rollback: dropping the two metadata keys and reverting `_citation_anchor`
 restores Phase-1 output exactly; no stored frozen field depends on them.
+
+### Obj4 - DOCX ingestion (2026-06-02)
+
+Additive / optional only. PDF, image, text, and unsupported classification
+values keep their existing behavior.
+
+- `SupportedKind` gains `"docx"`.
+- `ProcessingStrategy` gains `"docx"`.
+- DOCX page parsing emits the existing `OcrPage`, `PageBlock`, and
+  `DocumentAsset` schemas; no new schema object is introduced.
+- `DocumentAsset.object_type` is unchanged. DOCX tables use `"table"` assets;
+  embedded images use `"figure"` assets.
+- `IngestionManifest.input.kind` and `.processing_strategy` may now contain
+  `"docx"` for DOCX sources.
+
+Rollback: remove the two literal values and the DOCX parser/pipeline branch.
+Existing PDF/text/image ingestion outputs are independent of this path.

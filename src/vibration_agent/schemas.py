@@ -28,8 +28,8 @@ SourceType = Literal["standard", "textbook", "review", "paper", "webpage", "book
 AssetType = Literal["body", "title", "text", "formula", "figure", "table", "page_image", "unknown"]
 AssetObjectType = Literal["body", "formula", "figure", "table", "page_image"]
 ChunkType = Literal["body", "section_summary", "formula_context", "figure_context", "table_context"]
-SupportedKind = Literal["pdf", "image", "text", "unsupported"]
-ProcessingStrategy = Literal["native_pdf", "ocr_pdf", "image", "text", "unknown"]
+SupportedKind = Literal["pdf", "docx", "image", "text", "unsupported"]
+ProcessingStrategy = Literal["native_pdf", "ocr_pdf", "docx", "image", "text", "unknown"]
 DocumentLanguage = Literal["zh", "en", "mixed", "unknown"]
 DeferredSkill = Literal[
     "s4_engineering_analysis",

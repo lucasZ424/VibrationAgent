@@ -110,6 +110,20 @@ def pages_to_paragraphs(pages: Sequence[OcrPage]) -> list[Paragraph]:
                 )
                 emitted_from_blocks = True
                 continue
+            if block.block_type == "table":
+                for unit in _split_text_units(block.text):
+                    paragraphs.append(
+                        Paragraph(
+                            page_no=page.page_no,
+                            text=unit,
+                            block_type="body",
+                            section_key=current_section_key,
+                            section_title=current_section_title,
+                            section_level=current_section_level,
+                        )
+                    )
+                    emitted_from_blocks = True
+                continue
             if block.block_type != "body":
                 continue
             for unit in _split_text_units(block.text):

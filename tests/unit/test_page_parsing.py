@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import fitz
+from docx import Document
 
 from vibration_agent.config import load
 from vibration_agent.ingestion.classify import classify_document
@@ -92,6 +93,60 @@ def test_chunk_document_pages_writes_formal_chunk_outputs(tmp_path):
     chunk = json.loads(Path(result["chunks_output_path"]).read_text(encoding="utf-8").splitlines()[0])
     assert chunk["assets"][0]["object_type"] == "body"
     assert chunk["pages"] == [1]
+
+
+def test_docx_parse_and_chunk_outputs_match_common_shape(tmp_path):
+    source = tmp_path / "rotor_note.docx"
+    document = Document()
+    document.add_heading("Rotor damping", level=1)
+    document.add_paragraph("Damping reduces resonant vibration near critical speed. " * 3)
+    document.save(source)
+    doc = classify_document(source)
+    settings = load()
+    settings.paths.ocr_dir = tmp_path / "ocr"
+    settings.paths.chunks_dir = tmp_path / "chunks"
+    settings.paths.exports_dir = tmp_path / "exports"
+    settings.paths.extracted_dir = tmp_path / "extracted"
+
+    page_result = parse_document_pages(doc, settings=settings, max_pages=1, write_output=True)
+    chunk_result = chunk_document_pages(doc, settings=settings, max_pages=1, write_output=True)
+
+    assert page_result["status"] == "ok"
+    assert page_result["pages"][0]["primary_engine"] == "python-docx"
+    assert chunk_result["status"] == "ok"
+    chunk = json.loads(Path(chunk_result["chunks_output_path"]).read_text(encoding="utf-8").splitlines()[0])
+    assert chunk["pages"] == [1]
+    assert chunk["source_path"].endswith("rotor_note.docx")
+
+
+def test_docx_parse_defaults_missing_page_count_to_one_logical_page(tmp_path):
+    source = tmp_path / "rotor_note.docx"
+    document = Document()
+    document.add_paragraph("Damping reduces resonant vibration near critical speed. " * 3)
+    document.save(source)
+    doc = classify_document(source).model_copy(update={"page_count": None})
+    settings = load()
+    settings.paths.ocr_dir = tmp_path / "ocr"
+
+    result = parse_document_pages(doc, settings=settings, max_pages=None, write_output=False)
+
+    assert result["status"] == "ok"
+    assert result["page_count"] == 1
+    assert result["processed_pages"] == 1
+
+
+def test_corrupt_docx_returns_structured_insufficient(tmp_path):
+    source = tmp_path / "corrupt.docx"
+    source.write_bytes(b"not a zip")
+    doc = classify_document(source)
+    settings = load()
+    settings.paths.ocr_dir = tmp_path / "ocr"
+
+    result = parse_document_pages(doc, settings=settings, write_output=True)
+
+    assert result["status"] == "insufficient"
+    assert result["pages"] == []
+    assert result["warnings"]
 
 
 

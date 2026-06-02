@@ -34,6 +34,14 @@ def _fixture_zh_chunk() -> dict:
     return _jsonl(FIXTURES / "chunks" / "sample_zh_chunks.jsonl")[0]
 
 
+def _fixture_zh_docx_page() -> OcrPage:
+    return OcrPage.model_validate(_jsonl(FIXTURES / "ocr" / "sample_zh_docx_pages.jsonl")[0])
+
+
+def _fixture_zh_docx_chunk() -> dict:
+    return _jsonl(FIXTURES / "chunks" / "sample_zh_docx_chunks.jsonl")[0]
+
+
 def _project_workspace(path: Path) -> Path:
     (path / "configs").mkdir(parents=True, exist_ok=True)
     (path / "src" / "vibration_agent").mkdir(parents=True, exist_ok=True)
@@ -78,6 +86,21 @@ def test_zh_page_and_cross_page_chunk_fixtures_validate_against_schemas():
     assert chunk.metadata["page_boundary_crossed"] is True
     assert chunk.citation_anchor == "转子阻尼中文样例, pp. 1-2"
     assert chunk.source_path == "tests/fixtures/raw/small_vibration_zh.pdf"
+
+
+def test_zh_docx_page_and_chunk_fixtures_validate_against_schemas():
+    page = _fixture_zh_docx_page()
+    chunk = MemoryChunk.model_validate(_fixture_zh_docx_chunk())
+
+    assert page.primary_engine == "python-docx"
+    assert page.layout_quality == "ok"
+    assert any(block.block_type == "table" for block in page.blocks)
+    assert chunk.doc_id == "fixture_rotor_zh_docx"
+    assert chunk.pages == [1]
+    assert chunk.page_start == 1
+    assert chunk.page_end == 1
+    assert chunk.source_path == "tests/fixtures/raw/small_vibration_zh.docx"
+    assert "\u76d1\u6d4b\u91cf | \u7528\u9014" in chunk.text
 
 
 def test_retrieval_fixture_validates_against_schema():
@@ -190,6 +213,22 @@ def test_zh_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
     assert produced["text"] == fixture["text"]
     assert produced["metadata"]["section_key"] == fixture["metadata"]["section_key"]
     assert produced["metadata"]["page_boundary_crossed"] is True
+
+
+def test_zh_docx_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
+    docx = FIXTURES / "raw" / "small_vibration_zh.docx"
+    document = classify_document(docx)
+    settings = load(_project_workspace(tmp_path / "workspace"))
+
+    result = chunk_document_pages(document, settings=settings, max_pages=1, write_output=True)
+    produced = _jsonl(Path(result["chunks_output_path"]))[0]
+    fixture = _fixture_zh_docx_chunk()
+
+    assert result["status"] == "ok"
+    assert produced["pages"] == fixture["pages"]
+    assert produced["text"] == fixture["text"]
+    assert produced["metadata"]["section_key"] == fixture["metadata"]["section_key"]
+    assert produced["metadata"]["section_title"] == fixture["metadata"]["section_title"]
 
 
 def test_fixture_pdfs_have_no_recoverable_bibliography():

@@ -12,6 +12,7 @@ from vibration_agent.schemas import DocumentBibliography, DocumentClassification
 from .bibliography import extract_bibliography
 from .chunking import SCHEMA_VERSION, chunk_pages, write_api_context_json, write_jsonl
 from .classify import scan_inputs
+from .docx_parser import DocxParseError, parse_docx
 from .layout import enrich_page_layout
 from .ocr.router import ocr_page
 from .pymupdf_parser import parse_native_pdf
@@ -152,18 +153,18 @@ def parse_document_pages(
     """Parse or OCR one classified document into page-level JSON objects."""
     cfg = settings or load()
     source = Path(document.source_path)
-    if document.kind != "pdf":
+    if document.kind not in {"pdf", "docx"}:
         return {
             "status": "insufficient",
             "stage": "page_parse",
             "doc_id": document.doc_id,
             "source_path": document.source_path,
             "pages": [],
-            "warnings": ["Target 5 page parsing currently supports PDF inputs only."],
+            "warnings": ["Page parsing currently supports PDF and DOCX inputs only."],
         }
 
     paths = document_output_paths(cfg, source_type=source_type, doc_id=document.doc_id)
-    page_count = document.page_count or 0
+    page_count = document.page_count or (1 if document.kind == "docx" else 0)
     page_limit = min(page_count, max_pages) if max_pages is not None else page_count
     pages: list[OcrPage] = []
 
@@ -184,6 +185,22 @@ def parse_document_pages(
                 keep_images=keep_images,
             )
             pages.append(enrich_page_layout(page))
+    elif document.processing_strategy == "docx":
+        try:
+            pages = parse_docx(source, doc_id=document.doc_id, asset_dir=paths["extracted_dir"])[:page_limit]
+        except DocxParseError as exc:
+            return {
+                "status": "insufficient",
+                "stage": "page_parse",
+                "doc_id": document.doc_id,
+                "source_path": document.source_path,
+                "processing_strategy": document.processing_strategy,
+                "page_count": document.page_count or 0,
+                "processed_pages": 0,
+                "output_path": None,
+                "pages": [],
+                "warnings": [str(exc)],
+            }
     else:
         return {
             "status": "insufficient",

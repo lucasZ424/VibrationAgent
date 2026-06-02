@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import fitz
+from docx import Document
 
 from vibration_agent.ingestion.classify import classify_document, scan_inputs
 from vibration_agent.ingestion.pipeline import ingest
@@ -58,3 +59,21 @@ def test_scan_inputs_and_pipeline(tmp_path):
     assert plan["status"] == "ok"
     assert plan["document_count"] == 1
     assert plan["documents"][0]["processing_strategy"] == "text"
+
+
+def test_classify_docx_and_skip_office_lock_file(tmp_path):
+    docx = tmp_path / "rotor_note.docx"
+    document = Document()
+    document.add_paragraph("Rotor damping reduces resonant vibration near critical speed.")
+    document.save(docx)
+    lock_file = tmp_path / "~$rotor_note.docx"
+    lock_file.write_bytes(b"locked")
+
+    result = classify_document(docx)
+    scanned = scan_inputs(tmp_path)
+
+    assert result.kind == "docx"
+    assert result.processing_strategy == "docx"
+    assert result.page_count == 1
+    assert result.text_chars and result.text_chars > 20
+    assert [item.filename for item in scanned] == ["rotor_note.docx"]

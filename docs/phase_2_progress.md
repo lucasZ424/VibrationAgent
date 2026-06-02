@@ -10,7 +10,8 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 
 1. Phase-2 boundary: done
 2. Bilingual fixture and multi-page/cross-chunk regression samples: done
-3. Bibliography metadata + section parent-child linking: done (pending review)
+3. Bibliography metadata + section parent-child linking: done
+4. DOCX ingestion capability: done (pending review)
 
 ## Obj1 Notes
 
@@ -121,3 +122,64 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 - Result: 181 passed, 6 deselected.
 - Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration -q --basetemp=<repo-data-tmp> -p no:cacheprovider`
 - Result: 6 passed.
+
+## Obj4 Notes
+
+- Added `src/vibration_agent/ingestion/docx_parser.py`, backed by `python-docx`.
+- `classify_document()` now accepts `.docx`, assigns `kind="docx"` and
+  `processing_strategy="docx"`, detects language from paragraph/table text, and
+  still skips Office lock files such as `~$name.docx`.
+- `parse_document_pages()` now supports DOCX through the same `OcrPage` rows as
+  PDF parsing. DOCX is represented as one logical page because DOCX has no stable
+  parser-level pagination without rendering.
+- DOCX paragraphs/headings become `PageBlock` rows; tables become `table`
+  `DocumentAsset`s; embedded images become `figure` `DocumentAsset`s when
+  present.
+- Empty or corrupt DOCX files return structured `insufficient` page-parse
+  results instead of bubbling a traceback through S1/CLI/API.
+- Added fixed zh DOCX fixture: `tests/fixtures/raw/small_vibration_zh.docx`.
+- Added `python-docx` as a runtime dependency.
+
+## Obj4 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_docx_parser.py tests\unit\test_classify.py tests\unit\test_ingestion_classify.py tests\unit\test_page_parsing.py tests\integration\test_phase0_fixture_chain.py -q -p no:cacheprovider`
+- Result: 23 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not integration" --basetemp=<repo-data-tmp> -p no:cacheprovider`
+- Result: 189 passed, 7 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration -q --basetemp=<repo-data-tmp> -p no:cacheprovider`
+- Result: 7 passed.
+
+## Obj4 Residual Risk
+
+- DOCX pagination is logical, not rendered. All DOCX chunks currently cite page
+  1; real rendered pagination is deferred unless later storage/API requirements
+  need physical page numbers.
+- DOCX image extraction is relationship-based. It records embedded image assets,
+  but does not map images back to exact paragraph positions or page coordinates.
+- Visual layout was not rendered/inspected for the fixture; text/table/image
+  extraction is verified structurally by tests.
+
+## Obj4 Next Obj Gate
+
+- Pending review of Obj4 before starting Obj5.
+
+## Obj4 Issue Follow-Up Notes
+
+- Fixed Obj4 `#1`: added `scripts/generate_obj4_docx_fixtures.py`, which writes the zh DOCX source and parser-derived DOCX page/chunk baselines without touching the Obj2 PDF fixture pack. Added DOCX real-parse drift guards against `tests/fixtures/ocr/sample_zh_docx_pages.jsonl` and `tests/fixtures/chunks/sample_zh_docx_chunks.jsonl`.
+- Fixed Obj4 `#2`: DOCX page count now matches the documented one-logical-page model. Real Word page breaks still classify as one logical page.
+- Fixed Obj4 `#3`: table text is retrievable through `chunk.text` while table assets remain attached. This keeps tables searchable without dropping structured asset references.
+- Fixed Obj4 `#4`: DOCX classification now catches only `DocxParseError`; unexpected parser bugs fail loud instead of becoming soft warnings.
+- Improved Obj4 `#5` and `#6`: DOCX classification now opens the DOCX once via `inspect_docx()` and avoids duplicate text normalization.
+- Obj4 `#7` remains disclosed as residual risk: embedded images are relationship-ordered and pinned to logical page 1.
+- Obj4 `#8` remains part of the deferred EOL policy / hygiene thread.
+
+## Obj4 Issue Follow-Up Verification
+
+- Verified command: `.\.venv\Scripts\python.exe scripts\generate_obj4_docx_fixtures.py`
+- Result: regenerated zh DOCX source/page/chunk baselines.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_docx_parser.py tests\unit\test_classify.py tests\unit\test_ingestion_classify.py tests\unit\test_page_parsing.py tests\unit\test_regression_fixtures.py tests\integration\test_phase0_fixture_chain.py -q --basetemp=<repo-data-tmp> -p no:cacheprovider`
+- Result: 43 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not integration" --basetemp=<repo-data-tmp> -p no:cacheprovider`
+- Result: 194 passed, 7 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration -q --basetemp=<repo-data-tmp> -p no:cacheprovider`
+- Result: 7 passed.

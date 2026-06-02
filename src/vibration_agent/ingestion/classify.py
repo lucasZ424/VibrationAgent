@@ -4,9 +4,8 @@ Target 4 scope: discover supported input files, assign stable doc_id, count page
 and decide whether a PDF should use native parsing or OCR. This module does not
 run OCR or chunking.
 
-DOCX is intentionally deferred until the document parser target is ready. Office
-lock files such as ``~$name.docx`` are skipped now so enabling DOCX later will not
-accidentally ingest transient lock files.
+Office lock files such as ``~$name.docx`` are skipped so transient editor files
+do not enter ingestion.
 """
 from __future__ import annotations
 
@@ -22,8 +21,8 @@ from vibration_agent.schemas import DocumentClassification, DocumentLanguage, Pr
 SUPPORTED_IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".tif", ".tiff", ".bmp", ".webp"}
 SUPPORTED_TEXT_SUFFIXES = {".txt", ".md"}
 SUPPORTED_PDF_SUFFIXES = {".pdf"}
-DEFERRED_DOCX_SUFFIXES = {".docx"}
-SUPPORTED_SUFFIXES = SUPPORTED_PDF_SUFFIXES | SUPPORTED_IMAGE_SUFFIXES | SUPPORTED_TEXT_SUFFIXES
+SUPPORTED_DOCX_SUFFIXES = {".docx"}
+SUPPORTED_SUFFIXES = SUPPORTED_PDF_SUFFIXES | SUPPORTED_DOCX_SUFFIXES | SUPPORTED_IMAGE_SUFFIXES | SUPPORTED_TEXT_SUFFIXES
 
 
 @dataclass(frozen=True)
@@ -62,6 +61,8 @@ def detect_kind(path: Path) -> SupportedKind:
     suffix = path.suffix.lower()
     if suffix in SUPPORTED_PDF_SUFFIXES:
         return "pdf"
+    if suffix in SUPPORTED_DOCX_SUFFIXES:
+        return "docx"
     if suffix in SUPPORTED_IMAGE_SUFFIXES:
         return "image"
     if suffix in SUPPORTED_TEXT_SUFFIXES:
@@ -212,6 +213,20 @@ def classify_document(path: str | Path, *, pdf_density_threshold: float = 0.2) -
         image_size = _image_size(source)
         if image_size is None:
             warnings.append("Image dimensions could not be read; Pillow may be unavailable or the file may be invalid.")
+    elif kind == "docx":
+        strategy = "docx"
+        try:
+            from vibration_agent.ingestion.docx_parser import DocxParseError, inspect_docx
+
+            text, page_count = inspect_docx(source)
+            text_chars = len(text)
+            language = detect_language(text)
+            if not text:
+                warnings.append("DOCX contains no extractable text; page parsing may be insufficient.")
+        except DocxParseError as exc:
+            page_count = 0
+            text_chars = 0
+            warnings.append(f"DOCX could not be inspected: {exc}")
     elif kind == "text":
         page_count = 1
         strategy = "text"
@@ -223,8 +238,6 @@ def classify_document(path: str | Path, *, pdf_density_threshold: float = 0.2) -
             warnings.append(f"Text file could not be read: {exc}")
     else:
         warnings.append("Unsupported file type; no ingestion strategy selected.")
-        if suffix in DEFERRED_DOCX_SUFFIXES:
-            warnings.append("DOCX support is deferred until the document parser target is implemented.")
 
     return DocumentClassification(
         doc_id=f"{slugify_filename(source)}_{sha[:8]}",
