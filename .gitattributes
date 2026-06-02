@@ -1,0 +1,49 @@
+# .gitattributes — repository line-ending and binary policy
+# (Phase-2 Obj2 review draft — pending stakeholder approval before renormalize.)
+#
+# Policy: text files are stored as LF in the repo AND checked out as LF on every
+# platform, Windows included. This removes the "LF will be replaced by CRLF"
+# warnings and keeps Windows dev and the Linux CI runner (Obj17) byte-consistent,
+# which matters for golden-file fixture comparisons.
+#
+# Alternative: to keep NATIVE line endings in the working tree (CRLF on Windows,
+# LF on Linux) while still normalizing to LF in the repo, change the default line
+# below from `* text=auto eol=lf` to `* text=auto`. Everything else is unchanged.
+
+# Default for every file Git detects as text.
+* text=auto eol=lf
+
+# --- Windows-only scripts: keep CRLF so cmd.exe / PowerShell run them natively.
+#     (These never execute on the Linux CI runner, so LF is not required.)
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+# *.ps1   text eol=crlf
+
+# --- Shell scripts must stay LF even when checked out on Windows.
+*.sh    text eol=lf
+
+# --- Documents and images: never EOL-normalize, never text-diff.
+*.pdf   binary
+*.docx  binary
+*.xlsx  binary
+*.pptx  binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+
+# --- Archives.
+*.zip   binary
+*.gz    binary
+
+# --- ML model weights and the downloaded model cache (PaddleOCR / HuggingFace).
+#     The whole cache subtree is forced binary so model blobs (including
+#     extensionless HuggingFace objects) are never normalized.
+*.pdiparams    binary
+*.pdmodel      binary
+*.pdparams     binary
+*.onnx         binary
+*.safetensors  binary
+*.bin          binary
+data/cache/**  binary

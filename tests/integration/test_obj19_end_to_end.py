@@ -13,9 +13,13 @@ pytestmark = pytest.mark.integration
 
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 PDF_FIXTURE = FIXTURES / "raw" / "small_vibration_native.pdf"
+ZH_PDF_FIXTURE = FIXTURES / "raw" / "small_vibration_zh.pdf"
 REAL_QUESTION = "What happens near critical speed in rotor vibration?"
 GAP_QUESTION = "Pump oil API 610"
 OUT_OF_SCOPE_QUESTION = "Explain stock valuation methods."
+ZH_REAL_QUESTION = "阻尼比如何影响转子振动？"
+ZH_GAP_QUESTION = "齿轮箱润滑油牌号要求？"
+ZH_OUT_OF_SCOPE_QUESTION = "写一段市场营销文案。"
 
 
 def _stdout_json(capsys) -> dict:
@@ -28,14 +32,14 @@ def _project_workspace(path: Path) -> Path:
     return path
 
 
-def _cli_ingest_fixture(workspace: Path, capsys) -> tuple[dict, Path]:
+def _cli_ingest_fixture(workspace: Path, capsys, pdf: Path = PDF_FIXTURE, *, max_pages: str = "1") -> tuple[dict, Path]:
     code = cli_main.main([
         "--workspace",
         str(workspace),
         "ingest",
-        str(PDF_FIXTURE),
+        str(pdf),
         "--max-pages",
-        "1",
+        max_pages,
     ])
     payload = _stdout_json(capsys)
     assert code == 0
@@ -103,6 +107,53 @@ def test_cli_end_to_end_real_gap_and_out_of_scope(tmp_path, capsys):
     manifest = json.loads(Path(ingest_payload["documents"][0]["outputs"]["manifest_json"]).read_text(encoding="utf-8"))
     assert manifest["outputs"]["chunks_jsonl"] == str(chunks_jsonl)
     assert manifest["counts"]["chunk_count"] >= 1
+
+
+def test_cli_zh_end_to_end_real_gap_and_out_of_scope(tmp_path, capsys):
+    workspace = _project_workspace(tmp_path / "workspace")
+    _ingest_payload, chunks_jsonl = _cli_ingest_fixture(workspace, capsys, ZH_PDF_FIXTURE, max_pages="2")
+
+    ok_code = cli_main.main([
+        "--workspace",
+        str(tmp_path),
+        "ask",
+        ZH_REAL_QUESTION,
+        "--chunks-jsonl",
+        str(chunks_jsonl),
+        "--top-k",
+        "2",
+    ])
+    ok_payload = _stdout_json(capsys)
+    assert ok_code == 0
+    assert ok_payload["status"] == "ok"
+    assert ok_payload["structured_result"]["scope"] == "in_scope"
+    assert ok_payload["structured_result"]["v4"]["language"] == "zh"
+    assert ok_payload["citations"][0]["pages"] == [1, 2]
+    assert "## 结论" in ok_payload["structured_result"]["answer"]
+    assert "## 证据" in ok_payload["structured_result"]["answer"]
+
+    gap_code = cli_main.main([
+        "--workspace",
+        str(tmp_path),
+        "ask",
+        ZH_GAP_QUESTION,
+        "--chunks-jsonl",
+        str(chunks_jsonl),
+        "--top-k",
+        "2",
+        "--scope",
+        "in_scope",
+    ])
+    gap_payload = _stdout_json(capsys)
+    assert gap_code == 2
+    assert gap_payload["status"] == "insufficient"
+    assert gap_payload["structured_result"]["scope"] == "in_scope"
+
+    out_code = cli_main.main(["--workspace", str(workspace), "ask", ZH_OUT_OF_SCOPE_QUESTION])
+    out_payload = _stdout_json(capsys)
+    assert out_code == 2
+    assert out_payload["status"] == "insufficient"
+    assert out_payload["structured_result"]["scope"] == "out_of_scope"
 
 
 def test_api_end_to_end_ingest_and_query(tmp_path):

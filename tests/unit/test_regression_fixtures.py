@@ -25,6 +25,14 @@ def _fixture_chunk() -> dict:
     return _jsonl(FIXTURES / "chunks" / "sample_chunks.jsonl")[0]
 
 
+def _fixture_zh_pages() -> list[OcrPage]:
+    return [OcrPage.model_validate(row) for row in _jsonl(FIXTURES / "ocr" / "sample_zh_pages.jsonl")]
+
+
+def _fixture_zh_chunk() -> dict:
+    return _jsonl(FIXTURES / "chunks" / "sample_zh_chunks.jsonl")[0]
+
+
 def _project_workspace(path: Path) -> Path:
     (path / "configs").mkdir(parents=True, exist_ok=True)
     (path / "src" / "vibration_agent").mkdir(parents=True, exist_ok=True)
@@ -55,6 +63,22 @@ def test_page_and_chunk_fixtures_validate_against_schemas():
     assert chunk.source_path == "tests/fixtures/raw/small_vibration_native.pdf"
 
 
+def test_zh_page_and_cross_page_chunk_fixtures_validate_against_schemas():
+    pages = _fixture_zh_pages()
+    chunk = MemoryChunk.model_validate(_fixture_zh_chunk())
+
+    assert len(pages) == 2
+    assert pages[0].primary_engine == "pymupdf"
+    assert pages[0].blocks[0].block_type == "body"
+    assert chunk.doc_id == "fixture_rotor_zh_doc"
+    assert chunk.pages == [1, 2]
+    assert chunk.page_start == 1
+    assert chunk.page_end == 2
+    assert chunk.metadata["page_boundary_crossed"] is True
+    assert chunk.citation_anchor == "转子阻尼中文样例, pp. 1-2"
+    assert chunk.source_path == "tests/fixtures/raw/small_vibration_zh.pdf"
+
+
 def test_retrieval_fixture_validates_against_schema():
     payload = json.loads((FIXTURES / "retrieval" / "sample_retrieval.json").read_text(encoding="utf-8"))
 
@@ -63,6 +87,17 @@ def test_retrieval_fixture_validates_against_schema():
     assert retrieval.status == "ok"
     assert retrieval.hits[0].chunk_id == "fixture_rotor_doc_p0001_00001"
     assert retrieval.hits[0].reason
+
+
+def test_zh_retrieval_fixture_validates_against_schema():
+    payload = json.loads((FIXTURES / "retrieval" / "sample_zh_retrieval.json").read_text(encoding="utf-8"))
+
+    retrieval = RetrievalOutput.model_validate(payload)
+
+    assert retrieval.status == "ok"
+    assert retrieval.intent == "engineering"
+    assert retrieval.hits[0].chunk_id == "fixture_rotor_zh_doc_p0001_00001"
+    assert retrieval.hits[0].pages == [1, 2]
 
 
 def test_chunker_regression_matches_page_and_chunk_fixtures():
@@ -87,6 +122,27 @@ def test_chunker_regression_matches_page_and_chunk_fixtures():
     assert chunks[0]["citation_anchor"] == "Rotor Vibration Fixture, p. 1"
 
 
+def test_chunker_regression_matches_zh_cross_page_fixture():
+    pages = _fixture_zh_pages()
+    expected = _fixture_zh_chunk()
+
+    chunks = chunk_pages(
+        pages,
+        doc_id="fixture_rotor_zh_doc",
+        title="转子阻尼中文样例",
+        source_path="tests/fixtures/raw/small_vibration_zh.pdf",
+        source_type="book",
+        target_tokens=600,
+        overlap_tokens=60,
+    )
+
+    assert len(chunks) == 1
+    assert chunks[0]["chunk_id"] == expected["chunk_id"]
+    assert chunks[0]["pages"] == [1, 2]
+    assert chunks[0]["metadata"]["page_boundary_crossed"] is True
+    assert chunks[0]["text"] == expected["text"]
+
+
 def test_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
     pdf = FIXTURES / "raw" / "small_vibration_native.pdf"
     document = classify_document(pdf)
@@ -103,6 +159,24 @@ def test_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
     assert produced["metadata"]["section_title"] == fixture["metadata"]["section_title"]
 
 
+def test_zh_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
+    pdf = FIXTURES / "raw" / "small_vibration_zh.pdf"
+    document = classify_document(pdf)
+    settings = load(_project_workspace(tmp_path / "workspace"))
+
+    result = chunk_document_pages(document, settings=settings, max_pages=2, write_output=True)
+    produced = _jsonl(Path(result["chunks_output_path"]))[0]
+    fixture = _fixture_zh_chunk()
+
+    assert result["status"] == "ok"
+    assert produced["page_start"] == 1
+    assert produced["page_end"] == 2
+    assert produced["pages"] == fixture["pages"]
+    assert produced["text"] == fixture["text"]
+    assert produced["metadata"]["section_key"] == fixture["metadata"]["section_key"]
+    assert produced["metadata"]["page_boundary_crossed"] is True
+
+
 def test_fixture_chunk_supports_query_normalize():
     normalized = normalize("rotor unbalance critical speed")
 
@@ -117,6 +191,16 @@ def test_fixture_chunk_supports_search():
 
     assert result["status"] == "ok"
     assert result["hits"][0]["chunk_id"] == chunks[0]["chunk_id"]
+
+
+def test_zh_fixture_chunk_supports_search():
+    chunks = load_chunks(chunk_paths=[FIXTURES / "chunks" / "sample_zh_chunks.jsonl"])
+
+    result = search("阻尼比 临界转速 转子振动", chunks=chunks, top_k=1)
+
+    assert result["status"] == "ok"
+    assert result["hits"][0]["chunk_id"] == chunks[0]["chunk_id"]
+    assert result["hits"][0]["pages"] == [1, 2]
 
 
 def test_fixture_chunk_supports_evidence_helpers():
