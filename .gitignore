@@ -16,6 +16,9 @@ data/embeddings/*
 data/exports/*
 !data/**/.gitkeep
 
+# Downloaded ML model cache (PaddleOCR / PaddleX / HuggingFace) - regenerable, fetched at runtime
+data/cache/
+
 # DB local state
 db/postgres/pgdata/
 db/qdrant/storage/
