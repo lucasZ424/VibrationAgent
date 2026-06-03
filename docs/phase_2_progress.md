@@ -14,6 +14,7 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 4. DOCX ingestion capability: done (pending review)
 5. Real embedding generation layer: done (pending review)
 6. Qdrant write/read chain: done (pending review)
+7. Postgres qa_logs persistence: done (pending review)
 
 ## Obj1 Notes
 
@@ -291,3 +292,74 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 ## Obj6 Next Obj Gate
 
 - Pending verification of Obj6 before starting Obj7.
+
+## Obj7 Notes
+
+- Added `db/postgres/migrations/002_qa_logs_runtime.sql` extending `qa_logs`
+  with `status`, `citations` (JSONB), `latency_ms`, `token_cost` via
+  `ADD COLUMN IF NOT EXISTS`.
+- Added `storage/postgres_client.py` (optional psycopg adapter: `connect`,
+  `apply_migrations`, `insert_row`, `fetch_rows`) and `storage/qa_logs.py`
+  (redacted row builder + fail-safe `record_qa_log`).
+- `apply_migrations` is replayable: a `schema_migrations` ledger records applied
+  files so a second run applies nothing. The column registry in
+  `storage/postgres.py` and its alignment guard now span 001 + 002.
+- `TutorOrchestrator.handle_query` times the S2->S3->V4 chain and persists one
+  `qa_logs` row as an optional side effect. Offline/disabled -> silent skip; a
+  write failure appends a warning and never changes the return status.
+- Added `DatabaseSettings.postgres_enabled` (default false) and the optional
+  `postgres` pyproject extra (`psycopg[binary]`).
+- Redaction: qa_logs stores only locatable citation refs and short summaries —
+  never raw chunk text, document originals, or secrets; query/summary are capped.
+
+## Obj7 Verification
+
+- Verified command: `PYTHONPATH=src .venv/Scripts/python.exe -m pytest tests -q --basetemp=.pytest_tmp`
+- Result: 230 passed, 2 skipped (the Qdrant and Postgres roundtrips skip with no
+  live instance). Split: 223 passed (not integration) + 7 passed integration.
+- Obj7-specific: `tests/unit/test_qa_logs.py` 11 passed;
+  `tests/integration/test_postgres_roundtrip.py` skipped (no live Postgres).
+
+## Obj7 Residual Risk
+
+- The live Postgres roundtrip (idempotent migrations + qa_logs read-back) is
+  skip-only here; it needs a real Postgres + psycopg. The write path, redaction,
+  and fail-safe degradation are covered by fakes/monkeypatch unit tests.
+- `record_qa_log` opens a fresh connection per query (no pooling); acceptable for
+  a local-personal write rate, revisit if qa_logs volume grows.
+- `token_cost` is always NULL until LLM-S3 / token accounting lands (Obj9).
+- 001_init.sql's `CREATE EXTENSION`/`CREATE TABLE` require privileges; the
+  roundtrip test skips (not fails) if migrations cannot be applied.
+
+## Obj7 Next Obj Gate
+
+- Pending review of Obj7 before starting Obj8.
+
+## Obj7 Review Follow-Up
+
+Applied after the `issues_obj7.txt` review:
+- #1/#2 (migration operational model): documented that `POSTGRES_ENABLED=true`
+  requires migrations through 002, and hardened `apply_migrations` to backfill
+  `001_init.sql` into the ledger when the base schema pre-exists (so "replayable"
+  holds for a legacy 001-only DB, not only an empty DB).
+- #3 (silent logging failure): `_persist_qa_log` now surfaces an unexpected
+  failure as a "qa_logs persistence skipped (unexpected failure)" warning instead
+  of swallowing it; the primary status is still untouched.
+- #4 (per-query delay): added `DatabaseSettings.postgres_timeout` (default 2.0s,
+  `POSTGRES_TIMEOUT`) threaded into the connect, so a bad host no longer pays the
+  5s psycopg default per query.
+- #5 (secrets): added a conservative best-effort secret mask on query/summary
+  (`sk-…`/`Bearer …`/`api_key=…`/GitHub/AWS shapes) and documented it as
+  best-effort, not a guarantee.
+- #6 (SQL identifiers): `insert_row`/`fetch_rows` now validate table/column and
+  `order_by` identifiers (values remain parameterized).
+- #7 (dry-run drift): `PostgresWritePlan.dry_run` ddl_source now points at
+  `db/postgres/migrations/*.sql`.
+- #8 (exports): left `storage/__init__.py` unchanged by decision — runtime and
+  tests import `storage.qa_logs` / `storage.postgres_client` directly.
+- Judgment calls J1–J4 were affirmed by review; no change required.
+
+Residual (accepted): live Postgres roundtrip is skip-only without an instance;
+per-query connection (no pool) is acceptable at local-personal volume and now
+timeout-bounded; `token_cost` stays NULL until Obj9; the secret mask is
+best-effort.

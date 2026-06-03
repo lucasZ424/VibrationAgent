@@ -58,7 +58,18 @@ POSTGRES_COLUMNS: dict[str, tuple[str, ...]] = {
     "symbols": ("canonical_symbol", "latex", "meaning", "unit", "notes", "avoid_confusion_with"),
     "units": ("quantity", "canonical_units", "aliases", "warning_notes"),
     "citations": ("answer_id", "chunk_id", "evidence_type", "confidence"),
-    "qa_logs": ("query", "intent", "chosen_skills", "retrieved_chunks", "final_verdict"),
+    "qa_logs": (
+        "query",
+        "intent",
+        "chosen_skills",
+        "retrieved_chunks",
+        "final_verdict",
+        # Phase-2 Obj7 runtime columns (db/postgres/migrations/002_qa_logs_runtime.sql).
+        "status",
+        "citations",
+        "latency_ms",
+        "token_cost",
+    ),
 }
 
 POSTGRES_HELPER_KEYS: tuple[str, ...] = ("_meta",)
@@ -102,7 +113,7 @@ class PostgresWritePlan:
             "preview": {table: rows[:preview] for table, rows in self.rows.items() if rows},
             "sql_preview": {table: rows[:preview] for table, rows in self.sql_rows().items() if rows},
             "sql_columns": POSTGRES_COLUMNS,
-            "ddl_source": "db/postgres/migrations/001_init.sql",
+            "ddl_source": "db/postgres/migrations/*.sql",
         }
 
 
@@ -246,11 +257,17 @@ def qa_log_row(
     chosen_skills: Iterable[str] | None = None,
     retrieved_chunks: Iterable[str] | None = None,
     final_verdict: str | None = None,
+    status: str | None = None,
+    citations: list[dict[str, Any]] | None = None,
+    latency_ms: int | None = None,
+    token_cost: int | None = None,
 ) -> dict[str, Any]:
     """Prepare a QA log row with logical retrieval refs in ``_meta``.
 
     ``retrieved_chunks`` is a BIGINT[] column, so the dry-run row leaves it empty
-    until a runtime writer resolves logical chunk ids to database ids.
+    until a runtime writer resolves logical chunk ids to database ids. The Obj7
+    runtime columns (``status``/``citations``/``latency_ms``/``token_cost``) carry
+    only locatable citation refs and metadata — never raw chunk text or secrets.
     """
     logical_refs = [str(item) for item in retrieved_chunks or []]
     return {
@@ -259,6 +276,10 @@ def qa_log_row(
         "chosen_skills": list(chosen_skills or []),
         "retrieved_chunks": [],
         "final_verdict": final_verdict,
+        "status": status,
+        "citations": citations if citations is not None else [],
+        "latency_ms": latency_ms,
+        "token_cost": token_cost,
         "_meta": {"logical_retrieved_chunk_ids": logical_refs},
     }
 
@@ -328,5 +349,7 @@ def dry_run_ingestion(manifest: Mapping[str, Any], chunks: Iterable[Mapping[str,
 
 
 def connect(url: str):
-    """Connection creation is intentionally deferred until storage activation."""
-    raise NotImplementedError("Postgres runtime writes are deferred; use prepare_ingestion_plan(...).dry_run() for Target 10.")
+    """Open a runtime Postgres connection via the optional psycopg adapter."""
+    from .postgres_client import connect as _connect
+
+    return _connect(url)

@@ -6,6 +6,7 @@ are not invoked by this orchestrator.
 from __future__ import annotations
 
 import re
+import time
 from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
@@ -182,10 +183,12 @@ class TutorOrchestrator:
         retrieval_skill: Skill | None = None,
         qa_summary_skill: Skill | None = None,
         style_skill: Skill | None = None,
+        settings: Any | None = None,
     ) -> None:
         self.retrieval_skill = retrieval_skill or RetrievalSkill()
         self.qa_summary_skill = qa_summary_skill or QASummarySkill()
         self.style_skill = style_skill or OutputStyleSkill()
+        self._settings = settings
 
     def _early_return(
         self,
@@ -213,6 +216,45 @@ class TutorOrchestrator:
         )
 
     def handle_query(
+        self,
+        query: str,
+        *,
+        context: Mapping[str, Any] | None = None,
+        constraints: Mapping[str, Any] | None = None,
+        user_mode: UserMode = "engineering",
+        task_id: str | None = None,
+    ) -> SkillOutput:
+        """Run the S2 -> S3 -> V4 chain and persist one fail-safe qa_logs row.
+
+        Persisting is an optional side effect: it never changes ``output``'s status
+        and only appends a warning if a write was attempted (Postgres enabled) but
+        failed. Timing covers only the answer chain, not the log write.
+        """
+        start = time.perf_counter()
+        output = self._run_chain(
+            query,
+            context=context,
+            constraints=constraints,
+            user_mode=user_mode,
+            task_id=task_id,
+        )
+        latency_ms = int((time.perf_counter() - start) * 1000)
+        self._persist_qa_log(output, query=query, latency_ms=latency_ms)
+        return output
+
+    def _persist_qa_log(self, output: SkillOutput, *, query: str, latency_ms: int) -> None:
+        try:
+            from ..storage.qa_logs import record_qa_log
+
+            warning = record_qa_log(output, query=query, latency_ms=latency_ms, settings=self._settings)
+        except Exception as exc:  # noqa: BLE001 - persistence must never break the answer
+            # Fail-safe, not silent: an unexpected logging bug surfaces as a warning
+            # (the primary status is still untouched).
+            warning = f"qa_logs persistence skipped (unexpected failure): {type(exc).__name__}: {exc}"
+        if warning and warning not in output.warnings:
+            output.warnings.append(warning)
+
+    def _run_chain(
         self,
         query: str,
         *,

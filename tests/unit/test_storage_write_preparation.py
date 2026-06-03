@@ -71,22 +71,33 @@ def _chunk():
 
 
 def _parse_insertable_columns_from_sql() -> dict[str, tuple[str, ...]]:
-    text = Path("db/postgres/migrations/001_init.sql").read_text(encoding="utf-8-sig")
-    parsed: dict[str, tuple[str, ...]] = {}
-    for match in re.finditer(r"CREATE TABLE\s+(\w+)\s*\((.*?)\n\);", text, re.S):
-        table = match.group(1)
-        columns: list[str] = []
-        for raw_line in match.group(2).splitlines():
-            line = raw_line.strip().rstrip(",")
-            if not line or line.startswith("--"):
-                continue
-            name = line.split()[0]
-            if name.upper() in {"CONSTRAINT", "PRIMARY", "FOREIGN", "UNIQUE", "CHECK"}:
-                continue
-            if name not in {"id", "created_at"}:
-                columns.append(name)
-        parsed[table] = tuple(columns)
-    return parsed
+    """Insertable columns across all migrations: CREATE TABLE, then ALTER ADD COLUMN.
+
+    Spanning every ``*.sql`` (not just 001) keeps this guard honest as later
+    migrations extend a table — e.g. the Obj7 qa_logs runtime columns in 002.
+    """
+    parsed: dict[str, list[str]] = {}
+    for sql_path in sorted(Path("db/postgres/migrations").glob("*.sql")):
+        text = sql_path.read_text(encoding="utf-8-sig")
+        for match in re.finditer(r"CREATE TABLE\s+(\w+)\s*\((.*?)\n\);", text, re.S):
+            table = match.group(1)
+            columns: list[str] = []
+            for raw_line in match.group(2).splitlines():
+                line = raw_line.strip().rstrip(",")
+                if not line or line.startswith("--"):
+                    continue
+                name = line.split()[0]
+                if name.upper() in {"CONSTRAINT", "PRIMARY", "FOREIGN", "UNIQUE", "CHECK"}:
+                    continue
+                if name not in {"id", "created_at"}:
+                    columns.append(name)
+            parsed[table] = columns
+        for table, column in re.findall(
+            r"ALTER TABLE\s+(\w+)\s+ADD COLUMN\s+(?:IF NOT EXISTS\s+)?(\w+)", text
+        ):
+            if column not in {"id", "created_at"}:
+                parsed.setdefault(table, []).append(column)
+    return {table: tuple(columns) for table, columns in parsed.items()}
 
 
 def test_postgres_column_registry_matches_migration_insertable_columns():

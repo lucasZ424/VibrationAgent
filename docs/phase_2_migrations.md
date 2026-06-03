@@ -107,3 +107,46 @@ Additive / optional only. Existing retrieval outputs keep the same public
 Rollback: set `qdrant_enabled=false`, remove `storage/qdrant_client.py`, and
 revert `dense.py` to Obj5 local embedding/token-feature behavior. Dry-run point
 planning can remain because it predates Obj6 and is still useful for inspection.
+
+### Obj7 - Postgres qa_logs persistence (2026-06-03)
+
+Additive / optional only. The Phase-1 relational schema and the retrieval/answer
+contracts are unchanged; persistence is an opt-in side effect.
+
+- `db/postgres/migrations/002_qa_logs_runtime.sql` (new): extends `qa_logs` with
+  `status`, `citations` (JSONB), `latency_ms`, `token_cost` via
+  `ADD COLUMN IF NOT EXISTS`. Idempotent on its own; the runner
+  (`postgres_client.apply_migrations`) also records applied files in a
+  `schema_migrations` ledger, so replaying applies nothing. 001_init.sql is
+  untouched.
+- `storage/postgres.py`: `POSTGRES_COLUMNS["qa_logs"]` gains the four columns;
+  `qa_log_row(...)` accepts optional `status`/`citations`/`latency_ms`/
+  `token_cost`; the deferred `connect()` now delegates to the psycopg adapter.
+- `storage/postgres_client.py` (new): thin optional adapter around `psycopg`
+  (`connect`, `apply_migrations`, `insert_row`, `fetch_rows`). Importing storage
+  never requires psycopg; only runtime writes do.
+- `storage/qa_logs.py` (new): builds a redacted row and writes it fail-safe.
+- `config.py`: `DatabaseSettings.postgres_enabled` (default false; `POSTGRES_ENABLED`).
+- `orchestrator/tutor.py`: `handle_query` now times the chain and persists one
+  `qa_logs` row as an optional side effect. Disabled/offline -> silent skip; a
+  write failure appends a warning to `SkillOutput.warnings` and never changes the
+  return status. `token_cost` is NULL until LLM lanes activate (Obj9).
+- Redaction: only locatable citation refs (`chunk_id`/`doc_id`/`pages`/
+  `evidence_type`/`confidence`) and short summaries are stored — never raw chunk
+  text or document originals. Query/summary are length-capped and run through a
+  best-effort secret mask (`sk-…`, `Bearer …`, `api_key=…`, GitHub/AWS key
+  shapes -> `[REDACTED]`). The mask is a conservative net, not a guarantee.
+
+Operational model (qa_logs persistence is an operator-enabled feature):
+- `POSTGRES_ENABLED=true` requires the migrations through 002 to be applied first
+  (`postgres_client.apply_migrations(connect(url), "db/postgres/migrations")`).
+  Until then, inserts simply fail-safe to a warning; the answer is unaffected.
+- `apply_migrations` is replayable: it records applied files in a
+  `schema_migrations` ledger, and backfills `001_init.sql` into the ledger when
+  the base tables already exist out-of-band (so it never re-runs the bare
+  `CREATE TABLE`). Subsequent migrations use `IF NOT EXISTS` / `ADD COLUMN IF NOT
+  EXISTS`. `POSTGRES_TIMEOUT` (default 2.0s) bounds the per-query connect cost.
+
+Rollback: set `postgres_enabled=false` (the default), drop the orchestrator
+side-effect call, and the 002 columns are inert. No frozen contract depends on
+qa_logs persistence.

@@ -32,6 +32,8 @@ class ClassifySettings(BaseModel):
 
 class DatabaseSettings(BaseModel):
     postgres_url: str = ""
+    postgres_enabled: bool = False
+    postgres_timeout: float = Field(default=2.0, gt=0.0)
     qdrant_enabled: bool = False
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
@@ -205,6 +207,8 @@ def load(workspace: Path | None = None) -> Settings:
         ),
         database=DatabaseSettings(
             postgres_url=str(_env("POSTGRES_URL", "")),
+            postgres_enabled=_env_bool("POSTGRES_ENABLED", False),
+            postgres_timeout=float(_env("POSTGRES_TIMEOUT", 2.0)),
             qdrant_enabled=_env_bool("QDRANT_ENABLED", False),
             qdrant_url=str(_env("QDRANT_URL", "http://localhost:6333")),
             qdrant_api_key=str(_env("QDRANT_API_KEY", "")),
