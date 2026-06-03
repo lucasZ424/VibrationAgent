@@ -32,8 +32,12 @@ class ClassifySettings(BaseModel):
 
 class DatabaseSettings(BaseModel):
     postgres_url: str = ""
+    qdrant_enabled: bool = False
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: str = ""
+    qdrant_collection: str = "chunks"
+    qdrant_vector_size: int = Field(default=384, ge=1)
+    qdrant_timeout: float = Field(default=2.0, gt=0.0)
     redis_url: str = "redis://localhost:6379/0"
 
 
@@ -77,6 +81,16 @@ class RetrievalSettings(BaseModel):
     )
 
 
+class EmbeddingSettings(BaseModel):
+    provider: str = "sentence_transformers"
+    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    model_version: str | None = None
+    batch_size: int = Field(default=32, ge=1)
+    enabled: bool = True
+    local_files_only: bool = True
+    fallback_to_token_features: bool = True
+
+
 class LlmSettings(BaseModel):
     providers: dict[str, str] = Field(default_factory=dict)
 
@@ -93,6 +107,7 @@ class Settings(BaseModel):
     ocr: OcrSettings = Field(default_factory=OcrSettings)
     chunking: ChunkingSettings = Field(default_factory=ChunkingSettings)
     retrieval: RetrievalSettings = Field(default_factory=RetrievalSettings)
+    embeddings: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     routing: RoutingSettings = Field(default_factory=RoutingSettings)
     llm: LlmSettings = Field(default_factory=LlmSettings)
 
@@ -130,6 +145,13 @@ def _env(name: str, default: Any) -> Any:
     return default if value is None or value == "" else value
 
 
+def _env_bool(name: str, default: bool) -> bool:
+    value = os.getenv(name)
+    if value is None or value == "":
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 def _first_fallback_threshold(items: list[Any], default: float = 0.6) -> float:
     for item in items:
         if isinstance(item, dict) and "low_confidence_below" in item:
@@ -143,6 +165,7 @@ def load(workspace: Path | None = None) -> Settings:
     app_yaml = _read_yaml(config_dir / "app.yaml")
     ingestion_yaml = _read_yaml(config_dir / "ingestion.yaml")
     retrieval_yaml = _read_yaml(config_dir / "retrieval.yaml")
+    embeddings_yaml = _read_yaml(config_dir / "embeddings.yaml")
 
     app_section = app_yaml.get("app", {})
     orchestrator_section = app_yaml.get("orchestrator", {})
@@ -154,6 +177,7 @@ def load(workspace: Path | None = None) -> Settings:
     retrieval_top_k = retrieval_yaml.get("top_k", {})
     retrieval_fusion = retrieval_yaml.get("fusion", {})
     rerank_section = retrieval_yaml.get("rerank", {})
+    embeddings_section = embeddings_yaml.get("embeddings", {})
 
     data_dir = _resolve(root, _env("DATA_DIR", "data"))
     paths = PathSettings(
@@ -181,8 +205,12 @@ def load(workspace: Path | None = None) -> Settings:
         ),
         database=DatabaseSettings(
             postgres_url=str(_env("POSTGRES_URL", "")),
+            qdrant_enabled=_env_bool("QDRANT_ENABLED", False),
             qdrant_url=str(_env("QDRANT_URL", "http://localhost:6333")),
             qdrant_api_key=str(_env("QDRANT_API_KEY", "")),
+            qdrant_collection=str(_env("QDRANT_COLLECTION", "chunks")),
+            qdrant_vector_size=int(_env("QDRANT_VECTOR_SIZE", 384)),
+            qdrant_timeout=float(_env("QDRANT_TIMEOUT", 2.0)),
             redis_url=str(_env("REDIS_URL", "redis://localhost:6379/0")),
         ),
         ocr=OcrSettings(
@@ -209,6 +237,15 @@ def load(workspace: Path | None = None) -> Settings:
             rerank_enabled=bool(rerank_section.get("enabled", False)),
             source_priority=dict(retrieval_yaml.get("source_priority", {})) or RetrievalSettings().source_priority,
         ),
+        embeddings=EmbeddingSettings(
+            provider=str(_env("EMBEDDING_PROVIDER", embeddings_section.get("provider", "sentence_transformers"))),
+            model_name=str(_env("EMBEDDING_MODEL", embeddings_section.get("model_name", "sentence-transformers/all-MiniLM-L6-v2"))),
+            model_version=embeddings_section.get("model_version"),
+            batch_size=int(_env("EMBEDDING_BATCH_SIZE", embeddings_section.get("batch_size", 32))),
+            enabled=bool(embeddings_section.get("enabled", True)),
+            local_files_only=bool(embeddings_section.get("local_files_only", True)),
+            fallback_to_token_features=bool(embeddings_section.get("fallback_to_token_features", True)),
+        ),
         routing=RoutingSettings(
             default_owner=str(_env("ROUTING_DEFAULT_OWNER", routing_section.get("default_owner", "gpt"))),
             opus_difficulties=list(routing_section.get("opus_difficulties", ["extreme"])),
@@ -223,6 +260,7 @@ __all__ = [
     "ClassifySettings",
     "ChunkingSettings",
     "DatabaseSettings",
+    "EmbeddingSettings",
     "LlmSettings",
     "OcrSettings",
     "PathSettings",

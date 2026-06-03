@@ -249,7 +249,13 @@ def search(
         return {**output.model_dump(mode="json"), "retrieval_context": []}
 
     bm25_results = bm25.search(normalized_query, chunks=corpus, top_k=active_settings.retrieval.bm25_top_k)
-    dense_results = dense.search(normalized_query, chunks=corpus, top_k=active_settings.retrieval.dense_top_k)
+    dense_results = dense.search(
+        normalized_query,
+        chunks=corpus,
+        top_k=active_settings.retrieval.dense_top_k,
+        settings=active_settings,
+        warnings=warnings,
+    )
     candidates = _rrf_candidates(
         bm25_results=bm25_results,
         dense_results=dense_results,
@@ -262,7 +268,7 @@ def search(
 
     hits = [_hit_from_candidate(candidate) for candidate in candidates]
     if not hits:
-        warnings.append("Weak recall: no matching chunks found.")
+        warnings.insert(0, "Weak recall: no matching chunks found.")
     output = RetrievalOutput(
         normalized_query=normalized_query,
         intent=normalized["intent_hint"],

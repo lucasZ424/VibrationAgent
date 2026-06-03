@@ -1,0 +1,8 @@
+embeddings:
+  enabled: true
+  provider: sentence_transformers
+  model_name: sentence-transformers/all-MiniLM-L6-v2
+  model_version:
+  batch_size: 32
+  local_files_only: true
+  fallback_to_token_features: true

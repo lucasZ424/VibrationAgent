@@ -1,6 +1,6 @@
 # Phase 2 Progress
 
-Updated: 2026-06-02
+Updated: 2026-06-03
 
 ## Execution Model
 
@@ -12,6 +12,8 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 2. Bilingual fixture and multi-page/cross-chunk regression samples: done
 3. Bibliography metadata + section parent-child linking: done
 4. DOCX ingestion capability: done (pending review)
+5. Real embedding generation layer: done (pending review)
+6. Qdrant write/read chain: done (pending review)
 
 ## Obj1 Notes
 
@@ -183,3 +185,109 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 - Result: 194 passed, 7 deselected.
 - Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration -q --basetemp=<repo-data-tmp> -p no:cacheprovider`
 - Result: 7 passed.
+
+## Obj5 Notes
+
+- Added `src/vibration_agent/retrieval/embeddings.py` with `embed_texts()`,
+  batching, in-call text dedupe, a text-hash keyed in-memory cache, SHA-256
+  text hashes, and `EmbeddingRecord` provenance.
+- Added `configs/embeddings.yaml` and `EmbeddingSettings`.
+- Added optional `pyproject.toml` extra `embeddings` for installing
+  `sentence-transformers` without making it a mandatory runtime dependency.
+- `dense.py` now attempts embedding-vector retrieval first and falls back to the
+  deterministic token-feature lane when the model is disabled, unavailable, or
+  not configured as a local file.
+- The default config keeps `local_files_only: true`; this prevents fast tests and
+  local runs from accidentally downloading models. A real local model path can be
+  configured through `EMBEDDING_MODEL` / `configs/embeddings.yaml`.
+- A default cold start with no local embedding model configured falls back
+  silently to the Phase-1 token-feature lane. Explicit disablement or real model
+  load/encode failures still surface embedding warnings.
+- Obj5 still embeds the query and supplied corpus in the request path when a real
+  local model is configured. This is a bridge state before Obj6 moves dense
+  retrieval to Qdrant write/read.
+- `hybrid.search()` propagates actionable embedding fallback warnings through
+  `RetrievalOutput.warnings` while preserving Phase-1 retrieval hit/citation
+  shapes.
+
+## Obj5 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_embeddings.py tests\unit\test_s2_retrieval_skill.py tests\unit\test_schemas.py tests\unit\test_regression_fixtures.py -q --basetemp=<repo-data-tmp> -p no:cacheprovider`
+- Result: 43 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not integration" --basetemp=<repo-data-tmp> -p no:cacheprovider`
+- Result: 200 passed, 7 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration -q --basetemp=<repo-data-tmp> -p no:cacheprovider`
+- Result: 7 passed.
+
+## Obj5 Residual Risk
+
+- No real sentence-transformers model is bundled with the repo. The real-model
+  path is covered with fake-model tests; runtime uses deterministic fallback
+  until a local model path is configured.
+- The Obj5 in-memory cache is process-local only. Obj6 is expected to move
+  persistent vector storage and search into Qdrant.
+
+## Obj5 Next Obj Gate
+
+- Pending review of Obj5 before starting Obj6.
+
+## Obj6 Notes
+
+- Added `src/vibration_agent/storage/qdrant_client.py`, a thin adapter around
+  the optional `qdrant-client` package. Importing storage code does not require
+  the dependency; runtime client creation does.
+- Extended `src/vibration_agent/storage/qdrant.py` from dry-run point planning
+  to collection initialization, chunk vector upsert, and vector search result
+  mapping.
+- Qdrant payloads now carry chunk text/api context/assets so dense hits can still
+  feed retrieval context when BM25 does not already provide the same chunk.
+- Added `DatabaseSettings.qdrant_enabled`, `qdrant_collection`,
+  `qdrant_vector_size`, and `qdrant_timeout`. Qdrant remains off by default and
+  can be enabled explicitly with `QDRANT_ENABLED=true`.
+- `dense.py` attempts Qdrant search only when Qdrant is explicitly enabled and a
+  real query embedding is available. Any Qdrant dependency, connection, or query
+  failure records a warning and falls back to the deterministic token-feature
+  lane.
+- Added optional `pyproject.toml` extra `qdrant` for installing
+  `qdrant-client`.
+- Fixed Obj6 review `#3`: Qdrant default vector size now matches the default
+  MiniLM embedding dimension (384), and dry-run plans report the actual vector
+  dimension when vectors are supplied.
+- Fixed Obj6 review `#4`: runtime Qdrant clients are cached by
+  `url/api_key/timeout` to avoid reconnecting on every query.
+- Fixed Obj6 review `#6` and `#7`: Qdrant results are filtered to the
+  caller-supplied corpus, and empty Qdrant results fall back directly to
+  token-feature search instead of re-embedding the full local corpus.
+- Obj6 does not auto-populate Qdrant from ingestion. The write helpers are
+  available, but corpus population is deferred to Obj8's cold-start / large
+  corpus objective. Until vectors are upserted and a local embedding model is
+  configured, `qdrant_enabled=true` is an opt-in read path that may fall back.
+
+## Obj6 Verification
+
+- Reviewer verification from `docs/issue_log_p2/issues_obj6.txt`: fast suite
+  `208 passed, 8 deselected`; live Qdrant roundtrip `1 skipped` with no local
+  Qdrant instance; Qdrant failure fallback unit passed.
+- Follow-up verification command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_qdrant.py tests\unit\test_embeddings.py tests\integration\test_qdrant_roundtrip.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 18 passed, 1 skipped.
+- Attempted command including `tests\unit\test_s2_retrieval_skill.py` was blocked
+  by environment temp-dir permissions (`tmp_path` cannot scan
+  `C:\Users\zhoul\AppData\Local\Temp\pytest-of-zhoul`), not by an Obj6 assertion.
+
+## Obj6 Residual Risk
+
+- Qdrant remains explicit opt-in. The default Phase-1-compatible path still uses
+  local chunk JSONL plus BM25/token-feature fallback.
+- Live Qdrant roundtrip coverage is skippable when `qdrant-client` or a local
+  Qdrant instance is unavailable.
+- Qdrant writes are not wired into ingestion yet. Obj8 must either populate
+  Qdrant during cold start or explicitly keep Qdrant as a manual vector store.
+- Qdrant requires a real local embedding model for query vectors. The default
+  offline config still falls back before any Qdrant query.
+- Qdrant payload currently denormalizes text/api context/assets to keep dense
+  hits self-contained before Postgres rehydration lands; re-upsert is required
+  after chunk regeneration.
+
+## Obj6 Next Obj Gate
+
+- Pending verification of Obj6 before starting Obj7.

@@ -27,12 +27,20 @@ dev = [
     "pytest>=8.3.2,<9.0.0",
     "httpx>=0.27.0,<1.0.0",
 ]
+embeddings = [
+    "sentence-transformers>=3.0.0,<4.0.0",
+]
+qdrant = [
+    "qdrant-client>=1.9.0,<2.0.0",
+]
 all = [
     "paddleocr>=3.0.0,<4.0.0",
     "paddlepaddle>=3.0.0,<4.0.0",
     "pytesseract>=0.3.10,<1.0.0",
     "pytest>=8.3.2,<9.0.0",
     "httpx>=0.27.0,<1.0.0",
+    "sentence-transformers>=3.0.0,<4.0.0",
+    "qdrant-client>=1.9.0,<2.0.0",
 ]
 
 [project.scripts]

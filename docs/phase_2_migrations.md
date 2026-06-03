@@ -62,3 +62,48 @@ values keep their existing behavior.
 
 Rollback: remove the two literal values and the DOCX parser/pipeline branch.
 Existing PDF/text/image ingestion outputs are independent of this path.
+
+### Obj5 - embedding generation layer (2026-06-02)
+
+Additive / optional only. Existing retrieval outputs keep the same public
+`RetrievalOutput` shape.
+
+- `schemas.py`: new standalone `EmbeddingRecord` model with `text_hash`,
+  `vector`, `dimension`, `model_name`, `model_version`, `provider`, and
+  `warnings`.
+- `config.py`: new `EmbeddingSettings` section loaded from
+  `configs/embeddings.yaml`.
+- Dense retrieval may now use real embedding vectors when a configured local
+  model is available. When the default local model path is not configured, it
+  silently falls back to the deterministic token-feature lane. Explicit
+  disablement and real load/encode failures still record warnings.
+- `RetrievalOutput.warnings` may now include actionable embedding fallback
+  warnings. This is additive and does not change hit/citation schemas.
+
+Rollback: remove `EmbeddingRecord`, `EmbeddingSettings`, `configs/embeddings.yaml`,
+and revert `dense.py` to token-feature-only search.
+
+### Obj6 - Qdrant write/read chain (2026-06-03)
+
+Additive / optional only. Existing retrieval outputs keep the same public
+`RetrievalOutput` shape.
+
+- `config.py`: `DatabaseSettings` gains Qdrant runtime controls:
+  `qdrant_enabled`, `qdrant_collection`, `qdrant_vector_size`, and
+  `qdrant_timeout`. The default vector size is 384 to match the default
+  `all-MiniLM-L6-v2` embedding model; runtime upsert derives the size from
+  actual vectors when available.
+- `storage/qdrant.py`: existing dry-run point planning remains available; runtime
+  helpers now initialize the collection, upsert chunk vectors, and map vector
+  search hits back into dense-lane retrieval candidates. Ingestion-time
+  population is not wired in Obj6; Obj8 owns cold-start / corpus population.
+- `storage/qdrant_client.py`: new optional adapter around `qdrant-client`.
+  Missing dependency or unavailable Qdrant must not block the default chain.
+- `dense.py`: when Qdrant is explicitly enabled and a real query embedding is
+  available, dense retrieval may use Qdrant. Qdrant failures are converted into
+  warnings and the deterministic token-feature fallback remains available.
+  Qdrant hits are filtered to the caller-supplied corpus.
+
+Rollback: set `qdrant_enabled=false`, remove `storage/qdrant_client.py`, and
+revert `dense.py` to Obj5 local embedding/token-feature behavior. Dry-run point
+planning can remain because it predates Obj6 and is still useful for inspection.

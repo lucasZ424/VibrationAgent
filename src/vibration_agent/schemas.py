@@ -134,6 +134,22 @@ class DocumentBibliography(BaseModel):
         return bool(self.authors) and self.year is not None
 
 
+class EmbeddingRecord(BaseModel):
+    """One text embedding plus provenance.
+
+    Phase-2 Obj5 addition. Fields are standalone and optional where provenance
+    may be unavailable during fallback; no Phase-1 retrieval schema changes.
+    """
+
+    text_hash: str
+    vector: list[float] = Field(default_factory=list)
+    dimension: int | None = Field(default=None, ge=0)
+    model_name: str | None = None
+    model_version: str | None = None
+    provider: str = "unknown"
+    warnings: list[str] = Field(default_factory=list)
+
+
 class DocumentAsset(BaseModel):
     asset_id: str
     doc_id: str
