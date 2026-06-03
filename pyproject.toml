@@ -63,4 +63,6 @@ pythonpath = ["src"]
 addopts = "--strict-markers"
 markers = [
     "integration: tests that exercise multiple Phase-0 components together",
+    "slow: tests that are intentionally excluded from fast local runs",
+    "large_corpus: cold-start and regression-baseline tests run explicitly",
 ]

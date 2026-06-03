@@ -155,8 +155,25 @@ Run only fast tests:
 Run the full regression suite, including Phase-0 end-to-end checks:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests -q
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus"
 ```
+
+Run the Obj8 large-corpus smoke test explicitly; it is excluded from the fast
+suite by marker:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\integration\test_large_corpus.py -q -m large_corpus
+```
+
+Run a real cold-start baseline against a larger local corpus:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\bench_large_corpus.py data\raw\book --output data\exports\large_corpus_baseline.json
+```
+
+When validating the Obj6 Qdrant cold-start population path, enable a local
+embedding model plus Qdrant and add `--require-qdrant-population`; the command
+then exits non-zero if the benchmark falls back before Qdrant upsert succeeds.
 
 Reusable small fixtures live under `tests/fixtures/`; they are intentionally independent of the full book corpus. Obj19 end-to-end tests use the same fixture to validate CLI, API, and legacy ingestion paths. Phase-1 deferred/polish decisions are tracked in `docs/phase_1_deferred_and_polish_audit.md`.
 

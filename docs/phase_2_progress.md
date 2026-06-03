@@ -15,6 +15,7 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 5. Real embedding generation layer: done (pending review)
 6. Qdrant write/read chain: done (pending review)
 7. Postgres qa_logs persistence: done (pending review)
+8. Large-corpus cold-start baseline: done (pending review)
 
 ## Obj1 Notes
 
@@ -363,3 +364,60 @@ Residual (accepted): live Postgres roundtrip is skip-only without an instance;
 per-query connection (no pool) is acceptable at local-personal volume and now
 timeout-bounded; `token_cost` stays NULL until Obj9; the secret mask is
 best-effort.
+
+## Obj8 Notes
+
+- Added `scripts/bench_large_corpus.py` as the explicit cold-start benchmark
+  runner. It ingests a corpus, collects chunk exports, optionally populates
+  Qdrant when `QDRANT_ENABLED=true` and real embeddings are available, runs the
+  S2 -> S3 -> V4 query chain, and writes a JSON baseline.
+- The default benchmark question set contains 20 vibration-domain questions.
+  A JSON/JSONL question file can override it with `id`, `query`, and optional
+  `expected_terms`.
+- Baseline output records document count, chunk count, ingestion/total elapsed
+  time, per-query elapsed time, citation coverage, no-citation question IDs,
+  expected-term hit rate when terms are supplied, `token_cost: null`, and
+  runtime flags for embeddings/Qdrant/Postgres. The expected-term hit rate is a
+  proxy over retrieved S2 context text, not true retrieval recall.
+- Added `--require-qdrant-population` so the manual large-corpus run can fail
+  loud if the intended Qdrant cold-start population path is not actually
+  exercised.
+- Added `tests/integration/test_large_corpus.py` as a small-fixture smoke test
+  marked `integration`, `slow`, and `large_corpus`; the default fast suite does
+  not run it.
+- README Testing now includes a separate Obj8 smoke command and the real
+  `scripts/bench_large_corpus.py` baseline command.
+
+## Obj8 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration\test_large_corpus.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 1 passed.
+- Verified command: `.\.venv\Scripts\python.exe scripts\bench_large_corpus.py tests\fixtures\raw\small_vibration_native.pdf --output data\tmp\obj8_script_smoke\baseline.json --max-pages 1 --top-k 2`
+- Result: status ok, 1 document, 1 chunk, 20 questions, citation coverage 0.95, expected-term hit rate 0.3, no-citation question `q12`. This is a fixture smoke only, not the final large-corpus baseline.
+- Attempted broader non-integration suite with `--basetemp=data\tmp\pytest_obj8_fast`; pytest crashed during temp-dir cleanup with `PermissionError`, matching the known local sandbox/temp-dir issue and not an Obj8 assertion failure.
+
+## Obj8 Residual Risk
+
+- The committed test uses the small fixture because no Bently/full-book corpus
+  is committed. The real baseline command must be run on the user's local corpus
+  to establish final Obj8 numbers before these metrics are used to judge later
+  optimization.
+- Default offline embeddings may fall back to token features; Qdrant population
+  is skipped unless a real local embedding model and local Qdrant are enabled.
+  Use `--require-qdrant-population` during the manual baseline run when the
+  persistence loop is part of the gate.
+- `token_cost` remains `null` until Obj9 activates model-backed synthesis and
+  token accounting.
+- A bare `pytest tests` still collects the small fixture large-corpus smoke;
+  project documentation defines the default full command as
+  `pytest tests -q -m "not large_corpus"` rather than enforcing the exclusion in
+  `addopts`.
+- The smoke test writes under `data/tmp` and removes that workspace manually to
+  avoid the known Windows pytest `tmp_path` cleanup permission issue.
+
+## Obj8 Next Obj Gate
+
+- Obj8 harness is complete. The real large-corpus baseline is explicitly
+  deferred to a manual run on the user's local corpus; Obj9 is not blocked, but
+  later retrieval/storage optimization should not use Obj8 smoke numbers as the
+  comparison baseline.
