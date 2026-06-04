@@ -57,7 +57,7 @@ def _as_mapping(value: Any) -> Mapping[str, Any]:
 
 
 def _source_payload(payload: SkillInput) -> Mapping[str, Any]:
-    for key in ("s3_result", "skill_output", "upstream_result"):
+    for key in ("upstream_result", "s3_result", "skill_output"):
         source = _as_mapping(payload.context.get(key))
         if source:
             return source

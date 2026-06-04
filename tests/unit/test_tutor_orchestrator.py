@@ -5,7 +5,7 @@ from pathlib import Path
 from vibration_agent.orchestrator import TutorOrchestrator, handle_query, is_in_scope
 from vibration_agent.orchestrator.tutor import _token_cost
 from vibration_agent.schemas import SkillInput, SkillOutput
-from vibration_agent.skills import OutputStyleSkill, QASummarySkill, RetrievalSkill
+from vibration_agent.skills import CitationCheckSkill, OutputStyleSkill, QASummarySkill, RetrievalSkill
 from vibration_agent.skills.base import Skill
 
 
@@ -58,15 +58,17 @@ def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
     active_skills = [
         orchestrator.retrieval_skill,
         orchestrator.qa_summary_skill,
+        orchestrator.citation_check_skill,
         orchestrator.style_skill,
     ]
     active_names = {skill.name for skill in active_skills}
-    deferred_prefixes = ("s4_", "s5_", "s6_", "s7_", "s8_", "v1_", "v2_", "v3_")
+    deferred_prefixes = ("s4_", "s5_", "s6_", "s7_", "s8_", "v1_", "v3_")
 
     assert type(orchestrator.retrieval_skill) is RetrievalSkill
     assert type(orchestrator.qa_summary_skill) is QASummarySkill
+    assert type(orchestrator.citation_check_skill) is CitationCheckSkill
     assert type(orchestrator.style_skill) is OutputStyleSkill
-    assert active_names == {"s2_retrieval", "s3_qa_summary", "v4_style"}
+    assert active_names == {"s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"}
     assert all(not name.startswith(deferred_prefixes) for name in active_names)
     assert not any(
         module_name.startswith(f"vibration_agent.skills.{prefix}")
@@ -114,7 +116,7 @@ def test_tutor_orchestrator_out_of_scope_returns_localized_insufficient_without_
     assert v4.calls == []
 
 
-def test_tutor_orchestrator_runs_s2_s3_v4_for_in_scope_query(tmp_path):
+def test_tutor_orchestrator_runs_s2_s3_v2_v4_for_in_scope_query(tmp_path):
     chunks_path = _write_jsonl(
         tmp_path / "chunks.jsonl",
         [_chunk("c1", "阻尼比 zeta 控制自由振动衰减速度。阻尼越大，振动衰减越快。", pages=[3])],
@@ -132,6 +134,7 @@ def test_tutor_orchestrator_runs_s2_s3_v4_for_in_scope_query(tmp_path):
     assert [step["skill"] for step in output.structured_result["chain"]] == [
         "s2_retrieval",
         "s3_qa_summary",
+        "v2_citation_check",
         "v4_style",
     ]
     assert output.structured_result["chain"][0]["status"] == "ok"
@@ -139,7 +142,7 @@ def test_tutor_orchestrator_runs_s2_s3_v4_for_in_scope_query(tmp_path):
     assert "## 结论" in output.structured_result["answer"]
     assert "## 证据" in output.structured_result["answer"]
     assert output.structured_result["v4"]["answer"] == output.structured_result["answer"]
-    assert set(output.structured_result["skill_results"]) == {"s2", "s3", "v4"}
+    assert set(output.structured_result["skill_results"]) == {"s2", "s3", "v2", "v4"}
     assert output.citations[0].chunk_id == "c1"
 
 

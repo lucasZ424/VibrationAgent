@@ -1,7 +1,7 @@
 # Test Fixtures
 
 These fixtures are intentionally small and independent of the full Bently book corpus.
-They support fast regression tests for Phase-0 schemas and the S1 -> S2 -> S3 -> V4 chain.
+They support fast regression tests for Phase-0 schemas and the S1 -> S2 -> S3 -> V2 -> V4 chain.
 
 ## Files
 

@@ -103,7 +103,9 @@ class Settings(BaseModel):
     app_name: str = "vibration-agent"
     log_level: str = "INFO"
     default_user_mode: UserMode = "engineering"
-    phase0_pipeline: list[str] = Field(default_factory=lambda: ["s2_retrieval", "s3_qa_summary", "v4_style"])
+    phase0_pipeline: list[str] = Field(
+        default_factory=lambda: ["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"]
+    )
     high_risk_checks: list[str] = Field(default_factory=list)
     paths: PathSettings
     classify: ClassifySettings = Field(default_factory=ClassifySettings)
@@ -199,7 +201,12 @@ def load(workspace: Path | None = None) -> Settings:
         app_name=str(_env("APP_NAME", app_section.get("name", "vibration-agent"))),
         log_level=str(_env("LOG_LEVEL", app_section.get("log_level", "INFO"))),
         default_user_mode=_env("DEFAULT_USER_MODE", app_section.get("default_user_mode", "engineering")),
-        phase0_pipeline=list(orchestrator_section.get("phase0_pipeline", ["s2_retrieval", "s3_qa_summary", "v4_style"])),
+        phase0_pipeline=list(
+            orchestrator_section.get(
+                "phase0_pipeline",
+                ["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"],
+            )
+        ),
         high_risk_checks=list(orchestrator_section.get("high_risk_checks", [])),
         paths=paths,
         classify=ClassifySettings(

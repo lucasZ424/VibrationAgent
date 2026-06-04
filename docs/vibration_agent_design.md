@@ -19,7 +19,8 @@
 - **S1 文档摄取与解析**：读取本地知识库文件，提取文字和页级结构，输出可继续处理的结构化数据。
 - **S2 知识库检索**：基于已入库内容进行稳定召回，返回带原因和来源信息的检索结果。
 - **S3 概念解释 / 摘要 / 问答**：只基于检索证据做解释、摘要和问答；证据不足时返回 `insufficient`。
-- **V4 输出风格整形**：把上游结果渲染为固定工程回答模板，不新增事实或工程判断。
+- **V2 引用与证据核验**：检查 S3 claim 是否引用 S2 可见 chunk，拦截 unsupported claim。
+- **V4 输出风格整形**：把 V2 检查后的上游结果渲染为固定工程回答模板，不新增事实或工程判断。
 
 以下能力保留名称和接口概念，但不在 Phase-0 激活：
 
@@ -29,19 +30,18 @@
 - S7 模型选择
 - S8 实验与测量建议
 - V1 术语/符号/单位规范化
-- V2 引用与证据核验
 - V3 回答审稿
 
 Phase-0 的主链路为：
 
 ```text
-S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style -> user/API/CLI
+S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V2 citation check -> V4 style -> user/API/CLI
 ```
 
 用户查询路径为：
 
 ```text
-User query -> TutorOrchestrator -> S2 -> S3 -> V4 -> SkillOutput/API/CLI JSON
+User query -> TutorOrchestrator -> S2 -> S3 -> V2 -> V4 -> SkillOutput/API/CLI JSON
 ```
 
 S1 用于显式准备知识库，不在每次查询时自动运行。
@@ -85,11 +85,11 @@ User
 
 ### 4.2 任务层
 
-任务层由多个 skill 组成。每个 skill 只负责一种任务，不把检索、推导、总结、审稿、教学混在一个模块里。Phase-0 只激活 S1、S2、S3、V4。
+任务层由多个 skill 组成。每个 skill 只负责一种任务，不把检索、推导、总结、审稿、教学混在一个模块里。Phase-0 只激活 S1、S2、S3、V2、V4。
 
 ### 4.3 质量层
 
-质量层用于术语/符号/单位规范化、引用核验、回答审稿和置信边界控制。Phase-0 中质量层除 V4 外保持惯性，不主动接入主链路。
+质量层用于术语/符号/单位规范化、引用核验、回答审稿和置信边界控制。Phase-0 中质量层当前主动接入 V2 和 V4。
 
 ### 4.4 知识层
 
@@ -380,7 +380,7 @@ agent_skills/
   -> 两轮后仍有问题：Opus 接管或暂停等待人工澄清
 ```
 
-该控制面升级不改变 Phase-0 领域范围。S1、S2、S3、V4 仍是唯一激活的主链路。
+该控制面升级不改变 Phase-0 领域范围。S1、S2、S3、V2、V4 仍是唯一激活的主链路。
 
 ## 15. 目录结构约定
 
@@ -468,7 +468,7 @@ Agent/
 - Python + FastAPI + PostgreSQL + Qdrant + Redis + PyMuPDF + PaddleOCR + Tesseract fallback。
 - 本地证据中台，而不是单纯向量库。
 - `query_normalize + BM25 + dense + RRF/rerank` 的混合检索链路。
-- Phase-0 只激活 S1、S2、S3、V4。
+- Phase-0 只激活 S1、S2、S3、V2、V4。
 - 默认工程回答模板。
 - 文档回答必须带证据标签和置信边界。
 - 长期优势通过 taxonomy、案例沉淀和回归测试积累。

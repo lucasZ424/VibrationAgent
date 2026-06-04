@@ -38,7 +38,12 @@ def test_postgres_qa_log_roundtrip_and_idempotent_migrations():
             summary="Damping reduces resonant vibration.",
             citations=[Citation(chunk_id="c1", doc_id="d1", pages=[1], evidence_type="documented", confidence=0.8)],
             structured_result={
-                "chain": [{"skill": "s2_retrieval"}, {"skill": "s3_qa_summary"}, {"skill": "v4_style"}],
+                "chain": [
+                    {"skill": "s2_retrieval"},
+                    {"skill": "s3_qa_summary"},
+                    {"skill": "v2_citation_check"},
+                    {"skill": "v4_style"},
+                ],
                 "skill_results": {"s2": {"intent": "engineering"}},
             },
         )

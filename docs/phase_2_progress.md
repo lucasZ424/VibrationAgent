@@ -490,3 +490,74 @@ best-effort.
 - Result: 10 passed, 1 deselected.
 - Verified command: AST parse over follow-up touched Python files.
 - Result: ok.
+
+## Obj10 Notes
+
+- Added deterministic `CitationCheckSkill` (`v2_citation_check`) between S3 and
+  V4. The active query chain is now `S2 -> S3 -> V2 -> V4`.
+- V2 checks S3 structured claims against S2 visible retrieval chunks, blocks
+  missing chunk ids, invisible chunk ids, missing visible LLM refs, unstructured
+  answer prose, fake refs, and obvious lexical mismatches.
+- V2 returns `insufficient` with `unsupported_claims` and clears the renderable
+  conclusion answer when unsupported claims exist. V4 consumes V2 output through
+  `upstream_result`, so unsupported conclusions are not rendered.
+- V2 runtime failure is fail-safe: exceptions or explicit `fail` status warn and
+  pass through the original S3 output.
+- Updated runtime scope/config/docs so `v2_citation_check` is active, not
+  deferred/high-risk by default.
+
+## Obj10 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 11 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 10 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus) and not unknown_source_type"`
+- Result: 7 passed, 14 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_qa_logs.py -q -p no:cacheprovider -p no:tmpdir -k "not apply_migrations"`
+- Result: 13 passed, 2 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 4 passed.
+- Verified manual API/CLI query against `tests/fixtures/chunks/sample_chunks.jsonl`.
+- Result: both returned `ok` with chain
+  `["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"]`.
+- Verified command: AST parse over Obj10-touched Python files.
+- Result: ok.
+- Verified command: `git diff --check`
+- Result: no whitespace errors; only existing CRLF-to-LF warnings.
+
+## Obj10 Residual Risk
+
+- Full API/CLI/qa_logs pytest runs that use `tmp_path` still hit the known local
+  Windows pytest `basetemp` cleanup `PermissionError`. Targeted no-`tmp_path`
+  tests and manual API/CLI chain checks passed.
+- Regression fixture tests that require `tmp_path` were not rerun under
+  `-p no:tmpdir`; pytest correctly reports the fixture unavailable.
+- V2 is deterministic and lexical; semantic entailment remains outside Obj10 by
+  design.
+
+## Obj10 Next Obj Gate
+
+- Obj10 implementation is ready for review before starting Obj11.
+
+## Obj10 Review Follow-Up
+
+- Addressed Obj10 `#1`: documented that the >=90% fake-reference metric covers
+  non-existent/invisible chunk refs, not semantic hallucination detection. Added
+  a test that pins the known Obj10 limit where a false claim sharing vocabulary
+  with visible evidence passes the lexical gate.
+- Addressed Obj10 `#2`: documented the all-or-nothing conclusion-block policy.
+  V2 clears prose conclusions when any unsupported claim exists because safe
+  surgical rewriting is outside Obj10.
+- Addressed Obj10 `#3`: made final status propagation explicit in
+  Tutor-Orchestrator. If V2 returns `insufficient`, the final output is
+  `insufficient` even if a future/downstream V4 implementation returns `ok`.
+
+## Obj10 Review Follow-Up Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 13 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 10 passed, 1 deselected.
+- Verified command: AST parse over follow-up touched Python files.
+- Result: ok.

@@ -28,12 +28,13 @@ OCR belongs under `src/vibration_agent/ingestion/ocr/` because OCR is only one b
 
 ## Phase-0 Scope
 
-Phase-0 is limited to four active skills:
+Phase-0 is limited to five active skills:
 
 - `s1_ingestion`: document ingestion and parsing
 - `s2_retrieval`: knowledge-base retrieval
 - `s3_qa_summary`: concept explanation, summary, and QA
-- `v4_style`: output-style shaping
+- `v2_citation_check`: deterministic citation and visible-evidence guard
+- `v4_style`: output-style shaping after V2 filtering
 
 Reserved but inactive skills are:
 
@@ -43,14 +44,17 @@ Reserved but inactive skills are:
 - `s7_model_selection`
 - `s8_experiment_advice`
 - `v1_term_symbol_unit_normalizer`
-- `v2_citation_check`
 - `v3_reviewer`
 
 Deferred skills may appear in registries or scope declarations, but they must not be implemented inside S3 or called by the Phase-0 orchestrator.
 
-Phase-0 S3 produces cited sentence selections from retrieved chunks. It deliberately avoids LLM synthesis so it cannot fill evidence gaps with model-world knowledge. Synthesized answer generation is deferred until the model/API integration objective.
+Phase-0 S3 produces cited sentence selections from retrieved chunks by default.
+Obj9 added an optional feature-flagged LLM synthesis branch, but it still
+requires retrieved evidence and structured citations before V2/V4 consume it.
 
-Phase-0 V4 is a formatting layer. It can reorder and render upstream S3 content into the engineering answer template, preserve citations, and omit empty sections. It must not invent engineering meaning, assumptions, failure modes, formulas, or next actions; those belong to later deferred skills or future model-backed synthesis.
+Phase-0 V2 is a deterministic quality layer. It checks S3 claims against chunks visible to S2, removes unsupported claims, and lets V4 render only checked content.
+
+Phase-0 V4 is a formatting layer. It can reorder and render upstream V2/S3 content into the engineering answer template, preserve citations, and omit empty sections. It must not invent engineering meaning, assumptions, failure modes, formulas, or next actions; those belong to later deferred skills or future model-backed synthesis.
 
 ## Development Order Rule
 
@@ -148,9 +152,9 @@ Non-triggers:
 
 ### Phase-0 Implication
 
-Phase-0 remains GPT-first and keeps S1/S2/S3/V4 as the only active domain chain.
+Phase-0 remains GPT-first and keeps S1/S2/S3/V2/V4 as the only active domain chain.
 The dual-API supervisor loop is a control-plane design addition. It should not
-cause S4-S8 or V1-V3 to be implemented early.
+cause S4-S8 or V1/V3 to be implemented early.
 
 Before implementing the dual-API runtime, add a small control-plane objective:
 
@@ -168,15 +172,15 @@ Acceptance should require:
 
 ## Phase-1 Interface Freeze
 
-Phase 1 is frozen as a Phase-0 implementation. The running chain is:
+Phase 1 was frozen with this baseline runtime chain:
 
 ```text
 S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style
 ```
 
-The user query path is `TutorOrchestrator -> S2 -> S3 -> V4`. S1 is invoked explicitly by ingestion entry points and prepares file-backed knowledge exports for S2.
+As of Phase-2 Obj10, the current user query path is `TutorOrchestrator -> S2 -> S3 -> V2 -> V4`. S1 is invoked explicitly by ingestion entry points and prepares file-backed knowledge exports for S2.
 
-The frozen contract list, accepted limits, and Phase-2 candidate backlog are recorded in `docs/phase_1_interface_freeze.md`. Deferred skills S4-S8 and V1-V3 remain registry/documentation names only and are not called by the Phase-1 runtime.
+The frozen contract list, accepted limits, and Phase-2 candidate backlog are recorded in `docs/phase_1_interface_freeze.md`. Deferred skills S4-S8 and V1/V3 remain registry/documentation names only and are not called by the current Phase-0 runtime.
 
 ## Phase-2 Development Boundary
 

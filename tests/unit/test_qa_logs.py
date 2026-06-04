@@ -22,7 +22,12 @@ def _output() -> SkillOutput:
         summary="Damping reduces resonant vibration near critical speed.",
         citations=[Citation(chunk_id="c1", doc_id="d1", pages=[1, 2], evidence_type="documented", confidence=0.9)],
         structured_result={
-            "chain": [{"skill": "s2_retrieval"}, {"skill": "s3_qa_summary"}, {"skill": "v4_style"}],
+            "chain": [
+                {"skill": "s2_retrieval"},
+                {"skill": "s3_qa_summary"},
+                {"skill": "v2_citation_check"},
+                {"skill": "v4_style"},
+            ],
             "skill_results": {"s2": {"intent": "engineering"}},
         },
     )
@@ -38,7 +43,7 @@ def test_build_qa_log_row_persists_only_locatable_refs():
     ]
     assert row["status"] == "ok"
     assert row["intent"] == "engineering"
-    assert row["chosen_skills"] == ["s2_retrieval", "s3_qa_summary", "v4_style"]
+    assert row["chosen_skills"] == ["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"]
     assert row["latency_ms"] == 12
     assert "_meta" not in row  # SQL-ready, no planning helper
 

@@ -1,7 +1,7 @@
 """Tutor-Orchestrator: the Phase-0 user-facing query entry point.
 
-Phase-0 wiring calls only S2 -> S3 -> V4. Deferred skills stay registered but
-are not invoked by this orchestrator.
+Phase-0 wiring calls only S2 -> S3 -> V2 -> V4. Deferred skills stay
+registered but are not invoked by this orchestrator.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from typing import Any
 from uuid import uuid4
 
 from ..schemas import SkillInput, SkillOutput, UserMode
-from ..skills import OutputStyleSkill, QASummarySkill, RetrievalSkill
+from ..skills import CitationCheckSkill, OutputStyleSkill, QASummarySkill, RetrievalSkill
 from ..skills.base import Skill
 
 _ASCII_STRONG_TERMS = (
@@ -197,11 +197,13 @@ class TutorOrchestrator:
         *,
         retrieval_skill: Skill | None = None,
         qa_summary_skill: Skill | None = None,
+        citation_check_skill: Skill | None = None,
         style_skill: Skill | None = None,
         settings: Any | None = None,
     ) -> None:
         self.retrieval_skill = retrieval_skill or RetrievalSkill()
         self.qa_summary_skill = qa_summary_skill or QASummarySkill(settings=settings)
+        self.citation_check_skill = citation_check_skill or CitationCheckSkill()
         self.style_skill = style_skill or OutputStyleSkill()
         self._settings = settings
 
@@ -239,7 +241,7 @@ class TutorOrchestrator:
         user_mode: UserMode = "engineering",
         task_id: str | None = None,
     ) -> SkillOutput:
-        """Run the S2 -> S3 -> V4 chain and persist one fail-safe qa_logs row.
+        """Run the S2 -> S3 -> V2 -> V4 chain and persist one fail-safe qa_logs row.
 
         Persisting is an optional side effect: it never changes ``output``'s status
         and only appends a warning if a write was attempted (Postgres enabled) but
@@ -346,10 +348,51 @@ class TutorOrchestrator:
                 skill_results=_skill_results(s2=s2_output, s3=s3_output),
             )
 
+        v2_input = SkillInput(
+            task_id=current_task_id,
+            user_query=query,
+            context={
+                **context_dict,
+                "s2_result": s2_output.model_dump(mode="python"),
+                "s3_result": s3_output.model_dump(mode="python"),
+            },
+            constraints=constraints_dict,
+            user_mode=user_mode,
+        )
+        try:
+            v2_output = self.citation_check_skill.run(v2_input)
+        except Exception as exc:  # noqa: BLE001 - V2 quality failure must not break answering
+            v2_output = SkillOutput(
+                status="ok",
+                summary="V2 citation check unavailable; passing through S3 output.",
+                structured_result=s3_output.structured_result,
+                citations=s3_output.citations,
+                warnings=[
+                    *s3_output.warnings,
+                    f"V2 citation check failed; passing through S3 output: {type(exc).__name__}: {exc}",
+                ],
+                handoff_recommendation=s3_output.handoff_recommendation,
+            )
+        if v2_output.status == "fail":
+            v2_output = SkillOutput(
+                status="ok",
+                summary="V2 citation check failed; passing through S3 output.",
+                structured_result=s3_output.structured_result,
+                citations=s3_output.citations,
+                warnings=[
+                    *s3_output.warnings,
+                    *v2_output.warnings,
+                    "V2 citation check returned fail; passing through S3 output.",
+                ],
+                handoff_recommendation=s3_output.handoff_recommendation,
+            )
+        v2_chain = [*s3_chain, _chain_step("v2_citation_check", v2_output)]
+
         v4_context = {
             **context_dict,
             "s2_result": s2_output.model_dump(mode="python"),
             "s3_result": s3_output.model_dump(mode="python"),
+            "upstream_result": v2_output.model_dump(mode="python"),
         }
         v4_input = SkillInput(
             task_id=current_task_id,
@@ -359,8 +402,13 @@ class TutorOrchestrator:
             user_mode=user_mode,
         )
         v4_output = self.style_skill.run(v4_input)
-        chain = [*s3_chain, _chain_step("v4_style", v4_output)]
-        final_status = "fail" if "fail" in {s2_output.status, s3_output.status, v4_output.status} else v4_output.status
+        chain = [*v2_chain, _chain_step("v4_style", v4_output)]
+        if "fail" in {s2_output.status, s3_output.status, v4_output.status}:
+            final_status = "fail"
+        elif v2_output.status == "insufficient":
+            final_status = "insufficient"
+        else:
+            final_status = v4_output.status
 
         return SkillOutput(
             status=final_status,
@@ -371,10 +419,10 @@ class TutorOrchestrator:
                 "chain": chain,
                 "answer": v4_output.structured_result.get("answer", ""),
                 "v4": v4_output.structured_result,
-                "skill_results": _skill_results(s2=s2_output, s3=s3_output, v4=v4_output),
+                "skill_results": _skill_results(s2=s2_output, s3=s3_output, v2=v2_output, v4=v4_output),
             },
             citations=v4_output.citations,
-            warnings=_merge_warnings(s2_output, s3_output, v4_output),
+            warnings=_merge_warnings(s2_output, s3_output, v2_output, v4_output),
             handoff_recommendation=v4_output.handoff_recommendation,
         )
 
