@@ -50,6 +50,7 @@ def test_api_health_returns_runtime_status():
     assert payload["workspace"]
     assert "s2_retrieval" in payload["phase0_pipeline"]
     assert "v2_citation_check" in payload["phase0_pipeline"]
+    assert "v3_reviewer" in payload["phase0_pipeline"]
 
 
 def test_api_scope_returns_phase0_registry():
@@ -60,9 +61,11 @@ def test_api_scope_returns_phase0_registry():
     assert "s2_retrieval" in payload["active_skills"]
     assert "v1_term_symbol_unit_normalizer" in payload["active_skills"]
     assert "v2_citation_check" in payload["active_skills"]
+    assert "v3_reviewer" in payload["active_skills"]
     assert "s4_engineering_analysis" in payload["deferred_skills"]
     assert "v1_term_symbol_unit_normalizer" not in payload["deferred_skills"]
     assert "v2_citation_check" not in payload["deferred_skills"]
+    assert "v3_reviewer" not in payload["deferred_skills"]
 
 
 def test_api_ingest_plan_only_empty_dir_returns_insufficient(tmp_path):

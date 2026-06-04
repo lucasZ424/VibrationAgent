@@ -10,6 +10,7 @@ from vibration_agent.skills import (
     OutputStyleSkill,
     QASummarySkill,
     RetrievalSkill,
+    ReviewerSkill,
     TermSymbolUnitNormalizerSkill,
 )
 from vibration_agent.skills.base import Skill
@@ -67,20 +68,23 @@ def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
         orchestrator.normalizer_skill,
         orchestrator.citation_check_skill,
         orchestrator.style_skill,
+        orchestrator.reviewer_skill,
     ]
     active_names = {skill.name for skill in active_skills}
-    deferred_prefixes = ("s4_", "s5_", "s6_", "s7_", "s8_", "v3_")
+    deferred_prefixes = ("s4_", "s5_", "s6_", "s7_", "s8_")
 
     assert type(orchestrator.retrieval_skill) is RetrievalSkill
     assert type(orchestrator.qa_summary_skill) is QASummarySkill
     assert type(orchestrator.normalizer_skill) is TermSymbolUnitNormalizerSkill
     assert type(orchestrator.citation_check_skill) is CitationCheckSkill
     assert type(orchestrator.style_skill) is OutputStyleSkill
+    assert type(orchestrator.reviewer_skill) is ReviewerSkill
     assert active_names == {
         "s2_retrieval",
         "s3_qa_summary",
         "v1_term_symbol_unit_normalizer",
         "v2_citation_check",
+        "v3_reviewer",
         "v4_style",
     }
     assert all(not name.startswith(deferred_prefixes) for name in active_names)
@@ -225,6 +229,149 @@ def test_default_handle_query_uses_default_orchestrator_for_out_of_scope_query()
 
     assert output.status == "insufficient"
     assert output.structured_result["scope"] == "out_of_scope"
+
+
+def test_tutor_orchestrator_skips_v3_for_non_extreme_query():
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_chunk("c1", "Critical speed affects rotor response.")]},
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={
+                "answer": "## Conclusion\nCritical speed affects rotor response.",
+                "sections": {"conclusion": "Critical speed affects rotor response."},
+            },
+        )
+    )
+    v3 = RecordingSkill(SkillOutput(status="insufficient", summary="should not run"))
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        citation_check_skill=v2,
+        style_skill=v4,
+        reviewer_skill=v3,
+    )
+
+    output = orchestrator.handle_query("critical speed", constraints={"scope": "in_scope"}, task_id="t1")
+
+    assert output.status == "ok"
+    assert v3.calls == []
+    assert [step["skill"] for step in output.structured_result["chain"]] == [
+        "s2_retrieval",
+        "s3_qa_summary",
+        "v2_citation_check",
+        "v4_style",
+    ]
+    assert "v3" not in output.structured_result["skill_results"]
+
+
+def test_tutor_orchestrator_runs_v3_for_extreme_query_without_blocking_answer():
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_chunk("c1", "Critical speed affects rotor response.")]},
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={
+                "answer": "## Conclusion\nCritical speed always eliminates vibration risk.",
+                "sections": {"conclusion": "Critical speed always eliminates vibration risk."},
+            },
+        )
+    )
+    v3 = RecordingSkill(
+        SkillOutput(
+            status="insufficient",
+            summary="V3 flagged issue",
+            structured_result={"reviewer_notes": [{"code": "overclaiming", "message": "absolute wording"}]},
+        )
+    )
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        citation_check_skill=v2,
+        style_skill=v4,
+        reviewer_skill=v3,
+    )
+
+    output = orchestrator.handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert len(v3.calls) == 1
+    assert [step["skill"] for step in output.structured_result["chain"]] == [
+        "s2_retrieval",
+        "s3_qa_summary",
+        "v2_citation_check",
+        "v4_style",
+        "v3_reviewer",
+    ]
+    assert output.structured_result["reviewer_notes"][0]["code"] == "overclaiming"
+    assert "v3" in output.structured_result["skill_results"]
+
+
+def test_tutor_orchestrator_v3_exception_warns_without_blocking_answer():
+    class BrokenReviewer(Skill):
+        name = "v3_reviewer"
+
+        def run(self, payload: SkillInput) -> SkillOutput:
+            raise RuntimeError("v3 boom")
+
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_chunk("c1", "Critical speed affects rotor response.")]},
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={
+                "answer": "## Conclusion\nCritical speed affects rotor response.",
+                "sections": {"conclusion": "Critical speed affects rotor response."},
+            },
+        )
+    )
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        citation_check_skill=v2,
+        style_skill=v4,
+        reviewer_skill=BrokenReviewer(),
+    )
+
+    output = orchestrator.handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert output.structured_result["answer"] == "## Conclusion\nCritical speed affects rotor response."
+    assert output.structured_result["reviewer_notes"] == []
+    assert output.structured_result["chain"][-1]["skill"] == "v3_reviewer"
+    assert any("V3 reviewer failed" in warning for warning in output.warnings)
 
 
 def test_tutor_token_cost_reads_s3_skill_result_for_qa_logs():

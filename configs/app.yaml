@@ -4,8 +4,8 @@
   default_user_mode: engineering      # engineering | definition | derivation | research
 
 orchestrator:
-  phase0_pipeline: [s2_retrieval, s3_qa_summary, v2_citation_check, v4_style]
-  high_risk_checks: [v3_reviewer]   # deferred: activated for flagged answers
+  phase0_pipeline: [s2_retrieval, s3_qa_summary, v2_citation_check, v4_style, v3_reviewer]
+  high_risk_checks: [v3_reviewer]   # advisory: activated for extreme answers
 
 routing:
   default_owner: gpt

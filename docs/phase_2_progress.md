@@ -639,3 +639,68 @@ best-effort.
   `%TEMP%` basetemp. Both were blocked by the known local Windows pytest
   `PermissionError` during tmpdir cleanup, so they are not treated as valid
   assertion results in this environment.
+
+## Obj12 Notes
+
+- Added deterministic `ReviewerSkill` (`v3_reviewer`) as the Phase-2 advisory
+  reviewer.
+- V3 runs after V4 only when routing marks the request as `extreme`. Normal
+  requests still execute only `S2 -> S3 -> V2 -> V4`.
+- V3 checks conclusion/evidence/limits completeness, query-topic relevance, and
+  absolute or proof-like overclaiming language.
+- V3 writes `structured_result.reviewer_notes` and returns `insufficient` when
+  issues are found, but Tutor-Orchestrator does not let that advisory status
+  block the returned V4 answer.
+- Updated scope/config exposure so V3 is active/available and no longer listed
+  as deferred. The configured `phase0_pipeline` now records
+  `S2 -> S3 -> V2 -> V4 -> V3`, while runtime execution still skips V3 for
+  non-extreme requests.
+
+## Obj12 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v3_reviewer.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 16 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or schemas) and not unknown_source_type"`
+- Result: 11 passed, 14 deselected.
+- Verified command: AST parse over Obj12-touched Python files.
+- Result: ok.
+- Verified config/scope probe with `PYTHONPATH=src`.
+- Result: `phase0_pipeline` includes `v3_reviewer`; V3 is active and not
+  deferred.
+- Verified manual normal/extreme smoke against
+  `tests/fixtures/chunks/sample_chunks.jsonl`.
+- Result: normal query returned `ok` with
+  `["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"]`;
+  extreme query returned `ok` with
+  `["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style",
+  "v3_reviewer"]` and advisory reviewer notes.
+
+## Obj12 Residual Risk
+
+- V3 is deterministic and heuristic. It catches obvious structural and wording
+  risks but does not perform semantic entailment review.
+- Full `tmp_path`-using API/CLI chain tests were not rerun because the local
+  Windows pytest cleanup `PermissionError` remains unresolved outside Obj12.
+
+## Obj12 Next Obj Gate
+
+- Obj12 implementation is ready for review before starting Obj13.
+
+## Obj12 Review Follow-Up
+
+- Fixed Obj12 `#1`: cleaned mojibake Chinese aliases in V3 section detection
+  and Chinese overclaim/stop-token constants. Added a Chinese regression test
+  covering `## 结论`, `## 证据`, and `## 失效条件`, so real Chinese section
+  headers are now exercised.
+- Fixed Obj12 `#2`: added a Tutor-Orchestrator fail-safe regression where V3
+  raises at runtime. The final V4 answer remains returned with status `ok`, an
+  empty `reviewer_notes` list, and a visible `V3 reviewer failed` warning.
+- Reviewed Obj12 `#3`: accepted the current behavior. V3 intentionally flags
+  `missing_limits` for extreme answers when V4/S3 did not supply limits or
+  applicability text. V4 should not fabricate limits; later objectives may
+  reduce this advisory note by having upstream synthesis produce real caveats.
+
+## Obj12 Review Follow-Up Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v3_reviewer.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 18 passed, 1 deselected.

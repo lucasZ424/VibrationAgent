@@ -1,7 +1,8 @@
 """Tutor-Orchestrator: the Phase-0 user-facing query entry point.
 
-Phase-0 wiring calls only S2 -> S3 -> V2 -> V4. Deferred skills stay
-registered but are not invoked by this orchestrator.
+Phase-2 wiring calls S2 -> S3 -> V2 -> V4, with V3 reviewer added only for
+extreme tasks. Deferred S4-S8 skills stay registered but are not invoked by this
+orchestrator.
 """
 from __future__ import annotations
 
@@ -11,9 +12,17 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
 
+from ..agent.routing import Difficulty, route_task
 from ..config import load
 from ..schemas import SkillInput, SkillOutput, UserMode
-from ..skills import CitationCheckSkill, OutputStyleSkill, QASummarySkill, RetrievalSkill, TermSymbolUnitNormalizerSkill
+from ..skills import (
+    CitationCheckSkill,
+    OutputStyleSkill,
+    QASummarySkill,
+    RetrievalSkill,
+    ReviewerSkill,
+    TermSymbolUnitNormalizerSkill,
+)
 from ..skills.base import Skill
 
 _ASCII_STRONG_TERMS = (
@@ -220,6 +229,7 @@ class TutorOrchestrator:
         normalizer_skill: TermSymbolUnitNormalizerSkill | None = None,
         citation_check_skill: Skill | None = None,
         style_skill: Skill | None = None,
+        reviewer_skill: Skill | None = None,
         settings: Any | None = None,
     ) -> None:
         self.retrieval_skill = retrieval_skill or RetrievalSkill()
@@ -227,6 +237,7 @@ class TutorOrchestrator:
         self.normalizer_skill = normalizer_skill or TermSymbolUnitNormalizerSkill()
         self.citation_check_skill = citation_check_skill or CitationCheckSkill()
         self.style_skill = style_skill or OutputStyleSkill()
+        self.reviewer_skill = reviewer_skill or ReviewerSkill()
         self._settings = settings
 
     def _normalization_enabled(
@@ -259,6 +270,11 @@ class TutorOrchestrator:
             keys=("v1_output_enabled", "v1_normalize_output"),
         )
         return _bool_value(value, default=default)
+
+    def _review_enabled(self, *, context: Mapping[str, Any], constraints: Mapping[str, Any]) -> bool:
+        settings = self._settings or load()
+        decision = route_task(constraints=constraints, context=context, settings=settings)
+        return decision.difficulty == Difficulty.EXTREME
 
     def _early_return(
         self,
@@ -475,6 +491,41 @@ class TutorOrchestrator:
                     f"V1 output normalization skipped; returning original V4 output: {type(exc).__name__}: {exc}"
                 )
         chain = [*v2_chain, _chain_step("v4_style", v4_output)]
+        skill_results = _skill_results(s2=s2_output, s3=s3_output, v2=v2_output, v4=v4_output)
+        reviewer_notes: list[dict[str, Any]] = []
+        reviewer_warnings: list[str] = []
+        if self._review_enabled(context=context_dict, constraints=constraints_dict):
+            v3_input = SkillInput(
+                task_id=current_task_id,
+                user_query=query,
+                context={
+                    **context_dict,
+                    "s2_result": s2_for_downstream,
+                    "s3_result": s3_output.model_dump(mode="python"),
+                    "v2_result": v2_output.model_dump(mode="python"),
+                    "upstream_result": v4_output.model_dump(mode="python"),
+                },
+                constraints=constraints_dict,
+                user_mode=user_mode,
+            )
+            try:
+                v3_output = self.reviewer_skill.run(v3_input)
+            except Exception as exc:  # noqa: BLE001 - V3 is advisory and fail-safe
+                v3_output = SkillOutput(
+                    status="ok",
+                    summary="V3 reviewer unavailable; returning V4 answer.",
+                    structured_result={"task_id": current_task_id, "reviewer_notes": []},
+                    citations=v4_output.citations,
+                    warnings=[f"V3 reviewer failed; returning V4 answer: {type(exc).__name__}: {exc}"],
+                    handoff_recommendation=v4_output.handoff_recommendation,
+                )
+            chain = [*chain, _chain_step("v3_reviewer", v3_output)]
+            skill_results = {**skill_results, "v3": v3_output.structured_result}
+            reviewer_warnings = v3_output.warnings
+            notes = v3_output.structured_result.get("reviewer_notes")
+            if isinstance(notes, list):
+                reviewer_notes = [dict(note) for note in notes if isinstance(note, Mapping)]
+
         if "fail" in {s2_output.status, s3_output.status, v4_output.status}:
             final_status = "fail"
         elif v2_output.status == "insufficient":
@@ -490,11 +541,12 @@ class TutorOrchestrator:
                 "scope": "in_scope",
                 "chain": chain,
                 "answer": v4_output.structured_result.get("answer", ""),
+                "reviewer_notes": reviewer_notes,
                 "v4": v4_output.structured_result,
-                "skill_results": _skill_results(s2=s2_output, s3=s3_output, v2=v2_output, v4=v4_output),
+                "skill_results": skill_results,
             },
             citations=v4_output.citations,
-            warnings=[*v1_warnings, *_merge_warnings(s2_output, s3_output, v2_output, v4_output)],
+            warnings=[*v1_warnings, *_merge_warnings(s2_output, s3_output, v2_output, v4_output), *reviewer_warnings],
             handoff_recommendation=v4_output.handoff_recommendation,
         )
 
