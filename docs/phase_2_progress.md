@@ -16,6 +16,7 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 6. Qdrant write/read chain: done (pending review)
 7. Postgres qa_logs persistence: done (pending review)
 8. Large-corpus cold-start baseline: done (pending review)
+9. LLM-backed S3 evidence-bound synthesis: done (pending review)
 
 ## Obj1 Notes
 
@@ -421,3 +422,71 @@ best-effort.
   deferred to a manual run on the user's local corpus; Obj9 is not blocked, but
   later retrieval/storage optimization should not use Obj8 smoke numbers as the
   comparison baseline.
+
+## Obj9 Notes
+
+- Added an explicitly feature-flagged LLM synthesis branch inside
+  `QASummarySkill`. Default S3 remains deterministic unless `S3_LLM_ENABLED`
+  or request constraints such as `s3_llm_enabled=true` are set.
+- LLM-backed S3 requires retrieved evidence. With no usable evidence, S3 returns
+  `insufficient` before any model call.
+- LLM output must contain structured claims with valid chunk ids and visible
+  `[chunk_id]` citations in the answer. Malformed or uncited output is treated
+  as unavailable and falls back to deterministic S3 with warnings.
+- Model routing uses the existing GPT-first control plane and model registry;
+  normal S3 synthesis uses the configured `main_answer` role.
+- `S3_LLM_TIMEOUT` / `llm.s3_timeout` bound the mockable LLM call. Real online
+  SDK integration is still outside Obj9; tests use a fake client.
+- Tutor-Orchestrator now carries S3 `token_cost` through to qa_logs when LLM
+  synthesis reports token usage.
+- Updated `prompts/skills/s3_qa_summary.md`,
+  `agent_skills/s3_qa_summary/SKILL.md`, `configs/app.yaml`, and
+  `.env.example` to document the feature flag and citation contract.
+
+## Obj9 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s3_llm_synthesis.py tests\unit\test_s3_qa_summary_skill.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 22 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v4"`
+- Result: 10 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_qa_logs.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider -p no:tmpdir -k "not apply_migrations"`
+- Result: 29 passed, 2 deselected.
+- Verified command: AST parse over Obj9-touched Python files with `utf-8-sig`.
+- Result: ok.
+
+## Obj9 Residual Risk
+
+- LLM-backed S3 is not default until Obj10 V2 citation checking is complete.
+- Obj9 uses a mockable client seam but does not add a real provider SDK call.
+  Manual online validation remains future work when provider clients are wired.
+- The visible `[chunk_id]` guard is a local safety net, not the full V2 semantic
+  citation checker. Obj10 still owns unsupported-claim interception.
+- Wider tests that require pytest `tmp_path` still hit the known Windows
+  temp-dir cleanup `PermissionError`; non-`tmp_path` targeted tests passed.
+
+## Obj9 Next Obj Gate
+
+- Pending review of Obj9 before starting Obj10.
+
+## Obj9 Review Follow-Up
+
+- Fixed Obj9 `#1`: added boundary-invariant tests that pin
+  `load().llm.s3_enabled is False` and verify a default `TutorOrchestrator`
+  keeps S3 in `synthesis_mode == "deterministic"`.
+- Addressed Obj9 `#2`: documented that `S3_LLM_ENABLED=true` only enables the
+  branch; a runtime `llm_client` still has to be injected. Without a client, S3
+  warns and falls back to deterministic synthesis.
+- Addressed Obj9 `#3`: documented that `token_cost` becomes non-null only when
+  an injected client reports token usage; default deterministic production path
+  still writes null.
+- Improved Obj9 `#4`: simplified Tutor-Orchestrator token-cost extraction into
+  explicit readable branches.
+
+## Obj9 Review Follow-Up Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s3_llm_synthesis.py tests\unit\test_s3_qa_summary_skill.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 24 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v4"`
+- Result: 10 passed, 1 deselected.
+- Verified command: AST parse over follow-up touched Python files.
+- Result: ok.

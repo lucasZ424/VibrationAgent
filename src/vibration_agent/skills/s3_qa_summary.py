@@ -1,16 +1,20 @@
-﻿"""S3 concept explanation / summary / QA skill.
+"""S3 concept explanation / summary / QA skill.
 
-Phase-0 S3 is deterministic and evidence-bound. It does not call an LLM or use
-model-world knowledge to fill gaps; it extracts concise cited sentence selections
-from S2 evidence. Synthesized prose is deferred until LLM integration lands.
+The default S3 path is deterministic and evidence-bound. Phase-2 Obj9 adds an
+explicitly feature-flagged LLM synthesis branch; until V2 citation checking is
+active by default, deterministic extraction remains the safe default.
 """
 from __future__ import annotations
 
+import json
 import re
 from collections import defaultdict
 from collections.abc import Callable, Mapping
+from dataclasses import dataclass
 from typing import Any
 
+from vibration_agent.agent import ModelRegistry, route_task
+from vibration_agent.config import Settings, load
 from vibration_agent.knowledge.evidence import citation_from_evidence, retrieval_evidence_row
 from vibration_agent.retrieval.bm25 import tokenize
 from vibration_agent.schemas import Citation, SkillInput, SkillOutput
@@ -20,6 +24,16 @@ from .base import Skill
 _SUPPORTED_MODES = {"whole_doc_summary", "section_summary", "qa"}
 _DEFAULT_MAX_CLAIMS = {"qa": 4, "section_summary": 5, "whole_doc_summary": 6}
 S3Runner = Callable[[list[dict[str, Any]], SkillInput, str, str], tuple[str, list[dict[str, Any]], list[str]]]
+S3LlmClient = Any
+
+
+@dataclass(frozen=True)
+class _LlmSynthesis:
+    answer: str
+    claims: list[dict[str, Any]]
+    citations: list[Citation]
+    token_cost: int | None
+    warnings: list[str]
 
 
 def _first_present(*mappings: Mapping[str, Any], keys: tuple[str, ...]) -> Any:
@@ -190,6 +204,237 @@ def _max_claims(payload: SkillInput, mode: str) -> int:
     return int(value)
 
 
+def _as_bool(value: Any, *, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return bool(value)
+
+
+def _llm_enabled(payload: SkillInput, settings: Settings) -> bool:
+    value = _first_present(
+        payload.constraints,
+        payload.context,
+        keys=("s3_llm_enabled", "llm_enabled", "use_llm_s3"),
+    )
+    if value is not None:
+        return _as_bool(value, default=False)
+    return bool(settings.llm.s3_enabled)
+
+
+def _role_model(settings: Settings, payload: SkillInput) -> tuple[str, dict[str, Any]]:
+    route = route_task(constraints=payload.constraints, context=payload.context, settings=settings)
+    registry = ModelRegistry.from_settings(settings)
+    # Obj9 keeps S3 on the GPT/main-answer lane. Opus supervisor routing is a
+    # later objective and must not be activated from S3 synthesis.
+    role = "main_answer"
+    if role not in registry.roles:
+        role = "interaction_main"
+    spec = registry.get(role)
+    return spec.ref, {"role": role, **route.model_dump(mode="json")}
+
+
+def _evidence_prompt(
+    *,
+    payload: SkillInput,
+    rows: list[dict[str, Any]],
+    mode: str,
+    language: str,
+) -> str:
+    evidence_blocks = []
+    for row in rows:
+        evidence_blocks.append(
+            "\n".join(
+                [
+                    f"[{row['chunk_id']}]",
+                    f"doc_id: {row['doc_id']}",
+                    f"pages: {row.get('pages')}",
+                    str(row.get("text") or ""),
+                ]
+            )
+        )
+    return "\n\n".join(
+        [
+            "You are S3 evidence-bound synthesis for a vibration engineering assistant.",
+            "Use only the supplied evidence blocks.",
+            "Every claim must include a visible [chunk_id] citation from the supplied evidence.",
+            "If evidence is insufficient, return insufficient instead of filling gaps.",
+            f"mode: {mode}",
+            f"language: {language}",
+            f"query: {payload.user_query}",
+            "evidence:",
+            "\n\n".join(evidence_blocks),
+        ]
+    )
+
+
+def _call_llm_client(
+    client: S3LlmClient,
+    *,
+    prompt: str,
+    model: str,
+    rows: list[dict[str, Any]],
+    payload: SkillInput,
+    mode: str,
+    language: str,
+    timeout: float,
+) -> Any:
+    if hasattr(client, "synthesize"):
+        return client.synthesize(
+            prompt=prompt,
+            model=model,
+            evidence=rows,
+            query=payload.user_query,
+            mode=mode,
+            language=language,
+            timeout=timeout,
+        )
+    if callable(client):
+        return client(
+            prompt=prompt,
+            model=model,
+            evidence=rows,
+            query=payload.user_query,
+            mode=mode,
+            language=language,
+            timeout=timeout,
+        )
+    raise TypeError("S3 LLM client must be callable or expose synthesize().")
+
+
+def _response_mapping(response: Any) -> Mapping[str, Any]:
+    if isinstance(response, Mapping):
+        return response
+    if hasattr(response, "model_dump"):
+        dumped = response.model_dump(mode="python")
+        return dumped if isinstance(dumped, Mapping) else {}
+    if isinstance(response, str):
+        try:
+            parsed = json.loads(response)
+        except json.JSONDecodeError:
+            return {"answer": response}
+        return parsed if isinstance(parsed, Mapping) else {}
+    return {}
+
+
+def _token_cost(response: Mapping[str, Any]) -> int | None:
+    for key in ("token_cost", "total_tokens"):
+        value = response.get(key)
+        if value not in (None, ""):
+            return int(value)
+    usage = response.get("token_usage")
+    if isinstance(usage, Mapping):
+        for key in ("total_tokens", "tokens", "total"):
+            value = usage.get(key)
+            if value not in (None, ""):
+                return int(value)
+    return None
+
+
+def _claim_text(value: Mapping[str, Any]) -> str:
+    for key in ("text", "claim", "content"):
+        text = value.get(key)
+        if isinstance(text, str) and text.strip():
+            return text.strip()
+    return ""
+
+
+def _claim_chunk_id(value: Mapping[str, Any]) -> str | None:
+    for key in ("chunk_id", "citation", "source_chunk_id"):
+        chunk_id = value.get(key)
+        if chunk_id:
+            return str(chunk_id).strip("[]")
+    citations = value.get("citations")
+    if isinstance(citations, list) and citations:
+        first = citations[0]
+        if isinstance(first, Mapping) and first.get("chunk_id"):
+            return str(first["chunk_id"])
+        if isinstance(first, str):
+            return first.strip("[]")
+    return None
+
+
+def _llm_claims(response: Mapping[str, Any], rows_by_chunk: Mapping[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    raw_claims = response.get("claims")
+    if not isinstance(raw_claims, list):
+        return []
+    claims: list[dict[str, Any]] = []
+    for raw in raw_claims:
+        if not isinstance(raw, Mapping):
+            continue
+        text = _claim_text(raw)
+        chunk_id = _claim_chunk_id(raw)
+        if not text or not chunk_id or chunk_id not in rows_by_chunk:
+            continue
+        claims.append(
+            {
+                "text": text,
+                "evidence": rows_by_chunk[chunk_id],
+                "assets": rows_by_chunk[chunk_id].get("assets", []),
+                "score": 1.0,
+                "order": (len(claims), 0),
+            }
+        )
+    return claims
+
+
+def _validate_llm_answer(answer: str, claims: list[dict[str, Any]]) -> list[str]:
+    warnings: list[str] = []
+    for claim in claims:
+        chunk_id = str(claim["evidence"]["chunk_id"])
+        if f"[{chunk_id}]" not in answer:
+            warnings.append(f"LLM claim missing visible citation [{chunk_id}].")
+    return warnings
+
+
+def _try_llm_synthesis(
+    *,
+    client: S3LlmClient | None,
+    settings: Settings,
+    rows: list[dict[str, Any]],
+    payload: SkillInput,
+    mode: str,
+    language: str,
+) -> _LlmSynthesis | None:
+    if client is None:
+        raise RuntimeError("S3 LLM is enabled but no LLM client is configured.")
+    model, route = _role_model(settings, payload)
+    prompt = _evidence_prompt(payload=payload, rows=rows, mode=mode, language=language)
+    response = _response_mapping(
+        _call_llm_client(
+            client,
+            prompt=prompt,
+            model=model,
+            rows=rows,
+            payload=payload,
+            mode=mode,
+            language=language,
+            timeout=settings.llm.s3_timeout,
+        )
+    )
+    if response.get("status") == "insufficient":
+        return None
+    answer = str(response.get("answer") or "").strip()
+    rows_by_chunk = {str(row["chunk_id"]): row for row in rows}
+    claims = _llm_claims(response, rows_by_chunk)
+    if not answer or not claims:
+        raise RuntimeError("S3 LLM response did not contain cited claims.")
+    citation_warnings = _validate_llm_answer(answer, claims)
+    if citation_warnings:
+        raise RuntimeError("; ".join(citation_warnings))
+    warnings = list(response.get("warnings", [])) if isinstance(response.get("warnings"), list) else []
+    return _LlmSynthesis(
+        answer=answer,
+        claims=claims,
+        citations=_citations(claims),
+        token_cost=_token_cost(response),
+        warnings=[*warnings, f"S3 LLM route: {route['role']} -> {model}."],
+    )
+
+
 def _ranked_claims(rows: list[dict[str, Any]], query: str, *, limit: int) -> list[dict[str, Any]]:
     query_tokens = set(tokenize(query))
     candidates: list[dict[str, Any]] = []
@@ -318,8 +563,16 @@ def _dedupe_assets(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
 class QASummarySkill(Skill):
     name = "s3_qa_summary"
 
-    def __init__(self, *, runner: S3Runner | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        runner: S3Runner | None = None,
+        settings: Settings | None = None,
+        llm_client: S3LlmClient | None = None,
+    ) -> None:
         self._runner = runner or _default_runner
+        self._settings = settings
+        self._llm_client = llm_client
 
     def run(self, payload: SkillInput) -> SkillOutput:
         mode = _mode(payload)
@@ -335,8 +588,47 @@ class QASummarySkill(Skill):
             )
 
         language = _dominant_language(rows)
+        active_settings = self._settings or load()
+        llm_warnings: list[str] = []
+        if _llm_enabled(payload, active_settings):
+            try:
+                llm = _try_llm_synthesis(
+                    client=self._llm_client,
+                    settings=active_settings,
+                    rows=rows,
+                    payload=payload,
+                    mode=mode,
+                    language=language,
+                )
+            except Exception as exc:  # noqa: BLE001 - LLM path must degrade to deterministic S3
+                llm_warnings.append(
+                    f"S3 LLM synthesis unavailable; using deterministic fallback: {type(exc).__name__}: {exc}"
+                )
+            else:
+                if llm is not None:
+                    return SkillOutput(
+                        status="ok",
+                        summary=f"S3 {mode} LLM ok: {len(llm.claims)} claim(s) from {len(llm.citations)} chunk(s).",
+                        structured_result={
+                            "task_id": payload.task_id,
+                            "mode": mode,
+                            "language": language,
+                            "answer": llm.answer,
+                            "claims": [_claim_record(claim) for claim in llm.claims],
+                            "assets": _dedupe_assets(llm.claims),
+                            "evidence_count": len(rows),
+                            "unsupported_claims": [],
+                            "synthesis_mode": "llm",
+                            "token_cost": llm.token_cost,
+                        },
+                        citations=llm.citations,
+                        warnings=[*evidence_warnings, *llm.warnings],
+                        handoff_recommendation="Pass structured_result.answer and citations to V4.",
+                    )
+                llm_warnings.append("S3 LLM returned insufficient; using deterministic fallback.")
+
         answer, claims, runner_warnings = self._runner(rows, payload, mode, language)
-        warnings = [*evidence_warnings, *runner_warnings]
+        warnings = [*evidence_warnings, *llm_warnings, *runner_warnings]
 
         if not claims:
             return SkillOutput(
@@ -360,6 +652,8 @@ class QASummarySkill(Skill):
                 "assets": _dedupe_assets(claims),
                 "evidence_count": len(rows),
                 "unsupported_claims": [],
+                "synthesis_mode": "deterministic",
+                "token_cost": None,
             },
             citations=citations,
             warnings=warnings,

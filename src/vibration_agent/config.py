@@ -95,6 +95,8 @@ class EmbeddingSettings(BaseModel):
 
 class LlmSettings(BaseModel):
     providers: dict[str, str] = Field(default_factory=dict)
+    s3_enabled: bool = False
+    s3_timeout: float = Field(default=10.0, gt=0.0)
 
 
 class Settings(BaseModel):
@@ -256,7 +258,11 @@ def load(workspace: Path | None = None) -> Settings:
             repeated_failure_threshold=int(routing_section.get("repeated_failure_threshold", 2)),
             explicit_extreme_markers=list(routing_section.get("explicit_extreme_markers", ["extreme", "opus", "senior_supervisor"])),
         ),
-        llm=LlmSettings(providers=dict(llm_section.get("providers", {}))),
+        llm=LlmSettings(
+            providers=dict(llm_section.get("providers", {})),
+            s3_enabled=_env_bool("S3_LLM_ENABLED", bool(llm_section.get("s3_enabled", False))),
+            s3_timeout=float(_env("S3_LLM_TIMEOUT", llm_section.get("s3_timeout", 10.0))),
+        ),
     )
 
 

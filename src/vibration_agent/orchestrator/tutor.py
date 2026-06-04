@@ -174,6 +174,21 @@ def _skill_results(**results: SkillOutput) -> dict[str, dict[str, Any]]:
     return {name: output.structured_result for name, output in results.items()}
 
 
+def _token_cost(output: SkillOutput) -> int | None:
+    structured = output.structured_result
+    value = structured.get("token_cost")
+    if value not in (None, ""):
+        return int(value)
+
+    skill_results = structured.get("skill_results")
+    s3_result = skill_results.get("s3") if isinstance(skill_results, Mapping) else None
+    if isinstance(s3_result, Mapping):
+        value = s3_result.get("token_cost")
+        if value not in (None, ""):
+            return int(value)
+    return None
+
+
 class TutorOrchestrator:
     """Minimal Phase-0 orchestrator for evidence-bound tutoring answers."""
 
@@ -186,7 +201,7 @@ class TutorOrchestrator:
         settings: Any | None = None,
     ) -> None:
         self.retrieval_skill = retrieval_skill or RetrievalSkill()
-        self.qa_summary_skill = qa_summary_skill or QASummarySkill()
+        self.qa_summary_skill = qa_summary_skill or QASummarySkill(settings=settings)
         self.style_skill = style_skill or OutputStyleSkill()
         self._settings = settings
 
@@ -246,7 +261,13 @@ class TutorOrchestrator:
         try:
             from ..storage.qa_logs import record_qa_log
 
-            warning = record_qa_log(output, query=query, latency_ms=latency_ms, settings=self._settings)
+            warning = record_qa_log(
+                output,
+                query=query,
+                latency_ms=latency_ms,
+                token_cost=_token_cost(output),
+                settings=self._settings,
+            )
         except Exception as exc:  # noqa: BLE001 - persistence must never break the answer
             # Fail-safe, not silent: an unexpected logging bug surfaces as a warning
             # (the primary status is still untouched).

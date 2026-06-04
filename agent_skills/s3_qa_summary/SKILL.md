@@ -25,15 +25,20 @@ S3 requires retrieved text evidence from S2. Preferred input is
 `context.retrieval_context`. It also accepts `retrieval_results`, `context.evidence`,
 `context.chunks`, or `context.s2_result.structured_result.retrieval_context`.
 
-## Phase-0 Answering Model
+## Answering Model
 
-Phase-0 S3 produces cited sentence selections from retrieved chunks. It is not yet an LLM synthesis layer. Clean synthesized prose is deferred until the API client / model integration objective activates.
+The default S3 path produces cited sentence selections from retrieved chunks.
+Phase-2 Obj9 adds an explicitly feature-flagged LLM synthesis path. It is not
+the default until V2 citation checking or an equivalent citation interception
+layer is active in the main chain. The feature flag only enables the branch; a
+runtime `llm_client` must still be injected by a future provider integration.
 
 ## Guardrails
 
 - Never answer without retrieved evidence.
 - Never fill retrieval gaps with model-world knowledge.
 - Every returned claim must be tied to a documented chunk citation.
+- LLM-backed claims must include visible `[chunk_id]` references in the answer.
 - Match the dominant source language.
 - Keep S4 engineering analysis and S5 formula derivation deferred.
 

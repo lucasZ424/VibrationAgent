@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from vibration_agent.orchestrator import TutorOrchestrator, handle_query, is_in_scope
+from vibration_agent.orchestrator.tutor import _token_cost
 from vibration_agent.schemas import SkillInput, SkillOutput
 from vibration_agent.skills import OutputStyleSkill, QASummarySkill, RetrievalSkill
 from vibration_agent.skills.base import Skill
@@ -207,3 +208,12 @@ def test_default_handle_query_uses_default_orchestrator_for_out_of_scope_query()
 
     assert output.status == "insufficient"
     assert output.structured_result["scope"] == "out_of_scope"
+
+
+def test_tutor_token_cost_reads_s3_skill_result_for_qa_logs():
+    output = SkillOutput(
+        status="ok",
+        structured_result={"skill_results": {"s3": {"token_cost": 17}}},
+    )
+
+    assert _token_cost(output) == 17
