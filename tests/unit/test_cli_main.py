@@ -51,6 +51,8 @@ def test_cli_scope_returns_phase0_registry_and_workspace(capsys):
     assert payload["workspace"]
     assert "s2_retrieval" in payload["phase0_pipeline"]
     assert "v2_citation_check" in payload["phase0_pipeline"]
+    assert "v1_term_symbol_unit_normalizer" not in payload["phase0_pipeline"]
+    assert "v1_term_symbol_unit_normalizer" in payload["active_skills"]
     assert "v4_style" in payload["active_skills"]
     assert "v2_citation_check" in payload["active_skills"]
 

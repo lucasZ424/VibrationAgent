@@ -99,6 +99,14 @@ class LlmSettings(BaseModel):
     s3_timeout: float = Field(default=10.0, gt=0.0)
 
 
+class NormalizationSettings(BaseModel):
+    v1_enabled: bool = True
+    v1_input_enabled: bool = False
+    v1_output_enabled: bool = True
+    terms_path: str = "taxonomy/terms_zh_en.yaml"
+    units_path: str = "taxonomy/units.yaml"
+
+
 class Settings(BaseModel):
     app_name: str = "vibration-agent"
     log_level: str = "INFO"
@@ -116,6 +124,7 @@ class Settings(BaseModel):
     embeddings: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     routing: RoutingSettings = Field(default_factory=RoutingSettings)
     llm: LlmSettings = Field(default_factory=LlmSettings)
+    normalization: NormalizationSettings = Field(default_factory=NormalizationSettings)
 
 
 def _workspace_from(start: Path | None = None) -> Path:
@@ -176,6 +185,7 @@ def load(workspace: Path | None = None) -> Settings:
     app_section = app_yaml.get("app", {})
     orchestrator_section = app_yaml.get("orchestrator", {})
     llm_section = app_yaml.get("llm", {})
+    normalization_section = app_yaml.get("normalization", {})
     classify_section = ingestion_yaml.get("classify", {})
     ocr_section = ingestion_yaml.get("ocr", {})
     chunking_section = ingestion_yaml.get("chunking", {})
@@ -270,6 +280,17 @@ def load(workspace: Path | None = None) -> Settings:
             s3_enabled=_env_bool("S3_LLM_ENABLED", bool(llm_section.get("s3_enabled", False))),
             s3_timeout=float(_env("S3_LLM_TIMEOUT", llm_section.get("s3_timeout", 10.0))),
         ),
+        normalization=NormalizationSettings(
+            v1_enabled=_env_bool("V1_ENABLED", bool(normalization_section.get("v1_enabled", True))),
+            v1_input_enabled=_env_bool(
+                "V1_INPUT_ENABLED", bool(normalization_section.get("v1_input_enabled", False))
+            ),
+            v1_output_enabled=_env_bool(
+                "V1_OUTPUT_ENABLED", bool(normalization_section.get("v1_output_enabled", True))
+            ),
+            terms_path=str(normalization_section.get("terms_path", "taxonomy/terms_zh_en.yaml")),
+            units_path=str(normalization_section.get("units_path", "taxonomy/units.yaml")),
+        ),
     )
 
 
@@ -279,6 +300,7 @@ __all__ = [
     "DatabaseSettings",
     "EmbeddingSettings",
     "LlmSettings",
+    "NormalizationSettings",
     "OcrSettings",
     "PathSettings",
     "RetrievalSettings",

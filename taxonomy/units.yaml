@@ -2,20 +2,25 @@
 - quantity: frequency
   canonical_units: Hz
   aliases: [cps]
+  normalize_aliases: [Hertz, hertz, cycles per second]
 
 - quantity: angular_frequency
   canonical_units: rad/s
+  normalize_aliases: [rad/sec, radians per second]
 
 - quantity: acceleration
   canonical_units: m/s^2
   aliases: [g]
+  normalize_aliases: [m/sec^2, meter per second squared, meters per second squared]
   warning_notes: "1 g = 9.80665 m/s^2 — legacy datasheets often mix g and m/s²"
 
 - quantity: displacement
   canonical_units: m
+  normalize_aliases: [meter, meters]
   aliases: [mm, µm, mil]
   warning_notes: "Bently Nevada / vibration monitoring datasheets frequently use mil (thousandths of an inch)"
 
 - quantity: velocity
   canonical_units: m/s
   aliases: [mm/s, in/s]
+  normalize_aliases: [m/sec, meter per second, meters per second]

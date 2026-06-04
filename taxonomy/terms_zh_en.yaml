@@ -1,0 +1,23 @@
+# Canonical zh/en term aliases used by V1 normalization.
+
+- term: damping_ratio
+  canonical: damping ratio
+  zh: 阻尼比
+  aliases: [damping factor, zeta, ζ, 相对阻尼比]
+  symbol: zeta
+
+- term: natural_frequency
+  canonical: natural frequency
+  zh: 固有频率
+  aliases: [undamped natural frequency, 自然频率]
+  symbol: omega_n
+
+- term: critical_speed
+  canonical: critical speed
+  zh: 临界转速
+  aliases: [critical velocity, 临界速度]
+
+- term: rotor_unbalance
+  canonical: rotor unbalance
+  zh: 转子不平衡
+  aliases: [unbalance, 不平衡]

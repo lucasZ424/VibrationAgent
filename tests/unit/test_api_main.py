@@ -58,8 +58,10 @@ def test_api_scope_returns_phase0_registry():
 
     assert response.status_code == 200
     assert "s2_retrieval" in payload["active_skills"]
+    assert "v1_term_symbol_unit_normalizer" in payload["active_skills"]
     assert "v2_citation_check" in payload["active_skills"]
     assert "s4_engineering_analysis" in payload["deferred_skills"]
+    assert "v1_term_symbol_unit_normalizer" not in payload["deferred_skills"]
     assert "v2_citation_check" not in payload["deferred_skills"]
 
 

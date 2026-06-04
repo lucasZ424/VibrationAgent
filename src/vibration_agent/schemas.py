@@ -37,7 +37,6 @@ DeferredSkill = Literal[
     "s6_literature_search",
     "s7_model_selection",
     "s8_experiment_advice",
-    "v1_term_symbol_unit_normalizer",
     "v3_reviewer",
 ]
 
@@ -45,6 +44,7 @@ PHASE0_ACTIVE_SKILLS: tuple[str, ...] = (
     "s1_ingestion",
     "s2_retrieval",
     "s3_qa_summary",
+    "v1_term_symbol_unit_normalizer",
     "v2_citation_check",
     "v4_style",
 )
@@ -54,7 +54,6 @@ PHASE0_DEFERRED_SKILLS: tuple[str, ...] = (
     "s6_literature_search",
     "s7_model_selection",
     "s8_experiment_advice",
-    "v1_term_symbol_unit_normalizer",
     "v3_reviewer",
 )
 

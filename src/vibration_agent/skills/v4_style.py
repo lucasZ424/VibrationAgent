@@ -93,8 +93,11 @@ def _section_values_text(structured: Mapping[str, Any]) -> str:
     return "\n".join(part for part in parts if part)
 
 
-def _language(source: Mapping[str, Any], structured: Mapping[str, Any]) -> str:
-    for container in (structured, source):
+def _language(source: Mapping[str, Any], structured: Mapping[str, Any], context: Mapping[str, Any]) -> str:
+    for container in (context, structured, source):
+        value = container.get("answer_language") or container.get("query_language")
+        if value in {"zh", "en"}:
+            return str(value)
         value = container.get("language")
         if value in {"zh", "en"}:
             return str(value)
@@ -294,7 +297,7 @@ class OutputStyleSkill(Skill):
         structured = _structured_result(source)
         upstream_status = source.get("status")
         warnings = list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else []
-        language = _language(source, structured)
+        language = _language(source, structured, payload.context)
 
         content_sections: list[tuple[str, str]] = []
         section_keys: list[str] = []

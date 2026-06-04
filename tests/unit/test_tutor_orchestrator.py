@@ -5,7 +5,13 @@ from pathlib import Path
 from vibration_agent.orchestrator import TutorOrchestrator, handle_query, is_in_scope
 from vibration_agent.orchestrator.tutor import _token_cost
 from vibration_agent.schemas import SkillInput, SkillOutput
-from vibration_agent.skills import CitationCheckSkill, OutputStyleSkill, QASummarySkill, RetrievalSkill
+from vibration_agent.skills import (
+    CitationCheckSkill,
+    OutputStyleSkill,
+    QASummarySkill,
+    RetrievalSkill,
+    TermSymbolUnitNormalizerSkill,
+)
 from vibration_agent.skills.base import Skill
 
 
@@ -58,17 +64,25 @@ def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
     active_skills = [
         orchestrator.retrieval_skill,
         orchestrator.qa_summary_skill,
+        orchestrator.normalizer_skill,
         orchestrator.citation_check_skill,
         orchestrator.style_skill,
     ]
     active_names = {skill.name for skill in active_skills}
-    deferred_prefixes = ("s4_", "s5_", "s6_", "s7_", "s8_", "v1_", "v3_")
+    deferred_prefixes = ("s4_", "s5_", "s6_", "s7_", "s8_", "v3_")
 
     assert type(orchestrator.retrieval_skill) is RetrievalSkill
     assert type(orchestrator.qa_summary_skill) is QASummarySkill
+    assert type(orchestrator.normalizer_skill) is TermSymbolUnitNormalizerSkill
     assert type(orchestrator.citation_check_skill) is CitationCheckSkill
     assert type(orchestrator.style_skill) is OutputStyleSkill
-    assert active_names == {"s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"}
+    assert active_names == {
+        "s2_retrieval",
+        "s3_qa_summary",
+        "v1_term_symbol_unit_normalizer",
+        "v2_citation_check",
+        "v4_style",
+    }
     assert all(not name.startswith(deferred_prefixes) for name in active_names)
     assert not any(
         module_name.startswith(f"vibration_agent.skills.{prefix}")

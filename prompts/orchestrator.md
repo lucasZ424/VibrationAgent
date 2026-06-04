@@ -16,8 +16,9 @@ Phase-0 skills, preserve evidence, and return `SkillOutput`.
 user question -> scope check -> S2 retrieval -> S3 qa_summary -> V2 citation_check -> V4 style -> user
 ```
 
-Deferred skills (S4-S8, V1, V3) are listed in registries but not called by the
-Phase-0 orchestrator.
+V1 normalization is optional and may run before S3 and after V4. It is not a
+chain step. Deferred skills (S4-S8, V3) are listed in registries but not called
+by the Phase-0 orchestrator.
 
 ## Scope behavior
 
@@ -27,6 +28,8 @@ Phase-0 orchestrator.
 - S2 `fail` / `insufficient` short-circuits before S3, V2, and V4.
 - S3 `fail` / `insufficient` short-circuits before V2 and V4 so the user sees the most relevant evidence error.
 - V2 `insufficient` removes unsupported claims before V4; V2 runtime failure warns and passes through S3.
+- V1 input/output normalization can be disabled independently and must preserve citation anchors.
+  Input normalization is default-off; output normalization is default-on.
 
 ## Output contract
 

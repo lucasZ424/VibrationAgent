@@ -11,8 +11,9 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
 
+from ..config import load
 from ..schemas import SkillInput, SkillOutput, UserMode
-from ..skills import CitationCheckSkill, OutputStyleSkill, QASummarySkill, RetrievalSkill
+from ..skills import CitationCheckSkill, OutputStyleSkill, QASummarySkill, RetrievalSkill, TermSymbolUnitNormalizerSkill
 from ..skills.base import Skill
 
 _ASCII_STRONG_TERMS = (
@@ -166,6 +167,25 @@ def _merge_warnings(*outputs: SkillOutput) -> list[str]:
     return warnings
 
 
+def _bool_value(value: Any, *, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return bool(value)
+
+
+def _first_control_value(*mappings: Mapping[str, Any], keys: tuple[str, ...]) -> Any:
+    for mapping in mappings:
+        for key in keys:
+            value = mapping.get(key)
+            if value not in (None, ""):
+                return value
+    return None
+
+
 def _chain_step(skill_name: str, output: SkillOutput) -> dict[str, str]:
     return {"skill": skill_name, "status": output.status, "summary": output.summary}
 
@@ -197,15 +217,48 @@ class TutorOrchestrator:
         *,
         retrieval_skill: Skill | None = None,
         qa_summary_skill: Skill | None = None,
+        normalizer_skill: TermSymbolUnitNormalizerSkill | None = None,
         citation_check_skill: Skill | None = None,
         style_skill: Skill | None = None,
         settings: Any | None = None,
     ) -> None:
         self.retrieval_skill = retrieval_skill or RetrievalSkill()
         self.qa_summary_skill = qa_summary_skill or QASummarySkill(settings=settings)
+        self.normalizer_skill = normalizer_skill or TermSymbolUnitNormalizerSkill()
         self.citation_check_skill = citation_check_skill or CitationCheckSkill()
         self.style_skill = style_skill or OutputStyleSkill()
         self._settings = settings
+
+    def _normalization_enabled(
+        self,
+        stage: str,
+        *,
+        context: Mapping[str, Any],
+        constraints: Mapping[str, Any],
+    ) -> bool:
+        settings = self._settings or load()
+        normalization = settings.normalization
+        enabled = _bool_value(
+            _first_control_value(constraints, context, keys=("v1_enabled",)),
+            default=bool(normalization.v1_enabled),
+        )
+        if not enabled:
+            return False
+        if stage == "input":
+            default = bool(normalization.v1_input_enabled)
+            value = _first_control_value(
+                constraints,
+                context,
+                keys=("v1_input_enabled", "v1_normalize_input"),
+            )
+            return _bool_value(value, default=default)
+        default = bool(normalization.v1_output_enabled)
+        value = _first_control_value(
+            constraints,
+            context,
+            keys=("v1_output_enabled", "v1_normalize_output"),
+        )
+        return _bool_value(value, default=default)
 
     def _early_return(
         self,
@@ -326,9 +379,20 @@ class TutorOrchestrator:
                 skill_results=_skill_results(s2=s2_output),
             )
 
+        v1_warnings: list[str] = []
+        s2_for_downstream = s2_output.model_dump(mode="python")
+        if self._normalization_enabled("input", context=context_dict, constraints=constraints_dict):
+            try:
+                s2_for_downstream, _input_replacements = self.normalizer_skill.normalize_s2_result(s2_for_downstream)
+            except Exception as exc:  # noqa: BLE001 - V1 must be optional/fail-safe
+                s2_for_downstream = s2_output.model_dump(mode="python")
+                v1_warnings.append(
+                    f"V1 input normalization skipped; passing original S2 output: {type(exc).__name__}: {exc}"
+                )
+
         s3_context = {
             **context_dict,
-            "s2_result": s2_output.model_dump(mode="python"),
+            "s2_result": s2_for_downstream,
         }
         s3_input = SkillInput(
             task_id=current_task_id,
@@ -344,7 +408,7 @@ class TutorOrchestrator:
                 task_id=current_task_id,
                 source=s3_output,
                 chain=s3_chain,
-                warnings=_merge_warnings(s2_output, s3_output),
+                warnings=[*v1_warnings, *_merge_warnings(s2_output, s3_output)],
                 skill_results=_skill_results(s2=s2_output, s3=s3_output),
             )
 
@@ -353,7 +417,7 @@ class TutorOrchestrator:
             user_query=query,
             context={
                 **context_dict,
-                "s2_result": s2_output.model_dump(mode="python"),
+                "s2_result": s2_for_downstream,
                 "s3_result": s3_output.model_dump(mode="python"),
             },
             constraints=constraints_dict,
@@ -390,7 +454,8 @@ class TutorOrchestrator:
 
         v4_context = {
             **context_dict,
-            "s2_result": s2_output.model_dump(mode="python"),
+            "query_language": _query_language(query),
+            "s2_result": s2_for_downstream,
             "s3_result": s3_output.model_dump(mode="python"),
             "upstream_result": v2_output.model_dump(mode="python"),
         }
@@ -402,6 +467,13 @@ class TutorOrchestrator:
             user_mode=user_mode,
         )
         v4_output = self.style_skill.run(v4_input)
+        if self._normalization_enabled("output", context=context_dict, constraints=constraints_dict):
+            try:
+                v4_output, _output_replacements = self.normalizer_skill.normalize_skill_output(v4_output)
+            except Exception as exc:  # noqa: BLE001 - V1 must be optional/fail-safe
+                v1_warnings.append(
+                    f"V1 output normalization skipped; returning original V4 output: {type(exc).__name__}: {exc}"
+                )
         chain = [*v2_chain, _chain_step("v4_style", v4_output)]
         if "fail" in {s2_output.status, s3_output.status, v4_output.status}:
             final_status = "fail"
@@ -422,7 +494,7 @@ class TutorOrchestrator:
                 "skill_results": _skill_results(s2=s2_output, s3=s3_output, v2=v2_output, v4=v4_output),
             },
             citations=v4_output.citations,
-            warnings=_merge_warnings(s2_output, s3_output, v2_output, v4_output),
+            warnings=[*v1_warnings, *_merge_warnings(s2_output, s3_output, v2_output, v4_output)],
             handoff_recommendation=v4_output.handoff_recommendation,
         )
 

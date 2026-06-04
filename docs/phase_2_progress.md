@@ -561,3 +561,81 @@ best-effort.
 - Result: 10 passed, 1 deselected.
 - Verified command: AST parse over follow-up touched Python files.
 - Result: ok.
+
+## Obj11 Notes
+
+- Added deterministic `TermSymbolUnitNormalizerSkill`
+  (`v1_term_symbol_unit_normalizer`) for term/symbol/unit normalization.
+- Added `taxonomy/terms_zh_en.yaml` and extended `taxonomy/units.yaml` with
+  `normalize_aliases`. V1 uses `normalize_aliases` rather than conversion
+  aliases, so engineering units such as `mm/s` are not converted to SI values.
+- Tutor-Orchestrator now has two independent, fail-safe V1 call points:
+  an input-side pass that normalizes an in-memory S2 result copy before S3/V2,
+  and an output-side pass that normalizes the V4 answer/sections.
+- V1 preserves bracketed citation anchors and does not enter
+  `phase0_pipeline` or `structured_result.chain`; it is active/available but
+  optional.
+- Added `normalization` config with `v1_enabled`, `v1_input_enabled`, and
+  `v1_output_enabled`. Request constraints can disable the input and output
+  call points independently.
+
+## Obj11 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v1_normalizer.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 5 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v1_normalizer.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 15 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or schemas) and not unknown_source_type"`
+- Result: 11 passed, 14 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_qa_logs.py -q -p no:cacheprovider -p no:tmpdir -k "not apply_migrations"`
+- Result: 26 passed, 2 deselected.
+- Verified manual API/CLI query against `tests/fixtures/chunks/sample_chunks.jsonl`.
+- Result: both returned `ok` with chain
+  `["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"]`;
+  citations were preserved.
+- Verified config/scope probe with `PYTHONPATH=src`.
+- Result: V1 enabled, active, not deferred, and absent from `phase0_pipeline`.
+
+## Obj11 Residual Risk
+
+- V1 is a deterministic string normalizer, not a semantic glossary resolver.
+  It uses conservative alias replacement and may need taxonomy expansion as
+  more corpus terminology is added.
+- Existing Windows pytest `tmp_path` cleanup issues remain outside Obj11; the
+  no-`tmp_path` targeted tests passed.
+
+## Obj11 Next Obj Gate
+
+- Obj11 implementation is ready for review before starting Obj12.
+
+## Obj11 Review Follow-Up
+
+- Fixed Obj11 `#1`: V1 term canonicalization is now language-aware. Chinese
+  text maps term aliases to the Chinese canonical form, while English text maps
+  to the English canonical form. Added a Chinese regression test so V1 no longer
+  anglicizes Chinese evidence/answers.
+- Fixed Obj11 `#2`: changed the safer default policy to keep V1 enabled and
+  output normalization enabled, but default the S3 input-side normalization off.
+  The input-side call point remains available through config or request
+  constraints (`v1_input_enabled=true`).
+- Fixed Obj11 `#3`: V4 can now take `query_language` / `answer_language` from
+  context before inferring from upstream evidence. Tutor-Orchestrator passes the
+  query language into V4, so V1-normalized evidence cannot flip answer headers.
+
+## Obj11 Review Follow-Up Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v1_normalizer.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 7 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_qa_logs.py -q -p no:cacheprovider -p no:tmpdir -k "not apply_migrations"`
+- Result: 26 passed, 2 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or schemas) and not unknown_source_type"`
+- Result: 11 passed, 14 deselected.
+- Verified config/scope probe with `PYTHONPATH=src`.
+- Result: V1 enabled, input normalization default off, output normalization
+  default on, V1 active, not deferred, and absent from `phase0_pipeline`.
+- Verified command: AST parse over follow-up touched Python files.
+- Result: ok.
+- Attempted the two reviewer-flagged `tmp_path` tests directly with repo and
+  `%TEMP%` basetemp. Both were blocked by the known local Windows pytest
+  `PermissionError` during tmpdir cleanup, so they are not treated as valid
+  assertion results in this environment.
