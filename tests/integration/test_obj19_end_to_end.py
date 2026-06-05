@@ -73,6 +73,7 @@ def test_cli_end_to_end_real_gap_and_out_of_scope(tmp_path, capsys):
     assert [step["skill"] for step in ok_payload["structured_result"]["chain"]] == [
         "s2_retrieval",
         "s3_qa_summary",
+        "s4_engineering_analysis",
         "v2_citation_check",
         "v4_style",
     ]

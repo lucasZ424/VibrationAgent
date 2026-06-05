@@ -69,6 +69,8 @@ POSTGRES_COLUMNS: dict[str, tuple[str, ...]] = {
         "citations",
         "latency_ms",
         "token_cost",
+        # Phase-2 Obj13 supervisor observability.
+        "supervisor_invocations",
     ),
 }
 
@@ -261,6 +263,7 @@ def qa_log_row(
     citations: list[dict[str, Any]] | None = None,
     latency_ms: int | None = None,
     token_cost: int | None = None,
+    supervisor_invocations: int | None = None,
 ) -> dict[str, Any]:
     """Prepare a QA log row with logical retrieval refs in ``_meta``.
 
@@ -280,6 +283,7 @@ def qa_log_row(
         "citations": citations if citations is not None else [],
         "latency_ms": latency_ms,
         "token_cost": token_cost,
+        "supervisor_invocations": supervisor_invocations,
         "_meta": {"logical_retrieved_chunk_ids": logical_refs},
     }
 

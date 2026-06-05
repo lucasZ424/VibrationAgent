@@ -20,7 +20,7 @@ def _isolated_settings(tmp_path):
     return load(workspace)
 
 
-def test_phase0_fixture_runs_s1_to_s2_s3_v2_v4(tmp_path):
+def test_phase0_fixture_runs_s1_to_s2_s3_s4_v2_v4(tmp_path):
     pdf = FIXTURES / "raw" / "small_vibration_native.pdf"
     settings = _isolated_settings(tmp_path)
 
@@ -49,6 +49,7 @@ def test_phase0_fixture_runs_s1_to_s2_s3_v2_v4(tmp_path):
     assert [step["skill"] for step in answer.structured_result["chain"]] == [
         "s2_retrieval",
         "s3_qa_summary",
+        "s4_engineering_analysis",
         "v2_citation_check",
         "v4_style",
     ]

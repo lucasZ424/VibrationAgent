@@ -704,3 +704,162 @@ best-effort.
 
 - Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v3_reviewer.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
 - Result: 18 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or logs_supervisor or schemas) and not unknown_source_type"`
+- Result: 12 passed, 14 deselected.
+- Verified command: AST parse over Obj13-touched Python files.
+- Result: ok.
+- Verified manual normal/extreme smoke against
+  `tests/fixtures/chunks/sample_chunks.jsonl`.
+- Result: normal query returned `ok`, `supervisor_status=not_triggered`,
+  `supervisor_invocations=0`, with chain `S2 -> S3 -> V2 -> V4`; extreme query
+  returned `ok`, `supervisor_status=fallback`, `supervisor_invocations=1`, with
+  chain `S2 -> S3 -> V2 -> V4 -> V3`.
+
+## Obj13 Notes
+
+- Added a fail-safe `SupervisorLoop` in `src/vibration_agent/agent/supervisor.py`
+  with injectable supervisor clients for tests and future runtime adapters.
+- Tutor-Orchestrator now annotates full answer-chain outputs with
+  `supervisor_status` and `supervisor_invocations`.
+- Supervisor handoff triggers for `extreme` routed answers or reviewer-noted
+  answers. Normal full-chain answers are marked `not_triggered` with zero
+  invocations.
+- When no supervisor client is configured, or when the review loop reaches the
+  two-pass correction limit without approval, the deterministic V4 answer is
+  returned unchanged and `supervisor_status` is marked `fallback`.
+- Added `qa_logs.supervisor_invocations` through additive migration
+  `003_supervisor_invocations.sql`, Python row metadata, and row-builder
+  extraction from final `SkillOutput`.
+- Added API query logging for `supervisor_status` and
+  `supervisor_invocations`, so ordinary requests can be checked without adding
+  external Opus calls.
+
+## Obj13 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_supervisor_loop.py tests\unit\test_agent_control_plane.py tests\unit\test_qa_logs.py -q -p no:cacheprovider -p no:tmpdir -k "not apply_migrations"`
+- Result: 33 passed, 2 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v3_reviewer.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 18 passed, 1 deselected.
+
+## Obj13 Residual Risk
+
+- Obj13 does not call a real Opus API. The supervisor loop is dependency
+  injected; fast tests use fake supervisor clients, and default local runtime
+  degrades to deterministic output with `supervisor_status = "fallback"`.
+- Real GPT correction inside the loop is not implemented in Obj13. The loop
+  records the review attempts and falls back after the configured limit.
+- Full `tmp_path`-using API/CLI tests remain affected by the local Windows
+  pytest cleanup `PermissionError`; no-`tmp_path` targeted tests were used.
+
+## Obj13 Next Obj Gate
+
+- Obj13 implementation is ready for review before starting Obj14.
+
+## Obj13 Review Follow-Up
+
+- Reviewed Obj13 `#1`: true observation, accepted as current boundary. Obj13
+  provides the injectable supervisor execution seam and fail-safe fallback, but
+  does not wire a live Opus client. Added architecture wording that enabling
+  live Opus requires injecting a `SupervisorClient`; without one, extreme
+  answers are explicitly marked `supervisor_status = "fallback"`.
+- Reviewed Obj13 `#2`: true observation, accepted as current boundary. The
+  `GPT_CORRECTION` action is structural in Obj13; no real correction executor is
+  injected yet, so rejecting supervisor reviews re-review the same deterministic
+  candidate until the loop limit and then fall back.
+- Fixed Obj13 `#3`: unified API observability for early-return paths. Missing
+  supervisor annotations now log as `supervisor_status=not_triggered` with
+  `supervisor_invocations=0`, matching full-chain normal queries.
+
+## Obj13 Review Follow-Up Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir -k "(logs_supervisor or health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or schemas) and not unknown_source_type"`
+- Result: 12 passed, 14 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_supervisor_loop.py tests\unit\test_agent_control_plane.py tests\unit\test_qa_logs.py -q -p no:cacheprovider -p no:tmpdir -k "not apply_migrations"`
+- Result: 33 passed, 2 deselected.
+- Verified command: AST parse over Obj13 review-follow-up touched Python files.
+- Result: ok.
+
+## Obj14 Notes
+
+- Activated deterministic S4 engineering analysis as an optional skill after S3
+  and before V2.
+- S4 runs only when `user_mode == "engineering"` unless explicitly enabled by
+  `s4_enabled` / `s4_engineering_enabled`. Non-engineering requests skip S4.
+- S4 uses only upstream S3 claims that are visible in S2 retrieval evidence. If
+  no cited claim can be tied back to evidence, S4 returns `insufficient` and the
+  orchestrator continues with the S3 answer path.
+- S4 does not create new numeric claims or parameters. Concrete cited claims are
+  copied from evidence-backed S3 output, and the resulting candidate is still
+  passed through V2 before V4.
+- Updated config, schema, API/CLI scope reporting, orchestrator prompt notes,
+  architecture notes, agent skill docs, and unit tests so S4 is active rather
+  than deferred.
+
+## Obj14 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s4_engineering.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 22 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or logs_supervisor or schemas) and not unknown_source_type"`
+- Result: 12 passed, 14 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_v1_normalizer.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 33 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m compileall -q src\vibration_agent tests\unit\test_s4_engineering.py`
+- Result: ok.
+- Verified command: `git diff --check`
+- Result: ok; Git reported only existing CRLF/LF normalization warnings.
+
+## Obj14 Residual Risk
+
+- S4 is deterministic and evidence-gated, but it is not a semantic engineering
+  reasoner. It frames evidence-backed claims into engineering analysis sections
+  and relies on future model-backed steps for deeper domain reasoning.
+- V2 still guards concrete claim support lexically. It can block obvious
+  unsupported numeric claims, but it does not prove full semantic entailment.
+- Full `tmp_path`-using API/CLI chain tests remain affected by the local
+  Windows pytest cleanup `PermissionError`; no-`tmp_path` targeted tests were
+  used.
+
+## Obj14 Next Obj Gate
+
+- Obj14 implementation is ready for review before starting Obj15.
+
+## Obj14 Review Follow-Up
+
+- Fixed Obj14 `S1`: true issue. Two integration tests still asserted the
+  pre-S4 default chain. Updated the English fixture-chain and CLI end-to-end
+  assertions to expect `S2 -> S3 -> S4 -> V2 -> V4` for evidence-backed
+  engineering-mode queries.
+- Fixed Obj14 `#1`: true observation. Added architecture wording that Obj14 S4
+  is evidence-bound deterministic framing today, while deeper semantic
+  engineering analysis remains a future model-backed capability.
+- Fixed Obj14 `#2`: true but harmless observation. Removed unused
+  `v4_context["s4_result"]`; V4 consumes the V2-checked upstream result, which
+  already carries S4 sections when S4 ran.
+- Reviewed Obj14 `#3`: accepted current behavior. The default footprint expands
+  because `default_user_mode == "engineering"` and S4 is active by design in
+  Obj14. Per-call `s4_enabled` / `s4_engineering_enabled` controls remain
+  available when a caller needs to suppress S4.
+- Added `.pytest_tmp*/` to `.gitignore` so sandbox-created pytest temp
+  directories do not pollute git status when Windows denies cleanup access.
+
+## Obj14 Review Follow-Up Verification
+
+- Verified command: manual integration probe equivalent to
+  `test_phase0_fixture_runs_s1_to_s2_s3_s4_v2_v4` and
+  `test_cli_end_to_end_real_gap_and_out_of_scope`.
+- Result: ok; both orchestrator and CLI real-query paths returned
+  `["s2_retrieval", "s3_qa_summary", "s4_engineering_analysis",
+  "v2_citation_check", "v4_style"]`, with citations and post-chain answer
+  assertions passing. Gap and out-of-scope CLI assertions also passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s4_engineering.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 22 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_v1_normalizer.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 33 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m compileall -q src\vibration_agent tests\integration\test_phase0_fixture_chain.py tests\integration\test_obj19_end_to_end.py`
+- Result: ok.
+- User-verified command in regular PowerShell:
+  `.\.venv\Scripts\python.exe -m pytest tests\integration\test_phase0_fixture_chain.py::test_phase0_fixture_runs_s1_to_s2_s3_s4_v2_v4 tests\integration\test_obj19_end_to_end.py::test_cli_end_to_end_real_gap_and_out_of_scope -q -m "not large_corpus" --basetemp=...`
+- Result: 2 passed.
+- Sandbox result for the same command: blocked by Windows/sandbox pytest tmpdir
+  cleanup `PermissionError` before pytest could emit normal test results. The
+  sandbox can see the basetemp directory exists, but cannot enumerate it.

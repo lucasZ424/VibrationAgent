@@ -4,7 +4,7 @@
   default_user_mode: engineering      # engineering | definition | derivation | research
 
 orchestrator:
-  phase0_pipeline: [s2_retrieval, s3_qa_summary, v2_citation_check, v4_style, v3_reviewer]
+  phase0_pipeline: [s2_retrieval, s3_qa_summary, s4_engineering_analysis, v2_citation_check, v4_style, v3_reviewer]
   high_risk_checks: [v3_reviewer]   # advisory: activated for extreme answers
 
 routing:

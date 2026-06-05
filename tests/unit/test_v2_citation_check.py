@@ -191,7 +191,7 @@ def test_tutor_orchestrator_v2_removes_unsupported_claim_before_v4():
 
     output = TutorOrchestrator(retrieval_skill=s2, qa_summary_skill=s3).handle_query(
         "critical speed",
-        constraints={"scope": "in_scope"},
+        constraints={"scope": "in_scope", "s4_enabled": False},
     )
 
     assert "Bearing temperature proves lubrication failure" not in output.structured_result["answer"]
@@ -224,7 +224,7 @@ def test_tutor_orchestrator_v2_block_forces_final_insufficient_even_if_v4_return
 
     output = TutorOrchestrator(retrieval_skill=s2, qa_summary_skill=s3, style_skill=v4).handle_query(
         "critical speed",
-        constraints={"scope": "in_scope"},
+        constraints={"scope": "in_scope", "s4_enabled": False},
     )
 
     assert output.status == "insufficient"
@@ -261,7 +261,7 @@ def test_tutor_orchestrator_v2_failure_warns_and_passes_s3_through():
 
     output = TutorOrchestrator(retrieval_skill=s2, qa_summary_skill=s3, citation_check_skill=BrokenV2()).handle_query(
         "critical speed",
-        constraints={"scope": "in_scope"},
+        constraints={"scope": "in_scope", "s4_enabled": False},
     )
 
     assert output.status == "ok"
@@ -293,7 +293,7 @@ def test_tutor_orchestrator_v2_fail_status_warns_and_passes_s3_through():
 
     output = TutorOrchestrator(retrieval_skill=s2, qa_summary_skill=s3, citation_check_skill=v2).handle_query(
         "critical speed",
-        constraints={"scope": "in_scope"},
+        constraints={"scope": "in_scope", "s4_enabled": False},
     )
 
     assert output.status == "ok"

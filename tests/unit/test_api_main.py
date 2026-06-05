@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -49,6 +50,7 @@ def test_api_health_returns_runtime_status():
     assert payload["app"]
     assert payload["workspace"]
     assert "s2_retrieval" in payload["phase0_pipeline"]
+    assert "s4_engineering_analysis" in payload["phase0_pipeline"]
     assert "v2_citation_check" in payload["phase0_pipeline"]
     assert "v3_reviewer" in payload["phase0_pipeline"]
 
@@ -59,10 +61,11 @@ def test_api_scope_returns_phase0_registry():
 
     assert response.status_code == 200
     assert "s2_retrieval" in payload["active_skills"]
+    assert "s4_engineering_analysis" in payload["active_skills"]
     assert "v1_term_symbol_unit_normalizer" in payload["active_skills"]
     assert "v2_citation_check" in payload["active_skills"]
     assert "v3_reviewer" in payload["active_skills"]
-    assert "s4_engineering_analysis" in payload["deferred_skills"]
+    assert "s4_engineering_analysis" not in payload["deferred_skills"]
     assert "v1_term_symbol_unit_normalizer" not in payload["deferred_skills"]
     assert "v2_citation_check" not in payload["deferred_skills"]
     assert "v3_reviewer" not in payload["deferred_skills"]
@@ -110,6 +113,7 @@ def test_api_query_runs_tutor_chain_with_chunks_jsonl(tmp_path):
     assert [step["skill"] for step in payload["output"]["structured_result"]["chain"]] == [
         "s2_retrieval",
         "s3_qa_summary",
+        "s4_engineering_analysis",
         "v2_citation_check",
         "v4_style",
     ]
@@ -171,6 +175,15 @@ def test_api_query_returns_insufficient_without_corpus():
     assert response.status_code == 200
     assert payload["status"] == "insufficient"
     assert payload["output"]["structured_result"]["chain"][0]["skill"] == "s2_retrieval"
+
+
+def test_api_query_logs_supervisor_status_for_routing_observability(caplog):
+    caplog.set_level(logging.INFO)
+
+    response = client.post("/query", json={"query": "what is the capital of France?"})
+
+    assert response.status_code == 200
+    assert "query supervisor_status=not_triggered supervisor_invocations=0" in caplog.text
 
 
 def test_api_runtime_error_response_has_locatable_reason(monkeypatch, tmp_path):

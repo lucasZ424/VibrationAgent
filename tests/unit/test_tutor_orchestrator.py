@@ -7,6 +7,7 @@ from vibration_agent.orchestrator.tutor import _token_cost
 from vibration_agent.schemas import SkillInput, SkillOutput
 from vibration_agent.skills import (
     CitationCheckSkill,
+    EngineeringAnalysisSkill,
     OutputStyleSkill,
     QASummarySkill,
     RetrievalSkill,
@@ -65,16 +66,18 @@ def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
     active_skills = [
         orchestrator.retrieval_skill,
         orchestrator.qa_summary_skill,
+        orchestrator.engineering_analysis_skill,
         orchestrator.normalizer_skill,
         orchestrator.citation_check_skill,
         orchestrator.style_skill,
         orchestrator.reviewer_skill,
     ]
     active_names = {skill.name for skill in active_skills}
-    deferred_prefixes = ("s4_", "s5_", "s6_", "s7_", "s8_")
+    deferred_prefixes = ("s5_", "s6_", "s7_", "s8_")
 
     assert type(orchestrator.retrieval_skill) is RetrievalSkill
     assert type(orchestrator.qa_summary_skill) is QASummarySkill
+    assert type(orchestrator.engineering_analysis_skill) is EngineeringAnalysisSkill
     assert type(orchestrator.normalizer_skill) is TermSymbolUnitNormalizerSkill
     assert type(orchestrator.citation_check_skill) is CitationCheckSkill
     assert type(orchestrator.style_skill) is OutputStyleSkill
@@ -82,6 +85,7 @@ def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
     assert active_names == {
         "s2_retrieval",
         "s3_qa_summary",
+        "s4_engineering_analysis",
         "v1_term_symbol_unit_normalizer",
         "v2_citation_check",
         "v3_reviewer",
@@ -152,6 +156,7 @@ def test_tutor_orchestrator_runs_s2_s3_v2_v4_for_in_scope_query(tmp_path):
     assert [step["skill"] for step in output.structured_result["chain"]] == [
         "s2_retrieval",
         "s3_qa_summary",
+        "s4_engineering_analysis",
         "v2_citation_check",
         "v4_style",
     ]
@@ -160,7 +165,7 @@ def test_tutor_orchestrator_runs_s2_s3_v2_v4_for_in_scope_query(tmp_path):
     assert "## 结论" in output.structured_result["answer"]
     assert "## 证据" in output.structured_result["answer"]
     assert output.structured_result["v4"]["answer"] == output.structured_result["answer"]
-    assert set(output.structured_result["skill_results"]) == {"s2", "s3", "v2", "v4"}
+    assert set(output.structured_result["skill_results"]) == {"s2", "s3", "s4", "v2", "v4"}
     assert output.citations[0].chunk_id == "c1"
 
 

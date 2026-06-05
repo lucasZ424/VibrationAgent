@@ -12,11 +12,13 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
 
-from ..agent.routing import Difficulty, route_task
+from ..agent.routing import Difficulty, RouteDecision, route_task
+from ..agent.supervisor import SupervisorLoop
 from ..config import load
 from ..schemas import SkillInput, SkillOutput, UserMode
 from ..skills import (
     CitationCheckSkill,
+    EngineeringAnalysisSkill,
     OutputStyleSkill,
     QASummarySkill,
     RetrievalSkill,
@@ -226,18 +228,22 @@ class TutorOrchestrator:
         *,
         retrieval_skill: Skill | None = None,
         qa_summary_skill: Skill | None = None,
+        engineering_analysis_skill: Skill | None = None,
         normalizer_skill: TermSymbolUnitNormalizerSkill | None = None,
         citation_check_skill: Skill | None = None,
         style_skill: Skill | None = None,
         reviewer_skill: Skill | None = None,
+        supervisor_loop: SupervisorLoop | None = None,
         settings: Any | None = None,
     ) -> None:
         self.retrieval_skill = retrieval_skill or RetrievalSkill()
         self.qa_summary_skill = qa_summary_skill or QASummarySkill(settings=settings)
+        self.engineering_analysis_skill = engineering_analysis_skill or EngineeringAnalysisSkill()
         self.normalizer_skill = normalizer_skill or TermSymbolUnitNormalizerSkill()
         self.citation_check_skill = citation_check_skill or CitationCheckSkill()
         self.style_skill = style_skill or OutputStyleSkill()
         self.reviewer_skill = reviewer_skill or ReviewerSkill()
+        self.supervisor_loop = supervisor_loop or SupervisorLoop()
         self._settings = settings
 
     def _normalization_enabled(
@@ -271,10 +277,18 @@ class TutorOrchestrator:
         )
         return _bool_value(value, default=default)
 
-    def _review_enabled(self, *, context: Mapping[str, Any], constraints: Mapping[str, Any]) -> bool:
+    def _route_decision(self, *, context: Mapping[str, Any], constraints: Mapping[str, Any]) -> RouteDecision:
         settings = self._settings or load()
-        decision = route_task(constraints=constraints, context=context, settings=settings)
-        return decision.difficulty == Difficulty.EXTREME
+        return route_task(constraints=constraints, context=context, settings=settings)
+
+    def _review_enabled(self, *, route_decision: RouteDecision) -> bool:
+        return route_decision.difficulty == Difficulty.EXTREME
+
+    def _engineering_analysis_enabled(self, *, user_mode: UserMode, context: Mapping[str, Any], constraints: Mapping[str, Any]) -> bool:
+        value = _first_control_value(constraints, context, keys=("s4_enabled", "s4_engineering_enabled"))
+        if value is not None:
+            return _bool_value(value, default=user_mode == "engineering")
+        return user_mode == "engineering"
 
     def _early_return(
         self,
@@ -358,6 +372,7 @@ class TutorOrchestrator:
         context_dict = _copy_context(context)
         constraints_dict = _copy_constraints(constraints)
         current_task_id = _task_id(task_id or str(context_dict.get("task_id") or constraints_dict.get("task_id") or ""))
+        route_decision = self._route_decision(context=context_dict, constraints=constraints_dict)
 
         if not is_in_scope(query, context=context_dict, constraints=constraints_dict):
             language = _query_language(query)
@@ -428,13 +443,43 @@ class TutorOrchestrator:
                 skill_results=_skill_results(s2=s2_output, s3=s3_output),
             )
 
+        s4_warnings: list[str] = []
+        s4_output: SkillOutput | None = None
+        synthesis_for_quality = s3_output
+        synthesis_chain = s3_chain
+        if self._engineering_analysis_enabled(user_mode=user_mode, context=context_dict, constraints=constraints_dict):
+            s4_input = SkillInput(
+                task_id=current_task_id,
+                user_query=query,
+                context={
+                    **context_dict,
+                    "s2_result": s2_for_downstream,
+                    "s3_result": s3_output.model_dump(mode="python"),
+                },
+                constraints=constraints_dict,
+                user_mode=user_mode,
+            )
+            try:
+                candidate_s4 = self.engineering_analysis_skill.run(s4_input)
+            except Exception as exc:  # noqa: BLE001 - optional S4 must not break answering
+                s4_warnings.append(
+                    f"S4 engineering analysis failed; passing S3 output to V2: {type(exc).__name__}: {exc}"
+                )
+            else:
+                if candidate_s4.status == "ok":
+                    s4_output = candidate_s4
+                    synthesis_for_quality = candidate_s4
+                    synthesis_chain = [*s3_chain, _chain_step("s4_engineering_analysis", candidate_s4)]
+                else:
+                    s4_warnings.extend(candidate_s4.warnings)
+
         v2_input = SkillInput(
             task_id=current_task_id,
             user_query=query,
             context={
                 **context_dict,
                 "s2_result": s2_for_downstream,
-                "s3_result": s3_output.model_dump(mode="python"),
+                "s3_result": synthesis_for_quality.model_dump(mode="python"),
             },
             constraints=constraints_dict,
             user_mode=user_mode,
@@ -466,7 +511,7 @@ class TutorOrchestrator:
                 ],
                 handoff_recommendation=s3_output.handoff_recommendation,
             )
-        v2_chain = [*s3_chain, _chain_step("v2_citation_check", v2_output)]
+        v2_chain = [*synthesis_chain, _chain_step("v2_citation_check", v2_output)]
 
         v4_context = {
             **context_dict,
@@ -492,9 +537,11 @@ class TutorOrchestrator:
                 )
         chain = [*v2_chain, _chain_step("v4_style", v4_output)]
         skill_results = _skill_results(s2=s2_output, s3=s3_output, v2=v2_output, v4=v4_output)
+        if s4_output is not None:
+            skill_results = {**skill_results, "s4": s4_output.structured_result}
         reviewer_notes: list[dict[str, Any]] = []
         reviewer_warnings: list[str] = []
-        if self._review_enabled(context=context_dict, constraints=constraints_dict):
+        if self._review_enabled(route_decision=route_decision):
             v3_input = SkillInput(
                 task_id=current_task_id,
                 user_query=query,
@@ -533,7 +580,7 @@ class TutorOrchestrator:
         else:
             final_status = v4_output.status
 
-        return SkillOutput(
+        final_output = SkillOutput(
             status=final_status,
             summary=v4_output.summary,
             structured_result={
@@ -546,9 +593,17 @@ class TutorOrchestrator:
                 "skill_results": skill_results,
             },
             citations=v4_output.citations,
-            warnings=[*v1_warnings, *_merge_warnings(s2_output, s3_output, v2_output, v4_output), *reviewer_warnings],
+            warnings=[*v1_warnings, *s4_warnings, *_merge_warnings(s2_output, s3_output, v2_output, v4_output), *reviewer_warnings],
             handoff_recommendation=v4_output.handoff_recommendation,
         )
+        supervisor_triggered = bool(route_decision.use_opus_supervisor or reviewer_notes)
+        if supervisor_triggered:
+            return self.supervisor_loop.run(
+                query=query,
+                output=final_output,
+                reviewer_notes=reviewer_notes,
+            ).output
+        return self.supervisor_loop.annotate_not_triggered(final_output)
 
 
 def handle_query(

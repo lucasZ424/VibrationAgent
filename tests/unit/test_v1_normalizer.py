@@ -118,7 +118,7 @@ def test_v1_normalizes_s3_input_copy_and_v4_output_without_chain_entry():
         qa_summary_skill=s3,
         citation_check_skill=v2,
         style_skill=v4,
-    ).handle_query("critical speed", constraints={"scope": "in_scope", "v1_input_enabled": True})
+    ).handle_query("critical speed", constraints={"scope": "in_scope", "v1_input_enabled": True, "s4_enabled": False})
 
     s3_text = s3.calls[0].context["s2_result"]["structured_result"]["retrieval_context"][0]["text"]
     assert "damping ratio" in s3_text
@@ -153,7 +153,7 @@ def test_v1_input_and_output_call_points_can_be_disabled_independently():
         style_skill=v4,
     ).handle_query(
         "critical speed",
-        constraints={"scope": "in_scope", "v1_input_enabled": False, "v1_output_enabled": False},
+        constraints={"scope": "in_scope", "v1_input_enabled": False, "v1_output_enabled": False, "s4_enabled": False},
     )
 
     s3_text = s3.calls[0].context["s2_result"]["structured_result"]["retrieval_context"][0]["text"]

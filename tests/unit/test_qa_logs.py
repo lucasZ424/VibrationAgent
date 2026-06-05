@@ -29,6 +29,7 @@ def _output() -> SkillOutput:
                 {"skill": "v4_style"},
             ],
             "skill_results": {"s2": {"intent": "engineering"}},
+            "supervisor_invocations": 0,
         },
     )
 
@@ -45,7 +46,17 @@ def test_build_qa_log_row_persists_only_locatable_refs():
     assert row["intent"] == "engineering"
     assert row["chosen_skills"] == ["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style"]
     assert row["latency_ms"] == 12
+    assert row["supervisor_invocations"] == 0
     assert "_meta" not in row  # SQL-ready, no planning helper
+
+
+def test_build_qa_log_row_records_supervisor_invocations():
+    output = _output()
+    output.structured_result["supervisor_invocations"] = 2
+
+    row = qa_logs.build_qa_log_row(output, query="rotor damping?", latency_ms=12)
+
+    assert row["supervisor_invocations"] == 2
 
 
 def test_build_qa_log_row_is_aligned_with_real_qa_logs_columns():

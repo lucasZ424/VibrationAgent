@@ -1,6 +1,7 @@
 """FastAPI HTTP entry for Phase-0 development."""
 from __future__ import annotations
 
+import logging
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ from vibration_agent.schemas import (  # noqa: E402
 )
 
 app = FastAPI(title="Vibration Agent API")
+logger = logging.getLogger(__name__)
 
 
 class ApiHandledError(Exception):
@@ -231,6 +233,14 @@ def query(request: ApiQueryRequest) -> ApiQueryResponse:
             constraints=_query_constraints(request),
             user_mode=request.user_mode,
             task_id=request.task_id,
+        )
+        structured = output.structured_result
+        supervisor_status = structured.get("supervisor_status") if isinstance(structured, dict) else None
+        supervisor_invocations = structured.get("supervisor_invocations") if isinstance(structured, dict) else None
+        logger.info(
+            "query supervisor_status=%s supervisor_invocations=%s",
+            supervisor_status or "not_triggered",
+            supervisor_invocations if supervisor_invocations is not None else 0,
         )
     except Exception as exc:
         _raise_api_error(exc, loc=["body", "query"])

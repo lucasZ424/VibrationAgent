@@ -86,6 +86,16 @@ def _chosen_skills(output: Any) -> list[str]:
     return [str(step.get("skill")) for step in chain if isinstance(step, Mapping) and step.get("skill")]
 
 
+def _supervisor_invocations(output: Any) -> int | None:
+    structured = getattr(output, "structured_result", {}) or {}
+    if not isinstance(structured, Mapping):
+        return None
+    value = structured.get("supervisor_invocations")
+    if value in (None, ""):
+        return None
+    return int(value)
+
+
 def build_qa_log_row(
     output: Any,
     *,
@@ -105,6 +115,7 @@ def build_qa_log_row(
         citations=_citation_refs(citations),
         latency_ms=latency_ms,
         token_cost=token_cost,
+        supervisor_invocations=_supervisor_invocations(output),
     )
     row.pop("_meta", None)  # _meta is a planning helper, not a SQL column
     # Empty SQL arrays are written as NULL: an untyped empty list is ambiguous to

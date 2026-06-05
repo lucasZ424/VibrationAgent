@@ -50,10 +50,12 @@ def test_cli_scope_returns_phase0_registry_and_workspace(capsys):
     assert code == 0
     assert payload["workspace"]
     assert "s2_retrieval" in payload["phase0_pipeline"]
+    assert "s4_engineering_analysis" in payload["phase0_pipeline"]
     assert "v2_citation_check" in payload["phase0_pipeline"]
     assert "v3_reviewer" in payload["phase0_pipeline"]
     assert "v1_term_symbol_unit_normalizer" not in payload["phase0_pipeline"]
     assert "v1_term_symbol_unit_normalizer" in payload["active_skills"]
+    assert "s4_engineering_analysis" in payload["active_skills"]
     assert "v4_style" in payload["active_skills"]
     assert "v2_citation_check" in payload["active_skills"]
     assert "v3_reviewer" in payload["active_skills"]
@@ -86,6 +88,7 @@ def test_cli_ask_runs_tutor_chain_with_chunks_jsonl(tmp_path, capsys):
     assert [step["skill"] for step in payload["structured_result"]["chain"]] == [
         "s2_retrieval",
         "s3_qa_summary",
+        "s4_engineering_analysis",
         "v2_citation_check",
         "v4_style",
     ]

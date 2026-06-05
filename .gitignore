@@ -27,6 +27,7 @@ db/qdrant/storage/
 .ruff_cache/
 .pytest_cache/
 .pytest_tmp/
+.pytest_tmp*/
 .mypy_cache/
 .ipynb_checkpoints/
 node_modules/

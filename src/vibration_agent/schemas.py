@@ -32,7 +32,6 @@ SupportedKind = Literal["pdf", "docx", "image", "text", "unsupported"]
 ProcessingStrategy = Literal["native_pdf", "ocr_pdf", "docx", "image", "text", "unknown"]
 DocumentLanguage = Literal["zh", "en", "mixed", "unknown"]
 DeferredSkill = Literal[
-    "s4_engineering_analysis",
     "s5_formula_derivation",
     "s6_literature_search",
     "s7_model_selection",
@@ -43,13 +42,13 @@ PHASE0_ACTIVE_SKILLS: tuple[str, ...] = (
     "s1_ingestion",
     "s2_retrieval",
     "s3_qa_summary",
+    "s4_engineering_analysis",
     "v1_term_symbol_unit_normalizer",
     "v2_citation_check",
     "v3_reviewer",
     "v4_style",
 )
 PHASE0_DEFERRED_SKILLS: tuple[str, ...] = (
-    "s4_engineering_analysis",
     "s5_formula_derivation",
     "s6_literature_search",
     "s7_model_selection",
