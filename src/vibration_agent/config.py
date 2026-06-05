@@ -107,6 +107,15 @@ class NormalizationSettings(BaseModel):
     units_path: str = "taxonomy/units.yaml"
 
 
+class ApiSettings(BaseModel):
+    auth_enabled: bool = False
+    api_key: str = ""
+    cors_enabled: bool = False
+    cors_allow_origins: list[str] = Field(default_factory=lambda: ["http://localhost", "http://127.0.0.1"])
+    rate_limit_enabled: bool = False
+    rate_limit_per_minute: int = Field(default=60, ge=1)
+
+
 class Settings(BaseModel):
     app_name: str = "vibration-agent"
     log_level: str = "INFO"
@@ -116,6 +125,7 @@ class Settings(BaseModel):
             "s2_retrieval",
             "s3_qa_summary",
             "s4_engineering_analysis",
+            "s5_formula_derivation",
             "v2_citation_check",
             "v4_style",
             "v3_reviewer",
@@ -132,6 +142,7 @@ class Settings(BaseModel):
     routing: RoutingSettings = Field(default_factory=RoutingSettings)
     llm: LlmSettings = Field(default_factory=LlmSettings)
     normalization: NormalizationSettings = Field(default_factory=NormalizationSettings)
+    api: ApiSettings = Field(default_factory=ApiSettings)
 
 
 def _workspace_from(start: Path | None = None) -> Path:
@@ -188,11 +199,13 @@ def load(workspace: Path | None = None) -> Settings:
     ingestion_yaml = _read_yaml(config_dir / "ingestion.yaml")
     retrieval_yaml = _read_yaml(config_dir / "retrieval.yaml")
     embeddings_yaml = _read_yaml(config_dir / "embeddings.yaml")
+    api_yaml = _read_yaml(config_dir / "api.yaml")
 
     app_section = app_yaml.get("app", {})
     orchestrator_section = app_yaml.get("orchestrator", {})
     llm_section = app_yaml.get("llm", {})
     normalization_section = app_yaml.get("normalization", {})
+    api_section = api_yaml.get("api", {})
     classify_section = ingestion_yaml.get("classify", {})
     ocr_section = ingestion_yaml.get("ocr", {})
     chunking_section = ingestion_yaml.get("chunking", {})
@@ -225,6 +238,7 @@ def load(workspace: Path | None = None) -> Settings:
                     "s2_retrieval",
                     "s3_qa_summary",
                     "s4_engineering_analysis",
+                    "s5_formula_derivation",
                     "v2_citation_check",
                     "v4_style",
                     "v3_reviewer",
@@ -305,10 +319,19 @@ def load(workspace: Path | None = None) -> Settings:
             terms_path=str(normalization_section.get("terms_path", "taxonomy/terms_zh_en.yaml")),
             units_path=str(normalization_section.get("units_path", "taxonomy/units.yaml")),
         ),
+        api=ApiSettings(
+            auth_enabled=_env_bool("API_AUTH_ENABLED", bool(api_section.get("auth_enabled", False))),
+            api_key=str(_env("API_KEY", api_section.get("api_key", ""))),
+            cors_enabled=_env_bool("API_CORS_ENABLED", bool(api_section.get("cors_enabled", False))),
+            cors_allow_origins=list(api_section.get("cors_allow_origins", ["http://localhost", "http://127.0.0.1"])),
+            rate_limit_enabled=_env_bool("API_RATE_LIMIT_ENABLED", bool(api_section.get("rate_limit_enabled", False))),
+            rate_limit_per_minute=int(_env("API_RATE_LIMIT_PER_MINUTE", api_section.get("rate_limit_per_minute", 60))),
+        ),
     )
 
 
 __all__ = [
+    "ApiSettings",
     "ClassifySettings",
     "ChunkingSettings",
     "DatabaseSettings",

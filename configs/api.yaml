@@ -1,0 +1,8 @@
+api:
+  # Defaults preserve localhost/dev behavior. Enable in production or shared deployments.
+  auth_enabled: false
+  api_key: ""
+  cors_enabled: false
+  cors_allow_origins: ["http://localhost", "http://127.0.0.1"]
+  rate_limit_enabled: false
+  rate_limit_per_minute: 60

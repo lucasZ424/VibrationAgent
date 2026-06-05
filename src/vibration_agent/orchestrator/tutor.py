@@ -19,6 +19,7 @@ from ..schemas import SkillInput, SkillOutput, UserMode
 from ..skills import (
     CitationCheckSkill,
     EngineeringAnalysisSkill,
+    FormulaDerivationSkill,
     OutputStyleSkill,
     QASummarySkill,
     RetrievalSkill,
@@ -229,6 +230,7 @@ class TutorOrchestrator:
         retrieval_skill: Skill | None = None,
         qa_summary_skill: Skill | None = None,
         engineering_analysis_skill: Skill | None = None,
+        formula_derivation_skill: Skill | None = None,
         normalizer_skill: TermSymbolUnitNormalizerSkill | None = None,
         citation_check_skill: Skill | None = None,
         style_skill: Skill | None = None,
@@ -239,6 +241,7 @@ class TutorOrchestrator:
         self.retrieval_skill = retrieval_skill or RetrievalSkill()
         self.qa_summary_skill = qa_summary_skill or QASummarySkill(settings=settings)
         self.engineering_analysis_skill = engineering_analysis_skill or EngineeringAnalysisSkill()
+        self.formula_derivation_skill = formula_derivation_skill or FormulaDerivationSkill()
         self.normalizer_skill = normalizer_skill or TermSymbolUnitNormalizerSkill()
         self.citation_check_skill = citation_check_skill or CitationCheckSkill()
         self.style_skill = style_skill or OutputStyleSkill()
@@ -289,6 +292,12 @@ class TutorOrchestrator:
         if value is not None:
             return _bool_value(value, default=user_mode == "engineering")
         return user_mode == "engineering"
+
+    def _formula_derivation_enabled(self, *, user_mode: UserMode, context: Mapping[str, Any], constraints: Mapping[str, Any]) -> bool:
+        value = _first_control_value(constraints, context, keys=("s5_enabled", "s5_formula_enabled"))
+        if value is not None:
+            return _bool_value(value, default=user_mode == "derivation")
+        return user_mode == "derivation"
 
     def _early_return(
         self,
@@ -445,9 +454,20 @@ class TutorOrchestrator:
 
         s4_warnings: list[str] = []
         s4_output: SkillOutput | None = None
+        s5_warnings: list[str] = []
+        s5_output: SkillOutput | None = None
         synthesis_for_quality = s3_output
         synthesis_chain = s3_chain
-        if self._engineering_analysis_enabled(user_mode=user_mode, context=context_dict, constraints=constraints_dict):
+        s4_enabled = self._engineering_analysis_enabled(user_mode=user_mode, context=context_dict, constraints=constraints_dict)
+        s5_enabled = self._formula_derivation_enabled(user_mode=user_mode, context=context_dict, constraints=constraints_dict)
+        if s4_enabled and s5_enabled:
+            if user_mode == "derivation":
+                s4_enabled = False
+                s4_warnings.append("S4 and S5 were both enabled; S5 formula derivation takes precedence in derivation mode.")
+            else:
+                s5_enabled = False
+                s5_warnings.append("S4 and S5 were both enabled; S4 engineering analysis takes precedence outside derivation mode.")
+        if s4_enabled:
             s4_input = SkillInput(
                 task_id=current_task_id,
                 user_query=query,
@@ -472,6 +492,31 @@ class TutorOrchestrator:
                     synthesis_chain = [*s3_chain, _chain_step("s4_engineering_analysis", candidate_s4)]
                 else:
                     s4_warnings.extend(candidate_s4.warnings)
+        if s5_enabled:
+            s5_input = SkillInput(
+                task_id=current_task_id,
+                user_query=query,
+                context={
+                    **context_dict,
+                    "s2_result": s2_for_downstream,
+                    "s3_result": s3_output.model_dump(mode="python"),
+                },
+                constraints=constraints_dict,
+                user_mode=user_mode,
+            )
+            try:
+                candidate_s5 = self.formula_derivation_skill.run(s5_input)
+            except Exception as exc:  # noqa: BLE001 - optional S5 must not break answering
+                s5_warnings.append(
+                    f"S5 formula derivation failed; passing S3 output to V2: {type(exc).__name__}: {exc}"
+                )
+            else:
+                if candidate_s5.status == "ok":
+                    s5_output = candidate_s5
+                    synthesis_for_quality = candidate_s5
+                    synthesis_chain = [*s3_chain, _chain_step("s5_formula_derivation", candidate_s5)]
+                else:
+                    s5_warnings.extend(candidate_s5.warnings)
 
         v2_input = SkillInput(
             task_id=current_task_id,
@@ -539,6 +584,8 @@ class TutorOrchestrator:
         skill_results = _skill_results(s2=s2_output, s3=s3_output, v2=v2_output, v4=v4_output)
         if s4_output is not None:
             skill_results = {**skill_results, "s4": s4_output.structured_result}
+        if s5_output is not None:
+            skill_results = {**skill_results, "s5": s5_output.structured_result}
         reviewer_notes: list[dict[str, Any]] = []
         reviewer_warnings: list[str] = []
         if self._review_enabled(route_decision=route_decision):
@@ -593,7 +640,13 @@ class TutorOrchestrator:
                 "skill_results": skill_results,
             },
             citations=v4_output.citations,
-            warnings=[*v1_warnings, *s4_warnings, *_merge_warnings(s2_output, s3_output, v2_output, v4_output), *reviewer_warnings],
+            warnings=[
+                *v1_warnings,
+                *s4_warnings,
+                *s5_warnings,
+                *_merge_warnings(s2_output, s3_output, v2_output, v4_output),
+                *reviewer_warnings,
+            ],
             handoff_recommendation=v4_output.handoff_recommendation,
         )
         supervisor_triggered = bool(route_decision.use_opus_supervisor or reviewer_notes)

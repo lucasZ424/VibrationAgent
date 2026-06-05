@@ -51,6 +51,7 @@ def test_api_health_returns_runtime_status():
     assert payload["workspace"]
     assert "s2_retrieval" in payload["phase0_pipeline"]
     assert "s4_engineering_analysis" in payload["phase0_pipeline"]
+    assert "s5_formula_derivation" in payload["phase0_pipeline"]
     assert "v2_citation_check" in payload["phase0_pipeline"]
     assert "v3_reviewer" in payload["phase0_pipeline"]
 
@@ -62,17 +63,19 @@ def test_api_scope_returns_phase0_registry():
     assert response.status_code == 200
     assert "s2_retrieval" in payload["active_skills"]
     assert "s4_engineering_analysis" in payload["active_skills"]
+    assert "s5_formula_derivation" in payload["active_skills"]
     assert "v1_term_symbol_unit_normalizer" in payload["active_skills"]
     assert "v2_citation_check" in payload["active_skills"]
     assert "v3_reviewer" in payload["active_skills"]
     assert "s4_engineering_analysis" not in payload["deferred_skills"]
+    assert "s5_formula_derivation" not in payload["deferred_skills"]
     assert "v1_term_symbol_unit_normalizer" not in payload["deferred_skills"]
     assert "v2_citation_check" not in payload["deferred_skills"]
     assert "v3_reviewer" not in payload["deferred_skills"]
 
 
 def test_api_ingest_plan_only_empty_dir_returns_insufficient(tmp_path):
-    response = client.post("/ingest", json={"path": str(tmp_path), "plan_only": True})
+    response = client.post("/ingest", json={"workspace": str(tmp_path), "path": str(tmp_path), "plan_only": True})
     payload = response.json()
 
     assert response.status_code == 200
@@ -82,7 +85,7 @@ def test_api_ingest_plan_only_empty_dir_returns_insufficient(tmp_path):
 
 
 def test_api_ingest_chunk_documents_empty_dir_returns_insufficient(tmp_path):
-    response = client.post("/ingest", json={"path": str(tmp_path)})
+    response = client.post("/ingest", json={"workspace": str(tmp_path), "path": str(tmp_path)})
     payload = response.json()
 
     assert response.status_code == 200
@@ -192,7 +195,7 @@ def test_api_runtime_error_response_has_locatable_reason(monkeypatch, tmp_path):
 
     monkeypatch.setattr(api_main, "chunk_documents", boom)
 
-    response = client.post("/ingest", json={"path": str(tmp_path)})
+    response = client.post("/ingest", json={"workspace": str(tmp_path), "path": str(tmp_path)})
     payload = response.json()
 
     assert response.status_code == 403

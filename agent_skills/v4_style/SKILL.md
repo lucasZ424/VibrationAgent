@@ -44,4 +44,4 @@ those structured fields explicitly.
 - Omit empty sections.
 - Preserve citations passed from S3.
 - Preserve asset IDs from S3 claims/assets in the evidence section and structured result.
-- Keep S4 engineering analysis and S5 formula derivation deferred.
+- Render S4 engineering analysis and S5 formula derivation only when upstream structured content supplies those fields.

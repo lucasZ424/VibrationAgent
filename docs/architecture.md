@@ -28,12 +28,13 @@ OCR belongs under `src/vibration_agent/ingestion/ocr/` because OCR is only one b
 
 ## Phase-0 Scope
 
-Phase-2 current query runtime has eight active/available skills:
+Phase-2 current query runtime has nine active/available skills:
 
 - `s1_ingestion`: document ingestion and parsing
 - `s2_retrieval`: knowledge-base retrieval
 - `s3_qa_summary`: concept explanation, summary, and QA
 - `s4_engineering_analysis`: optional engineering framing after S3 and before V2
+- `s5_formula_derivation`: optional evidence-bound formula derivation after S3 and before V2
 - `v1_term_symbol_unit_normalizer`: optional term/symbol/unit normalization at S3 input and V4 output
 - `v2_citation_check`: deterministic citation and visible-evidence guard
 - `v4_style`: output-style shaping after V2 filtering
@@ -41,7 +42,6 @@ Phase-2 current query runtime has eight active/available skills:
 
 Reserved but inactive skills are:
 
-- `s5_formula_derivation`
 - `s6_literature_search`
 - `s7_model_selection`
 - `s8_experiment_advice`
@@ -59,14 +59,22 @@ result to V2. S4 must not invent numeric values or operating conditions.
 As of Obj14, S4 provides evidence-bound deterministic framing; deeper semantic
 engineering analysis remains a future model-backed capability.
 
-Phase-0 V2 is a deterministic quality layer. It checks S3/S4 claims against chunks visible to S2, removes unsupported claims, and lets V4 render only checked content.
+Phase-2 S5 is a deterministic formula derivation layer. It runs only for
+`user_mode="derivation"` and enough cited evidence, emits premise -> steps ->
+conclusion, and allows only visible evidence steps plus `axiomatic` math steps.
+S5 must not invent formulas, units, parameters, or measured values.
+As of Obj15, S5 provides evidence-bound deterministic derivation scaffolding and
+formula asset threading. Deep symbolic algebra and LaTeX/MathML generation
+remain future model-backed capabilities.
+
+Phase-0 V2 is a deterministic quality layer. It checks S3/S4/S5 claims against chunks visible to S2, removes unsupported claims, allows S5 `axiomatic` steps, and lets V4 render only checked content.
 
 Phase-0 V1 is an optional deterministic normalization layer. It can normalize
 in-memory S2 retrieval context before S3 and normalize the final V4 answer, but
 both call points are independently configurable and V1 is not a chain step. The
 safer default is input normalization off and output normalization on.
 
-Phase-0 V4 is a formatting layer. It can reorder and render upstream V2/S3 content into the engineering answer template, preserve citations, and omit empty sections. It must not invent engineering meaning, assumptions, failure modes, formulas, or next actions; those belong to later deferred skills or future model-backed synthesis.
+Phase-0 V4 is a formatting layer. It can reorder and render upstream V2/S3/S4/S5 content into the engineering answer template, preserve citations, and omit empty sections. It must not invent engineering meaning, assumptions, failure modes, formulas, or next actions; those belong to upstream skills or future model-backed synthesis.
 
 Phase-2 V3 is an advisory reviewer. It runs after V4 only when routing marks
 the query as `extreme`, checks conclusion/evidence/limits completeness, topic
@@ -209,9 +217,9 @@ Phase 1 was frozen with this baseline runtime chain:
 S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style
 ```
 
-As of Phase-2 Obj14, the current user query path is `TutorOrchestrator -> S2 -> S3 -> optional S4 -> V2 -> V4`, with optional V1 normalization before S3 and after V4, V3 reviewer after V4 for extreme tasks only, and a fail-safe supervisor handoff for extreme/reviewer-flagged answers. S1 is invoked explicitly by ingestion entry points and prepares file-backed knowledge exports for S2.
+As of Phase-2 Obj15, the current user query path is `TutorOrchestrator -> S2 -> S3 -> optional S4/S5 -> V2 -> V4`, with optional V1 normalization before S3 and after V4, V3 reviewer after V4 for extreme tasks only, and a fail-safe supervisor handoff for extreme/reviewer-flagged answers. S1 is invoked explicitly by ingestion entry points and prepares file-backed knowledge exports for S2.
 
-The frozen contract list, accepted limits, and Phase-2 candidate backlog are recorded in `docs/phase_1_interface_freeze.md`. Deferred skills S5-S8 remain registry/documentation names only and are not called by the current runtime.
+The frozen contract list, accepted limits, and Phase-2 candidate backlog are recorded in `docs/phase_1_interface_freeze.md`. Deferred skills S6-S8 remain registry/documentation names only and are not called by the current runtime.
 
 ## Phase-2 Development Boundary
 

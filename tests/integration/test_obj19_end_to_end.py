@@ -1,4 +1,5 @@
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -160,13 +161,15 @@ def test_cli_zh_end_to_end_real_gap_and_out_of_scope(tmp_path, capsys):
 
 def test_api_end_to_end_ingest_and_query(tmp_path):
     workspace = _project_workspace(tmp_path / "workspace")
+    workspace_fixture = workspace / PDF_FIXTURE.name
+    shutil.copy2(PDF_FIXTURE, workspace_fixture)
     api_main.get_settings.cache_clear()
     api_main.get_orchestrator.cache_clear()
     client = TestClient(api_main.app)
 
     ingest_response = client.post(
         "/ingest",
-        json={"workspace": str(workspace), "path": str(PDF_FIXTURE), "max_pages": 1},
+        json={"workspace": str(workspace), "path": str(workspace_fixture), "max_pages": 1},
     )
     ingest_payload = ingest_response.json()
     assert ingest_response.status_code == 200

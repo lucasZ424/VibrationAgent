@@ -124,6 +124,13 @@ def _claims(structured: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [dict(item) for item in raw if isinstance(item, Mapping)]
 
 
+def _derivation_steps(structured: Mapping[str, Any]) -> list[dict[str, Any]]:
+    raw = structured.get("derivation_steps")
+    if not isinstance(raw, list):
+        return []
+    return [dict(item) for item in raw if isinstance(item, Mapping)]
+
+
 def _visible_refs(answer: str) -> set[str]:
     return {match.group(1) for match in _REF_RE.finditer(answer or "")}
 
@@ -170,6 +177,29 @@ def _unsupported(
     return {"claim": claim_text, "chunk_id": chunk_id or None, "reasons": reasons}
 
 
+def _unsupported_derivation_step(
+    step: Mapping[str, Any],
+    *,
+    visible_rows: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any] | None:
+    source_type = step.get("source_type")
+    if source_type == "axiomatic":
+        return None
+    step_id = str(step.get("id") or "")
+    step_text = str(step.get("text") or "")
+    chunk_id = str(step.get("chunk_id") or "")
+    reasons: list[str] = []
+    if source_type != "evidence":
+        reasons.append("derivation step source_type must be evidence or axiomatic")
+    if not chunk_id:
+        reasons.append("evidence derivation step missing chunk_id")
+    elif chunk_id not in visible_rows:
+        reasons.append("evidence derivation step chunk not visible in retrieval")
+    if reasons:
+        return {"claim": step_text, "chunk_id": chunk_id or None, "step_id": step_id or None, "reasons": reasons}
+    return None
+
+
 def _answer_has_uncited_claim(answer: str, claims: list[Mapping[str, Any]]) -> bool:
     # V2 needs structured claims to verify visibility and lexical support. A
     # bare answer with bracket refs is still not machine-checkable here.
@@ -184,6 +214,7 @@ class CitationCheckSkill(Skill):
         structured = dict(_structured(source))
         answer = str(structured.get("answer") or source.get("answer") or "")
         claims = _claims(structured)
+        derivation_steps = _derivation_steps(structured)
         visible_rows = _visible_rows(payload)
         refs = _visible_refs(answer)
         require_visible_ref = structured.get("synthesis_mode") == "llm"
@@ -205,6 +236,11 @@ class CitationCheckSkill(Skill):
         for ref in sorted(refs - set(visible_rows)):
             unsupported.append({"claim": "", "chunk_id": ref, "reasons": ["referenced chunk not visible in retrieval"]})
 
+        for step in derivation_steps:
+            issue = _unsupported_derivation_step(step, visible_rows=visible_rows)
+            if issue:
+                unsupported.append(issue)
+
         if _answer_has_uncited_claim(answer, claims):
             unsupported.append({"claim": answer.strip(), "chunk_id": None, "reasons": ["answer contains unstructured claim"]})
 
@@ -224,6 +260,7 @@ class CitationCheckSkill(Skill):
                 "visible_chunk_ids": sorted(visible_rows),
                 "visible_answer_refs": sorted(refs),
                 "unsupported_count": len(unsupported),
+                "derivation_step_count": len(derivation_steps),
             },
         }
         warnings = list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else []

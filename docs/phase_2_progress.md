@@ -858,8 +858,176 @@ best-effort.
 - Verified command: `.\.venv\Scripts\python.exe -m compileall -q src\vibration_agent tests\integration\test_phase0_fixture_chain.py tests\integration\test_obj19_end_to_end.py`
 - Result: ok.
 - User-verified command in regular PowerShell:
-  `.\.venv\Scripts\python.exe -m pytest tests\integration\test_phase0_fixture_chain.py::test_phase0_fixture_runs_s1_to_s2_s3_s4_v2_v4 tests\integration\test_obj19_end_to_end.py::test_cli_end_to_end_real_gap_and_out_of_scope -q -m "not large_corpus" --basetemp=...`
+  `.\.venv\Scripts\python.exe -m pytest tests\integration\test_phase0_fixture_chain.py::test_phase0_fixture_runs_s1_to_s2_s3_s4_v2_v4 tests\integration\test_obj19_end_to_end.py::test_cli_end_to_end_real_gap_and_out_of_scope -q -m "not large_corpus" --basetemp=$env:TEMP\pytest-obj14-review -p no:cacheprovider`
 - Result: 2 passed.
 - Sandbox result for the same command: blocked by Windows/sandbox pytest tmpdir
   cleanup `PermissionError` before pytest could emit normal test results. The
   sandbox can see the basetemp directory exists, but cannot enumerate it.
+
+## Obj15 Notes
+
+- Activated deterministic S5 formula derivation as an optional skill after S3
+  and before V2.
+- S5 runs only when `user_mode == "derivation"` unless explicitly controlled by
+  `s5_enabled` / `s5_formula_enabled`. Engineering-mode requests continue to use
+  S4, and non-derivation requests skip S5.
+- S5 requires S3 cited claims that are visible in S2 retrieval evidence. Missing
+  visible evidence returns `insufficient`; the orchestrator treats that as a
+  skip and passes S3 to V2.
+- S5 emits `premises`, `derivation_steps`, `minimal_model`, and `conclusion`.
+  Evidence steps cite visible chunks; axiomatic math steps are explicitly marked
+  `source_type = "axiomatic"` and do not require fake citations.
+- V2 now validates S5 `derivation_steps`, allowing `axiomatic` steps while still
+  requiring evidence steps to cite visible chunks.
+- Updated config, schema, API/CLI scope reporting, orchestrator prompt notes,
+  architecture notes, agent skill docs, and unit tests so S5 is active rather
+  than deferred.
+
+## Obj15 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 7 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 26 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or logs_supervisor or schemas) and not unknown_source_type"`
+- Result: 12 passed, 14 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s4_engineering.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 22 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v4_style_skill.py tests\unit\test_s5_derivation.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 15 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_qa_logs.py -q -p no:cacheprovider -p no:tmpdir -k "not apply_migrations"`
+- Result: 14 passed, 2 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m compileall -q src\vibration_agent tests\unit\test_s5_derivation.py`
+- Result: ok.
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s4_engineering.py tests\unit\test_v4_style_skill.py tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py -q -p no:cacheprovider -p no:tmpdir -k "(s4 or v4 or health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or logs_supervisor or schemas) and not unknown_source_type"`
+- Result: 26 passed, 14 deselected.
+- Verified command: `git diff --check`
+- Result: ok; Git reported only existing CRLF/LF normalization warnings.
+
+## Obj15 Residual Risk
+
+- S5 is deterministic and evidence-gated. It structures formula derivation but
+  does not perform deep symbolic algebra or semantic proof.
+- V2 validates evidence visibility and `axiomatic` step classification, but it
+  does not prove mathematical correctness.
+- CLI `ask` still uses the default engineering mode unless callers use API or
+  direct orchestrator invocation to set `user_mode="derivation"`.
+- Full `tmp_path`-using integration tests remain affected in the sandbox by the
+  Windows pytest cleanup `PermissionError`; no-`tmp_path` targeted tests were
+  used.
+
+## Obj15 Next Obj Gate
+
+- Obj15 implementation is ready for review before starting Obj16.
+
+## Obj15 Review Follow-Up
+
+- Fixed Obj15 `M1`: true latent issue. `_validate_derivation_steps()` now runs
+  a dependency graph cycle check instead of only detecting self-loops. Added a
+  two-node cycle regression.
+- Fixed Obj15 `#1`: true observation. Documented that deterministic S5 is
+  derivation scaffolding today, not deep symbolic algebra.
+- Fixed Obj15 `#2`: true observation. Documented that Obj15 threads formula
+  asset references and formula text, while LaTeX/MathML generation remains a
+  future model-backed capability.
+- Fixed Obj15 `#3`: true edge case. S4 and S5 are now mutually exclusive when
+  both are force-enabled. In `user_mode="derivation"`, S5 takes precedence; in
+  other modes, S4 takes precedence. The skipped skill is not added to the chain
+  or `skill_results`, and a warning is surfaced.
+
+## Obj15 Review Follow-Up Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 9 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider -p no:tmpdir -k "not runs_s2_s3_v2_v4"`
+- Result: 26 passed, 1 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m compileall -q src\vibration_agent tests\unit\test_s5_derivation.py`
+- Result: ok.
+
+## Obj16 Notes
+
+- Added API hardening settings in `configs/api.yaml` and
+  `vibration_agent.config.ApiSettings`. Defaults keep localhost/dev behavior:
+  auth, CORS, and rate limiting are off unless explicitly enabled.
+- Added API token helpers supporting `X-API-Key` and `Authorization: Bearer`.
+- Added a small in-memory rate limiter for local deployments.
+- Added workspace path whitelisting for `ApiIngestionRequest.path`. Relative
+  paths resolve under the configured workspace; absolute or traversal paths
+  outside the workspace are rejected with 403.
+- `/ingest` performs path whitelist validation before auth/rate checks so path
+  safety remains the first hardening gate.
+- `/health` now reports `status = ok | degraded | fail` and optional dependency
+  details for Postgres and Qdrant. Disabled dependencies are reported as
+  `disabled`; enabled failing dependencies degrade health.
+- Added `tests/unit/test_api_hardening.py` for missing token, wrong token,
+  valid token, path escape precedence, degraded health, and rate limit behavior.
+
+## Obj16 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_hardening.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 6 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py tests\unit\test_api_hardening.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or logs_supervisor or hardening or rejects_missing_token or rejects_wrong_token or accepts_header_token or path_whitelist or degraded_dependency or schemas) and not unknown_source_type"`
+- Result: 17 passed, 14 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py tests\unit\test_s4_engineering.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 15 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m compileall -q apps\api src\vibration_agent tests\unit\test_api_hardening.py`
+- Result: ok.
+- Verified config probe with `PYTHONPATH=src`.
+- Result: `auth_enabled=False`, `cors_enabled=False`,
+  `rate_limit_enabled=False`, `rate_limit_per_minute=60`.
+- Verified command: `git diff --check`
+- Result: ok; Git reported only existing CRLF/LF normalization warnings.
+
+## Obj16 Residual Risk
+
+- CORS is configured at app import from default settings. Runtime workspace
+  query overrides do not reconfigure middleware after the app is created.
+- The rate limiter is process-local and in-memory; it is appropriate for local
+  deployment hardening, not distributed production enforcement.
+- Postgres/Qdrant health checks are best-effort and only run when the
+  corresponding dependency is enabled.
+- Full `tmp_path`-using API tests remain difficult to run inside the sandbox
+  because of the Windows pytest tmpdir permission issue. The changed ingest
+  tests should be verified in regular PowerShell when needed.
+
+## Obj16 Next Obj Gate
+
+- Obj16 implementation is ready for review before starting Obj17.
+
+## Obj16 Review Follow-Up
+
+- Fixed Obj16 `S1`: true issue. The API E2E ingest test posted a fixture path
+  outside the configured workspace, and the Obj16 whitelist correctly rejected
+  it. The test now copies the PDF fixture into the workspace before calling
+  `/ingest`, preserving the new HTTP API rule that ingest paths must live under
+  the workspace.
+- Fixed Obj16 `M1`: true issue. Added `_health_status()` so
+  `ApiHealthResponse.status = "fail"` is reachable when all reported
+  dependencies fail. Partial failure remains `degraded`; no failures remain
+  `ok`.
+- Reviewed Obj16 low observations:
+  path-before-auth is accepted as the AC1 priority tradeoff for this local
+  personal tool; `/health` auth behavior remains unchanged; empty API key with
+  auth enabled remains fail-closed; the in-memory rate limiter remains scoped to
+  local deployments.
+
+## Obj16 Review Follow-Up Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_hardening.py -q -p no:cacheprovider -p no:tmpdir`
+- Result: 7 passed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py tests\unit\test_cli_main.py tests\unit\test_schemas.py tests\unit\test_api_hardening.py -q -p no:cacheprovider -p no:tmpdir -k "(health or scope_returns or config or validation_error or out_of_scope or without_chunk_corpus or logs_supervisor or hardening or rejects_missing_token or rejects_wrong_token or accepts_header_token or path_whitelist or degraded_dependency or can_fail or schemas) and not unknown_source_type"`
+- Result: 19 passed, 14 deselected.
+- Verified command: `.\.venv\Scripts\python.exe -m compileall -q apps\api tests\unit\test_api_hardening.py tests\integration\test_obj19_end_to_end.py`
+- Result: ok.
+- Verified manual API E2E probe equivalent to
+  `test_api_end_to_end_ingest_and_query`, using a PDF copied inside a
+  gitignored workspace.
+- Result: ok; `/ingest` returned 200/ok, `/query` returned ok with citation
+  pages `[1]`, gap query returned `insufficient`, and out-of-scope query
+  returned `insufficient`.
+- Attempted command:
+  `.\.venv\Scripts\python.exe -m pytest tests\integration\test_obj19_end_to_end.py::test_api_end_to_end_ingest_and_query -q -m "not large_corpus" --basetemp=$env:TEMP\pytest-obj16-review -p no:cacheprovider`
+- Result: blocked by local Windows/sandbox pytest tmpdir cleanup
+  `PermissionError` before pytest could emit normal test results. Run this in
+  regular PowerShell to confirm the exact integration test.

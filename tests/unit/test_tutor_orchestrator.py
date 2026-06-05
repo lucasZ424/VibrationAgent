@@ -8,6 +8,7 @@ from vibration_agent.schemas import SkillInput, SkillOutput
 from vibration_agent.skills import (
     CitationCheckSkill,
     EngineeringAnalysisSkill,
+    FormulaDerivationSkill,
     OutputStyleSkill,
     QASummarySkill,
     RetrievalSkill,
@@ -67,17 +68,19 @@ def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
         orchestrator.retrieval_skill,
         orchestrator.qa_summary_skill,
         orchestrator.engineering_analysis_skill,
+        orchestrator.formula_derivation_skill,
         orchestrator.normalizer_skill,
         orchestrator.citation_check_skill,
         orchestrator.style_skill,
         orchestrator.reviewer_skill,
     ]
     active_names = {skill.name for skill in active_skills}
-    deferred_prefixes = ("s5_", "s6_", "s7_", "s8_")
+    deferred_prefixes = ("s6_", "s7_", "s8_")
 
     assert type(orchestrator.retrieval_skill) is RetrievalSkill
     assert type(orchestrator.qa_summary_skill) is QASummarySkill
     assert type(orchestrator.engineering_analysis_skill) is EngineeringAnalysisSkill
+    assert type(orchestrator.formula_derivation_skill) is FormulaDerivationSkill
     assert type(orchestrator.normalizer_skill) is TermSymbolUnitNormalizerSkill
     assert type(orchestrator.citation_check_skill) is CitationCheckSkill
     assert type(orchestrator.style_skill) is OutputStyleSkill
@@ -86,6 +89,7 @@ def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
         "s2_retrieval",
         "s3_qa_summary",
         "s4_engineering_analysis",
+        "s5_formula_derivation",
         "v1_term_symbol_unit_normalizer",
         "v2_citation_check",
         "v3_reviewer",
