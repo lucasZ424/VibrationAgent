@@ -1,0 +1,14 @@
+{
+  "structured_result": {
+    "answer": "Rotor vibration reaches 10 mm/s near critical speed [c1].",
+    "claims": [
+      {
+        "chunk_id": "c1",
+        "doc_id": "doc1",
+        "pages": [1],
+        "text": "Rotor vibration reaches 10 mm/s near critical speed."
+      }
+    ],
+    "synthesis_mode": "llm"
+  }
+}

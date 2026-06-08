@@ -1,0 +1,14 @@
+{
+  "structured_result": {
+    "answer": "The damping ratio ζ controls critical speed amplification [c1].",
+    "claims": [
+      {
+        "chunk_id": "c1",
+        "doc_id": "doc1",
+        "pages": [1],
+        "text": "The damping ratio ζ controls critical speed amplification."
+      }
+    ],
+    "synthesis_mode": "llm"
+  }
+}

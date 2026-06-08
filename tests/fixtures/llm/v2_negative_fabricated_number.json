@@ -1,0 +1,14 @@
+{
+  "structured_result": {
+    "answer": "Critical speed is 50 Hz and amplifies rotor response [c1].",
+    "claims": [
+      {
+        "chunk_id": "c1",
+        "doc_id": "doc1",
+        "pages": [1],
+        "text": "Critical speed is 50 Hz and amplifies rotor response."
+      }
+    ],
+    "synthesis_mode": "llm"
+  }
+}

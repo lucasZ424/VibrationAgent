@@ -21,7 +21,7 @@ Every Obj must record:
 0. Phase-3 execution baseline: done
 1. Provider client and record/replay baseline: done
 2. Token budget and cost estimation: done
-3. V2 LLM-output safety gate pre-hardening: pending
+3. V2 LLM-output safety gate pre-hardening: done
 4. S3 real LLM synthesis: pending
 5. S4 real engineering analysis: pending
 6. S5 real formula derivation and cycle-check hardening: pending
@@ -194,3 +194,52 @@ Every Obj must record:
 - Obj2 focused and compatibility tests passed.
 - Full non-large suite passed.
 - Obj3 may start after user review of Obj2.
+
+## Obj3 Notes
+
+- Hardened `v2_citation_check` for `synthesis_mode=="llm"` claims.
+- LLM claims still must cite visible chunks and include visible `[chunk_id]`
+  references.
+- LLM claims now also require numbers, units, and common engineering symbols
+  appearing in the claim to be present in the cited visible evidence text.
+- Deterministic mode keeps Phase-2 behavior and does not enable the new strict
+  number/unit/symbol blocking path.
+- Added negative LLM fixtures for fabricated number, fabricated unit, and
+  fabricated symbol cases.
+
+## Obj3 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py -q -p no:cacheprovider`
+- Result: passed, 18 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s3_llm_synthesis.py tests\unit\test_tutor_orchestrator.py tests\unit\test_v4_style_skill.py -q -p no:cacheprovider`
+- Result: passed, 31 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj3-nonlarge -p no:cacheprovider`
+- Result: passed, 333 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py -q -p no:cacheprovider`
+- Result: passed, 18 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj3-postreview -p no:cacheprovider`
+- Result: passed, 333 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+
+## Obj3 Residual Risk
+
+- The added check is explicit-string support for visible numbers, units, and
+  symbols. It is not semantic entailment and does not prove engineering truth.
+- Unit/symbol extraction is intentionally conservative and can be extended by
+  later eval failures without changing the Obj3 contract.
+- LLM-mode fail-closed checks may over-block legitimate paraphrases or rounded
+  values. Obj8 eval should calibrate whether bare-number/bare-unit blocking
+  needs narrowing.
+- S5 derivation-step numeric/unit/symbol hardening remains Obj6 scope.
+
+## Obj3 Post-Review Fixes
+
+- Wired `tests/fixtures/llm/v2_negative_*.json` into the V2 negative tests so
+  the fixtures are covered and cannot drift from inline test data.
+
+## Obj3 Next Obj Gate
+
+- Obj3 focused and nearby compatibility tests passed.
+- Full non-large suite passed.
+- Obj4 may start after user review of Obj3.

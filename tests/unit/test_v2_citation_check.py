@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from vibration_agent.orchestrator import TutorOrchestrator
 from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 from vibration_agent.skills import CitationCheckSkill
@@ -49,6 +52,11 @@ def _payload(s3: dict, *, s2: dict | None = None) -> SkillInput:
     )
 
 
+def _llm_fixture(name: str) -> dict:
+    path = Path(__file__).resolve().parents[1] / "fixtures" / "llm" / name
+    return {"status": "ok", **json.loads(path.read_text(encoding="utf-8"))}
+
+
 def test_v2_accepts_claims_citing_visible_retrieved_chunks():
     s3 = _s3(
         answer="Critical speed amplifies rotor response [c1].",
@@ -93,6 +101,69 @@ def test_v2_allows_deterministic_structured_claim_without_bracket_reference():
     s3 = _s3(
         answer="Critical speed amplifies rotor response. (evidence: c1)",
         claims=[{"text": "Critical speed amplifies rotor response.", "chunk_id": "c1", "doc_id": "doc1"}],
+        mode="deterministic",
+    )
+
+    output = CitationCheckSkill().run(_payload(s3))
+
+    assert output.status == "ok"
+
+
+def test_v2_blocks_llm_claim_with_number_not_in_cited_evidence():
+    # WHY: Obj3 hardens LLM output before real S3 is enabled. A model must not
+    # attach a fabricated numeric value to otherwise related evidence.
+    s3 = _llm_fixture("v2_negative_fabricated_number.json")
+
+    output = CitationCheckSkill().run(_payload(s3))
+
+    assert output.status == "insufficient"
+    assert "50hz" in output.structured_result["unsupported_claims"][0]["reasons"][-1]
+
+
+def test_v2_blocks_llm_claim_with_unit_not_in_cited_evidence():
+    s3 = _llm_fixture("v2_negative_fabricated_unit.json")
+
+    output = CitationCheckSkill().run(_payload(s3))
+
+    assert output.status == "insufficient"
+    assert "mm/s" in output.structured_result["unsupported_claims"][0]["reasons"][-1]
+
+
+def test_v2_blocks_llm_claim_with_symbol_not_in_cited_evidence():
+    s3 = _llm_fixture("v2_negative_fabricated_symbol.json")
+
+    output = CitationCheckSkill().run(_payload(s3))
+
+    assert output.status == "insufficient"
+    assert "ζ" in output.structured_result["unsupported_claims"][0]["reasons"][-1]
+
+
+def test_v2_allows_llm_number_unit_and_symbol_when_visible_in_cited_evidence():
+    row = _row(text="Critical speed is 50 Hz. The damping ratio ζ affects rotor response.")
+    s3 = _s3(
+        answer="Critical speed is 50 Hz and damping ratio ζ affects rotor response [c1].",
+        claims=[
+            {
+                "text": "Critical speed is 50 Hz and damping ratio ζ affects rotor response.",
+                "chunk_id": "c1",
+                "doc_id": "doc1",
+                "pages": [1],
+            }
+        ],
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2([row])))
+
+    assert output.status == "ok"
+    assert output.structured_result["unsupported_claims"] == []
+
+
+def test_v2_does_not_expand_numeric_blocking_for_deterministic_mode():
+    # WHY: Obj3 strict number/unit/symbol checks are scoped to synthesis_mode=llm
+    # so Phase-2 deterministic behavior does not regress.
+    s3 = _s3(
+        answer="Critical speed is 50 Hz and amplifies rotor response. (evidence: c1)",
+        claims=[{"text": "Critical speed is 50 Hz and amplifies rotor response.", "chunk_id": "c1", "doc_id": "doc1"}],
         mode="deterministic",
     )
 

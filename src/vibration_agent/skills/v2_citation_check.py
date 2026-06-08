@@ -15,6 +15,13 @@ from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 from .base import Skill
 
 _REF_RE = re.compile(r"\[([A-Za-z0-9_.:/#-]+)\]")
+_NUMBER_RE = re.compile(r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?%?")
+_NUMBER_UNIT_RE = re.compile(
+    r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?\s*(?:Hz|kHz|rpm|r/min|rad/s|m/s2|m/s\^2|mm/s|m/s|N|kN|Pa|kPa|MPa|GPa|kg|g|s|ms|V|A|W|dB|%)\b",
+    re.IGNORECASE,
+)
+_UNIT_RE = re.compile(r"\b(?:Hz|kHz|rpm|r/min|rad/s|m/s2|m/s\^2|mm/s|m/s|N|kN|Pa|kPa|MPa|GPa|kg|g|s|ms|V|A|W|dB)\b")
+_SYMBOL_RE = re.compile(r"(?<![A-Za-z0-9_])(?:[ζωΩαβγλμξφ]|zeta|omega_n|omega_d|omega|fn|f_n|Q)(?![A-Za-z0-9_])")
 _STOPWORDS = {
     "a",
     "an",
@@ -153,12 +160,35 @@ def _lexically_supported(claim_text: str, evidence_text: str) -> bool:
     return bool(claim_tokens & evidence_tokens)
 
 
+def _significant_items(text: str) -> set[str]:
+    items: set[str] = set()
+    for pattern in (_NUMBER_UNIT_RE, _NUMBER_RE, _UNIT_RE, _SYMBOL_RE):
+        for match in pattern.finditer(text):
+            items.add(_normalize_significant_item(match.group(0)))
+    return {item for item in items if item}
+
+
+def _normalize_significant_item(value: str) -> str:
+    return re.sub(r"\s+", "", value).casefold()
+
+
+def _missing_significant_items(claim_text: str, evidence_text: str) -> list[str]:
+    claim_items = _significant_items(claim_text)
+    if not claim_items:
+        return []
+    evidence_items = _significant_items(evidence_text)
+    evidence_compact = re.sub(r"\s+", "", evidence_text).casefold()
+    missing = sorted(item for item in claim_items if item not in evidence_items and item not in evidence_compact)
+    return missing
+
+
 def _unsupported(
     claim: Mapping[str, Any],
     *,
     visible_rows: Mapping[str, Mapping[str, Any]],
     visible_refs: set[str],
     require_visible_ref: bool,
+    strict_llm_support: bool,
 ) -> dict[str, Any] | None:
     claim_text = str(claim.get("text") or "")
     chunk_id = str(claim.get("chunk_id") or "")
@@ -169,8 +199,17 @@ def _unsupported(
         reasons.append("chunk not visible in retrieval")
     elif require_visible_ref and chunk_id not in visible_refs:
         reasons.append("claim missing visible [chunk_id] reference")
-    elif not _lexically_supported(claim_text, _evidence_text(visible_rows[chunk_id])):
-        reasons.append("claim text does not lexically match cited evidence")
+    else:
+        evidence = _evidence_text(visible_rows[chunk_id])
+        if not _lexically_supported(claim_text, evidence):
+            reasons.append("claim text does not lexically match cited evidence")
+        if strict_llm_support:
+            missing_items = _missing_significant_items(claim_text, evidence)
+            if missing_items:
+                reasons.append(
+                    "LLM claim contains number/unit/symbol not found in cited evidence: "
+                    + ", ".join(missing_items)
+                )
 
     if not reasons:
         return None
@@ -218,6 +257,7 @@ class CitationCheckSkill(Skill):
         visible_rows = _visible_rows(payload)
         refs = _visible_refs(answer)
         require_visible_ref = structured.get("synthesis_mode") == "llm"
+        strict_llm_support = structured.get("synthesis_mode") == "llm"
 
         unsupported: list[dict[str, Any]] = []
         supported_claims: list[dict[str, Any]] = []
@@ -227,6 +267,7 @@ class CitationCheckSkill(Skill):
                 visible_rows=visible_rows,
                 visible_refs=refs,
                 require_visible_ref=require_visible_ref,
+                strict_llm_support=strict_llm_support,
             )
             if issue:
                 unsupported.append(issue)

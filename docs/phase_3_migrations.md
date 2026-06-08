@@ -119,3 +119,24 @@ file shape, or chain order changed.
 Rollback: remove `src/vibration_agent/llm/budget.py`, Obj2 tests, the Obj2
 schema additions, provider `budget_guard` hooks, and Obj2 additions to
 `LlmSettings` / `LlmProviderSettings` / `configs/llm.yaml`.
+
+### Obj3 - V2 LLM-output safety gate pre-hardening (2026-06-08)
+
+Runtime/quality contract additions:
+
+- `v2_citation_check` now applies strict number/unit/symbol support checks when
+  `structured_result.synthesis_mode == "llm"`.
+- LLM claims containing visible numbers, units, or common engineering symbols
+  are blocked unless those exact significant items appear in the cited visible
+  evidence chunk text.
+- Deterministic mode keeps the Phase-2 lexical/citation behavior and does not
+  use the new strict significant-item blocker.
+- Added LLM negative fixtures under `tests/fixtures/llm/v2_negative_*.json`.
+
+No frozen API request/response shape, ingestion file shape, database schema, or
+chain order changed. Unsupported LLM claims continue to use the existing
+`structured_result.unsupported_claims` and `citation_check` surfaces.
+
+Rollback: remove the significant-item checks from
+`src/vibration_agent/skills/v2_citation_check.py` and remove the Obj3 V2 tests
+and negative fixtures.
