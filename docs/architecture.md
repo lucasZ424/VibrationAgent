@@ -219,7 +219,12 @@ S1 ingestion -> S2 retrieval -> S3 evidence-bound QA/summary -> V4 style
 
 As of Phase-2 Obj15, the current user query path is `TutorOrchestrator -> S2 -> S3 -> optional S4/S5 -> V2 -> V4`, with optional V1 normalization before S3 and after V4, V3 reviewer after V4 for extreme tasks only, and a fail-safe supervisor handoff for extreme/reviewer-flagged answers. S1 is invoked explicitly by ingestion entry points and prepares file-backed knowledge exports for S2.
 
-The frozen contract list, accepted limits, and Phase-2 candidate backlog are recorded in `docs/phase_1_interface_freeze.md`. Deferred skills S6-S8 remain registry/documentation names only and are not called by the current runtime.
+The Phase-1 compatibility baseline is recorded in
+`docs/phase_1_interface_freeze.md`. The Phase-2 frozen contract list, accepted
+limits, and Phase-3 candidate backlog are recorded in
+`docs/phase_2_interface_freeze.md` and
+`docs/phase_2_deferred_and_polish_audit.md`. Deferred skills S6-S8 remain
+registry/documentation names only and are not called by the current runtime.
 
 ## Phase-2 Development Boundary
 
@@ -228,3 +233,7 @@ The approved Phase-2 development order is recorded in `docs/phase_2_development_
 At architecture level, Phase 2 activates three kinds of work: local-corpus usability, real retrieval/storage, and citation-guarded reasoning/quality layers. Later product surfaces remain outside Phase 2 unless a new boundary decision changes the scope.
 
 Phase-2 execution is Obj-based. Each Obj must define verification, preserve a fallback path for external dependencies, update progress notes, and pass review before the next Obj starts. The binding fallback and feature-flag rules are recorded under "执行模型与风险控制" in `docs/phase_2_development_order.md`. Schema or API contract changes follow the canonical process in `docs/phase_2_migrations.md`; until a specific Obj completes that process, the Phase-1 runtime chain remains the stable baseline.
+
+As of Obj19, Phase 2 is frozen. Future schema/API/chain changes must follow
+`docs/phase_2_interface_freeze.md`; future capability work starts from the
+Phase-3 candidates in `docs/phase_2_deferred_and_polish_audit.md`.

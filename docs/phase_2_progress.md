@@ -1,6 +1,6 @@
 # Phase 2 Progress
 
-Updated: 2026-06-03
+Updated: 2026-06-05
 
 ## Execution Model
 
@@ -11,12 +11,22 @@ Phase 2 proceeds one Obj at a time. Each Obj must define its verification, prese
 1. Phase-2 boundary: done
 2. Bilingual fixture and multi-page/cross-chunk regression samples: done
 3. Bibliography metadata + section parent-child linking: done
-4. DOCX ingestion capability: done (pending review)
-5. Real embedding generation layer: done (pending review)
-6. Qdrant write/read chain: done (pending review)
-7. Postgres qa_logs persistence: done (pending review)
-8. Large-corpus cold-start baseline: done (pending review)
-9. LLM-backed S3 evidence-bound synthesis: done (pending review)
+4. DOCX ingestion capability: done
+5. Real embedding generation layer: done
+6. Qdrant write/read chain: done
+7. Postgres qa_logs persistence: done
+8. Large-corpus cold-start baseline: done
+9. LLM-backed S3 evidence-bound synthesis: done
+10. V2 citation check: done
+11. V1 term/symbol/unit normalization: done
+12. V3 reviewer: done
+13. Opus supervisor loop: done
+14. S4 engineering analysis: done
+15. S5 formula derivation: done
+16. API hardening: done
+17. CI workflow and regression gate: done
+18. Phase-2 end-to-end verification: done
+19. Phase-2 interface freeze and Phase-3 planning: done
 
 ## Obj1 Notes
 
@@ -1031,3 +1041,158 @@ best-effort.
 - Result: blocked by local Windows/sandbox pytest tmpdir cleanup
   `PermissionError` before pytest could emit normal test results. Run this in
   regular PowerShell to confirm the exact integration test.
+
+## Obj17 Notes
+
+- Added `.github/workflows/test.yml`.
+- PR and push events run the fast gate:
+  `python -m pytest tests -q -m "not integration"`.
+- PR and push events also run the cheap Phase-2 contract E2E:
+  `python -m pytest tests/integration/test_phase2_end_to_end.py -q -m "not large_corpus"`.
+- Scheduled nightly and manual `workflow_dispatch` runs execute
+  `python -m pytest tests -q`, which includes Obj8 large-corpus smoke, plus a
+  one-page benchmark sample.
+- Nightly outputs are written under `data/exports/ci/` and uploaded with
+  `actions/upload-artifact`; no benchmark output is committed.
+- Updated `Makefile` with `test-full`, `test-large`, and `test-nightly`
+  targets plus `test-contract`. `test-full` now uses the documented default
+  `pytest tests -q -m "not large_corpus"`.
+- Updated README Testing to describe local fast/full/large-corpus/manual E2E
+  commands and the CI split.
+
+## Obj17 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration\test_large_corpus.py -q -m large_corpus -p no:cacheprovider -p no:tmpdir`
+- Result: 1 passed.
+- Verified command: `.\.venv\Scripts\python.exe scripts\bench_large_corpus.py tests\fixtures\raw\small_vibration_native.pdf --workspace data\tmp\obj17-large-corpus --output data\exports\obj17_large_corpus_baseline.json --max-pages 1 --top-k 2`
+- Result: ok; `document_count=1`, `chunk_count=1`,
+  `question_count=20`, `citation_coverage=0.95`,
+  `expected_term_hit_rate=0.3`, `no_citation_questions=["q12"]`.
+- Verified command: `git diff --check`
+- Result: ok; Git reported only existing CRLF/LF normalization warnings.
+- Skipped sandbox-blocked command:
+  `.\.venv\Scripts\python.exe -m pytest tests -q -m "not integration" -p no:cacheprovider`
+- Result: blocked by Windows/sandbox pytest tmpdir permission on
+  `C:\Users\zhoul\AppData\Local\Temp\pytest-of-zhoul` before a valid fast-suite
+  result could be emitted.
+- Skipped sandbox-blocked command:
+  `.\.venv\Scripts\python.exe -m pytest tests -q -m "not integration" --basetemp=data\tmp\pytest-obj17-fast -p no:cacheprovider`
+- Result: blocked by Windows/sandbox pytest tmpdir cleanup/scandir permission on
+  `C:\Challenge\Viberation\Agent\data\tmp\pytest-obj17-fast` before a valid
+  fast-suite result could be emitted.
+
+## Obj17 Residual Risk
+
+- GitHub Actions itself was not executed locally. The workflow uses standard
+  `actions/checkout`, `actions/setup-python`, pip editable install, pytest, and
+  artifact upload steps; final validation must happen in GitHub after push.
+- Nightly failure does not block PRs because it only runs on schedule or manual
+  dispatch. GitHub's normal scheduled workflow notifications are the failure
+  signal.
+- PR blocking requires repository branch protection to mark the `fast regression`
+  check as required; this is now documented in README because it is repo
+  configuration, not YAML behavior.
+
+## Obj17 Next Obj Gate
+
+- Obj17 implementation is complete; Obj18 was executed in the same review batch.
+
+## Obj18 Notes
+
+- Added `tests/integration/test_phase2_end_to_end.py`.
+- The first E2E uses committed PDF and DOCX chunk fixtures as two evidence
+  rows and verifies the `S2 -> S3 -> V2 -> V4 -> V3` chain, in-scope status,
+  reviewer notes, and citations from both source documents.
+- S2/S3 are intentionally injected in the Obj18 E2E so the tests freeze the
+  Phase-2 handoff contract through real V2/V4/V3/supervisor logic. Real S1/S2/S3
+  fixture-chain coverage remains in `test_phase0_fixture_chain.py` and
+  `test_obj19_end_to_end.py`.
+- The second E2E verifies an `extreme` query reaches V3 and falls back safely
+  when no Opus supervisor client is configured.
+- The third E2E feeds a deliberately unsupported LLM-style claim through real
+  V2/V4/V3 and asserts V2 strips the conclusion, returns `insufficient`, clears
+  citations, preserves scope, and exposes `reviewer_notes`.
+- Added `scripts/manual_e2e.py` for non-CI manual Phase-2 probing. It runs the
+  local fixture chain by default and can accept a captured S3 JSON response via
+  `--s3-llm-response-json` to manually exercise the S3 LLM contract without
+  adding online API dependency to CI. This is captured-response replay, not a
+  live provider call.
+
+## Obj18 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration\test_phase2_end_to_end.py -q -m "not large_corpus" -p no:cacheprovider -p no:tmpdir`
+- Result: 3 passed.
+- Verified command: `.\.venv\Scripts\python.exe scripts\manual_e2e.py`
+- Result: ok; returned `status=ok`, `scope=in_scope`,
+  chain `["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style",
+  "v3_reviewer"]`, `citation_count=2`, and `supervisor_status=fallback`.
+- Skipped sandbox-blocked command:
+  `.\.venv\Scripts\python.exe -m compileall -q scripts\manual_e2e.py tests\integration\test_phase2_end_to_end.py`
+- Result: blocked by Windows/sandbox bytecode write permission on
+  `scripts\__pycache__\manual_e2e.cpython-313.pyc.*`. The script itself was
+  executed successfully in the prior verification command.
+
+## Obj18 Residual Risk
+
+- The integration E2E deliberately uses injected deterministic/static S2/S3
+  outputs for chain-contract coverage. This avoids testing retrieval ranking
+  randomness when the requirement is Phase-2 chain verification.
+- No online LLM or live Opus client is called in CI. The manual script supports
+  captured S3 JSON response replay, while a real provider client remains a
+  future explicit wiring task.
+
+## Obj18 Next Obj Gate
+
+- Obj18 implementation is ready for review before starting Obj19.
+
+## Obj19 Notes
+
+- Added `docs/phase_2_interface_freeze.md` as the Phase-2 runtime and contract
+  freeze. It records the current query chain, active/deferred skills, structured
+  result additions, runtime defaults, entry points, verification gates, and the
+  post-freeze change rule.
+- Added `docs/phase_2_deferred_and_polish_audit.md` as the accepted residual
+  and Phase-3 candidate ledger. Obj17/18 low-risk observations are marked
+  completed; remaining items are explicitly categorized as runtime limits,
+  dependency limits, deployment limits, fixture/ingestion limits, or Phase-3
+  candidates.
+- Updated `docs/phase_2_migrations.md` with Obj9-Obj16 migration notes so the
+  schema/contract log covers all Phase-2 additive changes, including S3 LLM
+  token cost, V2 unsupported claims, V1/V3 structured additions, supervisor
+  metadata, S4/S5 optional chain nodes, and API hardening.
+- Updated README to describe Phase-2 runtime scope instead of the older
+  Phase-0-only active/deferred table.
+- Updated architecture and Phase-1 freeze cross-references so Phase-1 remains
+  the compatibility baseline while Phase-2 freeze is the current runtime
+  authority.
+
+## Obj19 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\integration\test_phase2_end_to_end.py -q -m "not large_corpus" -p no:cacheprovider -p no:tmpdir`
+- Result: 3 passed.
+- Verified command: `.\.venv\Scripts\python.exe scripts\manual_e2e.py`
+- Result: ok; returned `status=ok`, `scope=in_scope`, chain
+  `["s2_retrieval", "s3_qa_summary", "v2_citation_check", "v4_style",
+  "v3_reviewer"]`, `citation_count=2`, and `supervisor_status=fallback`.
+- Verified command: `.\.venv\Scripts\python.exe -c "import ast, pathlib; files=['scripts/manual_e2e.py','tests/integration/test_phase2_end_to_end.py']; [ast.parse(pathlib.Path(f).read_text(encoding='utf-8-sig'), filename=f) for f in files]; print('ok')"`
+- Result: ok.
+- Verified command: `git diff --check`
+- Result: ok; Git reported only existing CRLF/LF normalization warnings for
+  README/architecture.
+- Skipped sandbox-blocked command:
+  `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\tmp\pytest-obj19-freeze -p no:cacheprovider`
+- Result: blocked by Windows/sandbox pytest tmpdir cleanup/scandir permission on
+  `C:\Challenge\Viberation\Agent\data\tmp\pytest-obj19-freeze` before a valid
+  full-suite result could be emitted. The Obj17/18 reviewer-run full suite
+  remains the latest clean full-suite result: `302 passed, 2 skipped, 1
+  deselected`.
+
+## Obj19 Residual Risk
+
+- Accepted residual risks are centralized in
+  `docs/phase_2_deferred_and_polish_audit.md`.
+
+## Obj19 Final Gate
+
+- Phase 2 is frozen. Future changes must follow
+  `docs/phase_2_interface_freeze.md` and `docs/phase_2_migrations.md`.

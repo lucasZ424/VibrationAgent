@@ -150,3 +150,110 @@ Operational model (qa_logs persistence is an operator-enabled feature):
 Rollback: set `postgres_enabled=false` (the default), drop the orchestrator
 side-effect call, and the 002 columns are inert. No frozen contract depends on
 qa_logs persistence.
+
+### Obj9 - LLM-backed S3 synthesis (2026-06-04)
+
+Additive / feature-flagged only. Default S3 remains deterministic.
+
+- `config.py`: `LlmSettings` gains `s3_enabled`, `s3_timeout`, and role-provider
+  mappings.
+- `QASummarySkill`: when explicitly enabled and supplied with an LLM client, S3
+  may return `synthesis_mode="llm"` and `token_cost`.
+- `SkillOutput.structured_result.skill_results.s3.token_cost` may now feed
+  qa_logs. It remains `null` when the deterministic path runs.
+- LLM failures, malformed uncited responses, insufficient model responses, and
+  timeouts fall back to deterministic S3 with warnings.
+
+Rollback: keep `s3_enabled=false` and remove the LLM branch/client injection.
+
+### Obj10 - V2 citation check (2026-06-04)
+
+Additive quality layer. No Pydantic model was changed.
+
+- `TutorOrchestrator` inserts `v2_citation_check` after S3/S4/S5 and before V4.
+- V2 adds structured keys including `unsupported_claims` and `citation_check`
+  to the checked upstream result.
+- When V2 returns `insufficient`, unsupported claims are stripped before V4
+  renders; final answer status remains `insufficient`.
+- V2 failure itself is fail-safe: it warns and passes S3 through.
+
+Rollback: remove the V2 orchestrator call and pass S3/S4/S5 directly to V4.
+
+### Obj11 - V1 normalization (2026-06-04)
+
+Additive optional layer. No Pydantic model was changed.
+
+- `config.py`: new normalization settings (`v1_enabled`, `v1_input_enabled`,
+  `v1_output_enabled`, terms/units paths).
+- `TutorOrchestrator` can normalize in-memory S2 rows before S3 and final V4
+  text after rendering.
+- V1 is active/available but not recorded as a chain step.
+
+Rollback: set `v1_enabled=false` or remove the optional normalization calls.
+
+### Obj12 - V3 reviewer (2026-06-04)
+
+Additive advisory layer. No Pydantic model was changed.
+
+- `TutorOrchestrator` appends `v3_reviewer` only for `difficulty="extreme"`.
+- Final `SkillOutput.structured_result` gains `reviewer_notes` as an advisory
+  list. It is empty when no issue is found or V3 does not run.
+- V3 failures are converted into warnings; V4 output remains returned.
+
+Rollback: disable V3 routing or remove the V3 orchestrator call.
+
+### Obj13 - supervisor loop observability (2026-06-04)
+
+Additive / optional only.
+
+- `agent/supervisor.py`: new supervisor loop schemas and fail-safe execution
+  wrapper.
+- `TutorOrchestrator`: extreme/reviewer-noted answers are annotated with
+  `supervisor_status`, `supervisor_invocations`, and optional
+  `supervisor_action`/`supervisor_issues`.
+- `db/postgres/migrations/003_supervisor_invocations.sql` adds
+  `qa_logs.supervisor_invocations` via `ADD COLUMN IF NOT EXISTS`.
+- `storage/postgres.py` and `storage/qa_logs.py` write supervisor invocation
+  count when qa_logs persistence is enabled.
+
+Rollback: set no supervisor client and leave annotations as fallback/not
+triggered, or remove the supervisor call and 003 column usage.
+
+### Obj14 - S4 engineering analysis (2026-06-05)
+
+Additive optional skill. No Pydantic model was changed.
+
+- `TutorOrchestrator` can insert `s4_engineering_analysis` after S3 and before
+  V2 when `user_mode="engineering"` or controls enable it.
+- S4 writes structured engineering sections and remains evidence-bound.
+- S4 and S5 are mutually exclusive; S4 takes precedence outside derivation mode.
+
+Rollback: set `s4_enabled=false` per request or remove the optional S4 call.
+
+### Obj15 - S5 formula derivation (2026-06-05)
+
+Additive optional skill. No Pydantic model was changed.
+
+- `TutorOrchestrator` can insert `s5_formula_derivation` after S3 and before V2
+  when `user_mode="derivation"` or controls enable it.
+- S5 writes `premises`, `derivation_steps`, `minimal_model`, and `conclusion`.
+- V2 accepts `axiomatic` derivation steps and checks evidence steps for visible
+  chunks.
+- S4 and S5 are mutually exclusive; S5 takes precedence in derivation mode.
+
+Rollback: set `s5_enabled=false` per request or remove the optional S5 call.
+
+### Obj16 - API hardening (2026-06-05)
+
+Additive API behavior. Defaults preserve localhost development behavior.
+
+- `ApiHealthResponse.status` is now `ok | degraded | fail`.
+- `ApiIngestionRequest.path` is validated against the request/default workspace
+  before ingestion executes.
+- `configs/api.yaml` and `ApiSettings` add auth, CORS, and rate-limit controls.
+- `/health` may report dependency details for Postgres and Qdrant when enabled.
+- API query logging records supervisor status/invocation metadata when qa_logs is
+  enabled.
+
+Rollback: keep auth/CORS/rate limit disabled and restrict HTTP ingestion to
+workspace-contained paths.

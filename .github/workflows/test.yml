@@ -1,0 +1,59 @@
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 18 * * *"
+  workflow_dispatch:
+
+jobs:
+  fast:
+    name: fast regression
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Run fast tests
+        run: python -m pytest tests -q -m "not integration"
+      - name: Run Phase-2 contract E2E
+        run: python -m pytest tests/integration/test_phase2_end_to_end.py -q -m "not large_corpus"
+
+  nightly:
+    name: nightly regression
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+      - name: Run nightly suite
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p data/exports/ci data/tmp/ci-large-corpus
+          python -m pytest tests -q | tee data/exports/ci/full-regression.txt
+          python scripts/bench_large_corpus.py tests/fixtures/raw/small_vibration_native.pdf --workspace data/tmp/ci-large-corpus --output data/exports/ci/large_corpus_baseline.json --max-pages 1 --top-k 2 | tee data/exports/ci/large-corpus-baseline-summary.txt
+      - name: Upload nightly artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-regression
+          path: data/exports/ci/

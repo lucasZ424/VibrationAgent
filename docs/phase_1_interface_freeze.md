@@ -146,3 +146,9 @@ See `docs/phase_1_deferred_and_polish_audit.md` for the detailed deferred/polish
 Phase 2 is now governed by `docs/phase_2_development_order.md`. It extends the Phase-1 skeleton toward a locally usable personal knowledge-base Agent, but it does not retroactively change the frozen Phase-1 chain.
 
 The authoritative Phase-2 scope, exclusions, order, and risk controls live in `docs/phase_2_development_order.md`. This freeze document only records the compatibility rule: none of the Phase-2 scope changes the Phase-1 frozen chain until a specific Obj completes the canonical schema-change process in `docs/phase_2_migrations.md`. Work proceeds one Obj at a time, with review before the next Obj starts.
+
+## Phase 2 Freeze Cross-Reference
+
+Phase 2 is frozen separately in `docs/phase_2_interface_freeze.md`. That file is
+the authority for the current Phase-2 runtime chain and active skills. This
+Phase-1 document remains the compatibility baseline for older consumers.
