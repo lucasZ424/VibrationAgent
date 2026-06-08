@@ -1179,13 +1179,16 @@ best-effort.
 - Verified command: `git diff --check`
 - Result: ok; Git reported only existing CRLF/LF normalization warnings for
   README/architecture.
-- Skipped sandbox-blocked command:
+- Sandbox-blocked command later verified manually in PowerShell:
   `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\tmp\pytest-obj19-freeze -p no:cacheprovider`
-- Result: blocked by Windows/sandbox pytest tmpdir cleanup/scandir permission on
-  `C:\Challenge\Viberation\Agent\data\tmp\pytest-obj19-freeze` before a valid
-  full-suite result could be emitted. The Obj17/18 reviewer-run full suite
-  remains the latest clean full-suite result: `302 passed, 2 skipped, 1
-  deselected`.
+- Sandbox result: blocked by Windows/sandbox pytest tmpdir cleanup/scandir
+  permission on `C:\Challenge\Viberation\Agent\data\tmp\pytest-obj19-freeze`
+  before a valid full-suite result could be emitted.
+- Manual PowerShell result: `302 passed, 2 skipped, 1 deselected, 1 warning in
+  11.30s`.
+- Warning: qdrant client could not obtain server version in
+  `tests/unit/test_classify.py::test_iter_supported_files_includes_docx_and_skips_office_lockfiles`;
+  this is a compatibility-check warning, not a failed assertion.
 
 ## Obj19 Residual Risk
 

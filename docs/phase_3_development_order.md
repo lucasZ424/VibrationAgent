@@ -1,246 +1,428 @@
-# Phase-3 Development Order — "Make the scaffolds real (OpenAI)"
+# 三阶段开发顺序
 
-Draft: 2026-06-08 · Status: PROPOSED (awaiting sign-off on the open questions at the end)
+Draft: 2026-06-08
 
-## North Star
+## 三阶段边界
 
-Phase 2 shipped the full chain as **deterministic scaffolds behind injectable LLM
-seams**. Phase 3 makes the four model-shaped stages genuinely intelligent using
-**OpenAI** — S3 synthesis, S4 engineering analysis, S5 derivation, and the Opus
-supervisor (review + correction) — while:
+三阶段目标是在二阶段冻结接口之上，把已经落地的确定性脚手架升级为
+可用的工程助手。三阶段不改变本地个人部署定位，不新增 Web UI、远程共享
+部署、多租户权限或生产级可观测性；重点是让 S3、S4、S5 和 supervisor
+从可注入的 deterministic scaffold 变成可试运行、可回放、可预算约束的
+真实模型能力。
 
-- keeping the product **local-personal** (no new deployment surface);
-- keeping **every default deterministic** (the Phase-2 local path and the fast
-  suite stay byte-identical when LLM flags are off);
-- **capping cost** with a token/cost budget governor;
-- guaranteeing **CI never makes a live API call** (record / replay).
+三阶段主线是：
 
-The single sentence: *turn S3/S4/S5/supervisor from placeholders into real
-OpenAI implementations — safely, cheaply, and CI-replayable.*
+```text
+OpenAI S3/S4/S5 live/replay path
+  -> V2 minimal faithfulness hardening
+  -> Claude Opus 4.8 supervisor live/replay trial
+  -> golden eval
+  -> manual live validation
+  -> Phase-3 freeze
+```
 
-## Non-goals (explicitly deferred to Phase 4+)
+三阶段默认链路仍保持二阶段冻结行为。所有模型能力都必须 default-off；
+缺少 API key、预算不足、超时、schema 解析失败、模型拒答、replay fixture
+缺失或 provider 异常时，必须降级到二阶段确定性输出并记录 warning，不允许
+静默调用 live API。
 
-- Deferred skills S6 literature search / S7 model selection / S8 experiment advice.
-- Web UI, k8s, shared/remote, multi-tenant authz, durable rate limiting, full
-  observability stack.
-- Deep semantic entailment beyond the **minimal** V2 hardening needed for safety.
-- LaTeX/MathML generation and full symbolic proof.
-- Switching embeddings/retrieval to OpenAI (retrieval stays as-is unless the
-  Phase-3 eval shows it is the bottleneck — see Open Question 3).
+三阶段不实现：
 
-## Design invariants (apply to EVERY objective)
+- S6 文献搜索。
+- S7 模型选择。
+- S8 实验建议。
+- Web UI。
+- k8s / 远程共享部署 / 多租户权限。
+- 生产级可观测性栈。
+- 深度语义蕴含证明。
+- LaTeX/MathML 生成和完整符号证明。
+- OpenAI embeddings / retrieval 替换，除非三阶段 eval 明确证明 retrieval 是瓶颈。
 
-1. **Seam + deterministic fallback.** Every live path degrades to the Phase-2
-   deterministic output on error, timeout, missing key, or budget exhaustion.
-   Answering never breaks; the supervisor/V2/V3 fail-safe posture is preserved.
-2. **Default-off.** `s3_enabled`, `s4_llm_enabled`, `s5_llm_enabled`,
-   `supervisor_llm_enabled` all default `false`. Local deterministic operation
-   and the fast suite are unchanged.
-3. **Additive + schemas-first.** Any contract change starts in `schemas.py`, gets
-   a note in `docs/phase_3_migrations.md`, then tests, then callers (the Phase-2
-   change rule carries forward).
-4. **Record/replay is CI law.** No live OpenAI call in any pytest run. Live calls
-   happen ONLY in the manual probe / capture tool, which write response fixtures
-   that CI replays. A pytest autouse guard hard-fails the suite if a live client
-   is ever constructed.
-5. **Budget-governed.** Every live call passes through `BudgetGuard` (per-task +
-   per-session token/cost ceilings, configurable). Exceeding fails loud (warning
-   + degrade), never silently truncates.
-6. **Cost observability.** Token usage + USD estimate are attached to
-   `SkillOutput` and persisted to `qa_logs.token_cost` (currently always null).
-7. **Secrets via env only.** `OPENAI_API_KEY` from env; non-secret knobs (model,
-   temperature, max_tokens, timeout, budgets, prices) in `configs/llm.yaml` +
-   `LlmSettings`. Never commit a key or a captured response containing one.
-8. **Structured outputs.** Use OpenAI structured outputs (`response_format`
-   json_schema) so S3/S4/S5 emit exactly the `claims`/`derivation_steps` schema
-   V2 consumes — removes brittle parsing and tightens the V2 gate.
+S6/S7/S8 仍然作为四阶段候选能力。三阶段可以被视为“可用工程助手”的第一版：
+先让已有工程链路具备真实模型推理、审稿和修正能力，再进入更广义的
+文献、模型选择和实验设计能力。
 
-## Objectives (recommended order)
+## 执行模型与风险控制
 
-Dependency spine: **P3-1 (client+replay) → P3-2 (budget) → P3-3 (S3) → P3-4 (V2
-hardening) → P3-5 (S4) → P3-6 (S5) → P3-7 (supervisor) → P3-8 (eval) → P3-9
-(manual/cost) → P3-10 (freeze).** Each is independently gated and logged to
-`docs/issue_log_p3/issues_objN.txt` under the existing supervisor-review workflow.
+三阶段保持单个目标粒度执行。每个目标完成后必须：
 
-### P3-1. OpenAI provider client + record/replay harness
-- Files: `src/vibration_agent/llm/openai_client.py` (new), `.../llm/replay.py` (new),
-  `.../llm/__init__.py`, `configs/llm.yaml`, `config.py` (LlmSettings),
-  `tests/unit/test_openai_client.py`, `tests/fixtures/llm/` (captured responses).
-- Feature blocks:
-  - `OpenAIClient` implementing the **existing** seams: S3 synth protocol
-    (`.synthesize(**kwargs) -> dict`) and supervisor protocol
-    (`.review(...) -> ReviewReport`). The `openai` SDK is imported **lazily inside
-    methods** (no top-level import), matching the qdrant/psycopg pattern.
-  - `ReplayClient` serves responses from `tests/fixtures/llm/<hash>.json` keyed by
-    a stable hash of the request; `RecordingClient` calls live + writes the
-    fixture (redacting secrets). CI uses `ReplayClient` only.
-  - A pytest **autouse guard** that raises if a live `OpenAIClient` is built during
-    the suite (enforces invariant 4).
-  - `LlmSettings`: `provider`, `model`, `temperature`, `max_tokens`,
-    `request_timeout`, `base_url`, budget fields; env overrides
-    (`OPENAI_API_KEY`, `LLM_PROVIDER`, `LLM_MODEL`, …). `s3_enabled` stays false.
-- Acceptance:
-  - Replay returns the captured response for a known request hash; an unknown hash
-    raises explicitly (no silent live call).
-  - The live-client guard makes the suite fail if any test constructs a real client.
-  - No top-level `import openai` anywhere (grep-asserted); fast CI installs without
-    the `openai` extra and stays green.
-  - Unit tests: request→hash determinism, replay hit, replay miss, recording writes
-    a **redacted** fixture (no key).
+1. 更新 `docs/phase_3_progress.md`。
+2. 在 `docs/issue_log_p3/issues_objN.txt` 记录 review 发现和处理结论。
+3. 运行该目标对应的 replay / deterministic fallback / schema 约束测试。
+4. 明确是否允许进入下一个目标。
 
-### P3-2. Token-budget governor + cost accounting
-- Files: `src/vibration_agent/llm/budget.py` (new), `config.py`,
-  `storage/qa_logs.py` + a `db/postgres/migrations/004_*.sql` (optional
-  `tokens_in`/`tokens_out`; `token_cost` already exists), `schemas.py` (optional
-  cost fields), `tests/unit/test_budget.py`.
-- Feature blocks:
-  - `BudgetGuard(per_task_tokens, per_session_tokens, usd_ceiling?)` — each call
-    checks-and-reserves; a would-exceed returns a deny → caller degrades to
-    deterministic + warning (`"LLM budget exhausted; deterministic fallback"`).
-  - Cost accounting from OpenAI `usage` (prompt/completion tokens) → `token_cost`
-    + USD estimate via a configurable price table; attached to
-    `SkillOutput.structured_result.cost` and `qa_logs`.
-  - Session-scoped accumulation keyed by task/session id.
-- Acceptance:
-  - A call that would exceed the per-task budget is denied and the orchestrator
-    returns the deterministic answer with the budget warning (test).
-  - `token_cost` populated in qa_logs when an LLM path ran; null otherwise (test).
-  - Budgets configurable via env/yaml; seeded defaults 4000/task, 30000/session.
+风险控制原则：
 
-### P3-3. S3 real LLM synthesis
-- Files: `skills/s3_qa_summary.py`, `prompts/skills/s3_qa_summary.md` (versioned),
-  `agent_skills/s3_qa_summary/SKILL.md`, `tests/unit/test_s3_llm_synthesis.py`,
-  `tests/fixtures/llm/s3_*.json`.
-- Feature blocks:
-  - When `s3_enabled` and a client is wired, S3 calls OpenAI with structured
-    output `{answer, claims:[{text,chunk_id,doc_id,pages,evidence_type}]}`
-    constrained to cite **only** chunk_ids present in `s2.retrieval_context`;
-    `synthesis_mode="llm"`. Prompt enforces evidence-binding, no fabricated
-    numbers/units, and language match (zh/en).
-  - Deterministic fallback on error/budget/empty; output still flows through V2.
-- Acceptance:
-  - Recorded response citing only visible chunks → status ok, visible chunk_ids,
-    passes V2 (replay test).
-  - Recorded response citing a **non-visible chunk or fabricated number** → V2
-    blocks it, conclusion stripped (the load-bearing safety test).
-  - `s3_enabled=false` → byte-identical deterministic output (regression).
-  - No live call in the suite.
+1. 所有 live API 路径必须有 replay 路径，CI 禁止 live API 调用。
+2. 所有 provider client 必须 lazy import，fast suite 不依赖 OpenAI 或 Anthropic SDK。
+3. 所有模型调用必须经过预算门控；成本字段只作为本地估算和自用运行记录，不作为账单事实。
+4. 所有模型输出必须结构化。schema parse failure、refusal、unknown replay hash
+   都必须 fail loud 并降级，不允许拼接半结构化文本继续运行。
+5. 所有 contract 变更遵守二阶段 freeze 规则：先改 `schemas.py`，再记录
+   `docs/phase_3_migrations.md`，再更新 fixtures/tests，最后改调用方。
+6. V2 hardening 必须早于真实 S3/S4/S5 默认启用；模型输出只有通过 V2 后
+   才能进入最终答案。
+7. Claude Opus 4.8 supervisor 只作为 extreme / V3-flagged 路径，不参与普通问题。
+8. OpenAI embeddings / retrieval 替换不进入默认计划，避免同时改变 retrieval
+   和 synthesis，导致质量问题无法归因。
 
-### P3-4. V2 faithfulness hardening for LLM output  *(safety prerequisite — see Open Q4)*
-- Files: `skills/v2_citation_check.py`, `tests/unit/test_v2_citation_check.py`.
-- Rationale: once S3 is a real model, V2 becomes the only hallucination gate. This
-  is **minimal** hardening, not full semantic entailment (which stays deferred).
-- Feature blocks:
-  - For `synthesis_mode=="llm"`: require each claim to (a) carry a visible
-    chunk_id AND (b) have its salient numerics/units/symbols appear in the cited
-    chunk text (extend the existing lexical overlap with a numeric/unit
-    cross-check). Unsupported → blocked as today.
-  - Deterministic-mode behavior unchanged (no regression to S3/S4/S5 deterministic).
-- Acceptance:
-  - LLM claim with a number absent from the cited chunk → blocked (test).
-  - All existing Phase-2 V2 tests stay green.
-  - Strictness is a flag; default strict for llm mode only.
+## 排序原则
 
-### P3-5. S4 real engineering analysis (LLM)
-- Files: `skills/s4_engineering_analysis.py`, prompt + `SKILL.md`, tests, fixtures.
-- Feature blocks: real impact / typical-scenario / countermeasure reasoning
-  grounded in cited claims, structured into the existing
-  `engineering_meaning/premises/failure_modes/next_action` keys; `s4_llm_enabled`
-  default off; deterministic framing remains the fallback; V2-gated.
-- Acceptance: recorded response yields richer engineering sections that still pass
-  V2; a fabricated-threshold response is blocked; mode-mismatch / insufficient
-  evidence still skip; deterministic fallback intact.
+1. 先建立三阶段记录、迁移和 issue log 基线，避免后续能力开发无审计轨迹。
+2. 先建立 provider client、record/replay 和 live-call guard，再开发模型能力。
+3. 先建立预算和成本估算，再允许任何 live call。
+4. 先用 replay/fake LLM output 压测 V2，再接入真实 S3。
+5. 先完成 S3/S4/S5 的 replay 能力，再做 Claude Opus 4.8 supervisor 试运行。
+6. 先建立小型 golden eval，再扩展到 manual live validation。
+7. 最后冻结三阶段接口，并把 S6/S7/S8 等能力统一进入四阶段规划。
 
-### P3-6. S5 real formula derivation (LLM) + cycle-check hardening
-- Files: `skills/s5_formula_derivation.py`, prompt + `SKILL.md`, tests, fixtures.
-- Feature blocks: real premise→steps→conclusion, each step typed
-  `evidence|axiomatic`, structured output; `s5_llm_enabled` default off;
-  deterministic fallback. **Fold in the Phase-2 Obj15 M1 carryforward**: replace
-  the self-loop-only validator with a real DAG / topological cycle check (+ a
-  2-node-cycle test). LaTeX/symbolic proof stays deferred.
-- Acceptance: recorded multi-step derivation passes V2 axiomatic handling; a
-  genuine 2-node cycle is now rejected (test); insufficient / mode-mismatch skip;
-  deterministic fallback intact.
+## 目标开发清单
 
-### P3-7. Supervisor real reviewer + GPT correction executor
-- Files: `agent/supervisor.py`, `prompts/orchestrator.md`, tests, fixtures.
-- Feature blocks: wire OpenAI as the supervisor reviewer (`.review`) AND implement
-  the **real `GPT_CORRECTION` executor** that actually rewrites the candidate
-  (Phase-2 left it structural, re-reviewing the same candidate). Keep the bounded
-  loop (max 2) and full fail-safe (no client/budget/exception → deterministic).
-  `supervisor_llm_enabled` default off; only runs for extreme / V3-flagged tasks.
-- Acceptance: recorded review→reject→correct→approve path improves the candidate
-  and finalizes (test); budget/exception → fallback (test); normal queries never
-  call it (test); supervisor_status/invocations/cost recorded.
+### 0. 固化三阶段执行基线
 
-### P3-8. Golden-output eval harness + CI replay regression gate
-- Files: `tests/eval/` (new) with a curated set (zh + en, PDF + DOCX evidence) and
-  recorded responses; `scripts/llm_eval.py`; nightly CI step.
-- Feature blocks: replay-based eval asserting per case — citation faithfulness (no
-  claim without visible support), no fabricated numerics, correct scope/status,
-  reviewer_notes presence; emits a faithfulness scorecard. Runs in nightly via
-  replay (no live calls).
-- Acceptance: eval set green on recorded fixtures; a deliberately-hallucinated
-  fixture is **caught** (negative case); scorecard emitted as a nightly artifact.
+涉及代码/文档：
 
-### P3-9. Manual live-validation lane + cost report
-- Files: `scripts/manual_e2e.py` (extend), `scripts/llm_capture.py` (new), README,
-  docs.
-- Feature blocks: a local, env+budget-gated mode that makes **real** OpenAI calls,
-  captures responses as fixtures (feeding P3-3/5/6/7/8), and prints a token/cost
-  report. Stays out of CI — the only place live calls happen.
-- Acceptance: with `OPENAI_API_KEY` set, the probe runs a real call within budget,
-  writes a redacted fixture, prints cost; without the key it falls back to replay;
-  documented in the README Testing section.
+- `docs/phase_3_development_order.md`
+- `docs/phase_3_progress.md`（新增）
+- `docs/phase_3_migrations.md`（新增）
+- `docs/issue_log_p3/`（新增）
+- `README.md`
 
-### P3-10. Phase-3 interface freeze + Phase-4 planning
-- Files: `docs/phase_3_interface_freeze.md`, `docs/phase_3_deferred_and_polish_audit.md`,
-  `docs/phase_3_migrations.md`, `schemas.py` (if needed), README, architecture.
-- Feature blocks: freeze the LLM client contracts, structured-output schemas, cost
-  fields, budget config, and replay-fixture layout; record residual risks; list
-  Phase-4 candidates (S6/S7/S8, UI, deploy/observability, deep entailment, OpenAI
-  embeddings, LaTeX/symbolic). Same discipline as Phase-2 Obj19.
+功能板块：
 
-## Verification strategy
+- 明确三阶段目标、非目标、风险控制和单目标执行模型。
+- 建立三阶段 progress / migrations / issue log 记录位置。
+- 明确 CI replay-only、manual live-only、default-off 的执行纪律。
 
-- **Fast CI**: unchanged deterministic suite + replay-only LLM tests; no live
-  calls; under 5 minutes.
-- **Nightly**: full suite + the replay eval scorecard artifact; still no live calls.
-- **Local manual**: `scripts/manual_e2e.py` / `scripts/llm_capture.py` for real
-  OpenAI within budget.
-- **Per-objective gate**: full suite green + the objective's recorded-response
-  tests + the deterministic-fallback regression, reviewed and logged to
-  `docs/issue_log_p3/issues_objN.txt`.
+验收标准：
 
-## Cross-cutting risks & mitigations
+- 文档中能判断哪些能力属于三阶段，哪些能力推迟到四阶段。
+- 三阶段所有后续目标都有 progress、migration 和 issue log 的记录入口。
+- README 中说明三阶段 live API 只允许本地 manual lane，不进入 CI。
 
-- Hallucinated citations/numbers → P3-4 V2 hardening + P3-8 eval negative cases
-  (this is why V2 hardening is sequenced immediately after S3).
-- Cost blowups → `BudgetGuard` (P3-2) + never-in-CI.
-- CI non-determinism → record/replay + live-client guard (P3-1).
-- Silent quality regressions / prompt drift → golden eval (P3-8) in nightly.
-- Schema churn → schemas-first change rule + `phase_3_migrations.md`.
+### 1. Provider client 与 record/replay 基线
 
-## Assumptions made (correct me)
+涉及代码/文档：
 
-- **Models**: a cost-efficient model for S3/S4/S5 (e.g. `gpt-4o-mini`) and a
-  stronger model for the supervisor (e.g. `gpt-4o` / an o-series), both
-  configurable. *(Open Q1)*
-- **Budgets**: seeded at the house-rule values (4k/task, 30k/session),
-  configurable. *(Open Q2)*
-- **Embeddings/Qdrant unchanged** this phase. *(Open Q3)*
-- **Local-personal = single user**; `OPENAI_API_KEY` in local env only; no new
-  network exposure.
-- **P3-4 (minimal V2 hardening) is in-scope** as a safety prerequisite even though
-  "deepen quality" was not the chosen theme. *(Open Q4 — cut it for a pure
-  scaffold-swap if you prefer.)*
+- `src/vibration_agent/llm/openai_client.py`（新增）
+- `src/vibration_agent/llm/anthropic_client.py`（新增）
+- `src/vibration_agent/llm/replay.py`（新增）
+- `src/vibration_agent/llm/__init__.py`
+- `src/vibration_agent/config.py`
+- `configs/llm.yaml`
+- `tests/unit/test_llm_replay.py`
+- `tests/unit/test_openai_client.py`
+- `tests/unit/test_anthropic_client.py`
+- `tests/fixtures/llm/`
 
-## Open questions for sign-off
+功能板块：
 
-1. Which OpenAI models for (a) S3/S4/S5 and (b) the supervisor? Any **USD** ceiling
-   per query/session on top of the token budget?
-2. Keep the house-rule token budgets (4k/task, 30k/session) or set project numbers?
-3. In-scope to also move embeddings to OpenAI (better recall), or leave the
-   sentence-transformers/Qdrant lane as-is for Phase 3?
-4. Keep the minimal V2 faithfulness hardening (P3-4) inside Phase 3, or split it
-   into a separate quality phase and ship live S3 on the existing lexical V2?
+- 新增 OpenAI client，用于 S3/S4/S5 结构化输出。
+- 新增 Anthropic client，用于 Claude latest / Claude Opus 4.8 supervisor
+  review / correction。
+- 新增 ReplayClient，根据稳定 request hash 读取 captured fixture。
+- 新增 RecordingClient，仅在 manual lane 调用 live API 并写入脱敏 fixture。
+- 新增 pytest autouse guard，测试环境构造 live client 时直接失败。
+- `LlmSettings` 增加 provider、model、temperature、max_tokens、timeout、
+  reasoning_effort、text_verbosity、budget、replay_dir、capture_enabled、
+  API key env 名称等字段。
+
+验收标准：
+
+- replay hit 返回已捕获 response；replay miss 明确失败，不回退 live call。
+- recording 写入 fixture 时不包含 API key。
+- 测试证明 OpenAI / Anthropic SDK 均为 lazy import，fast suite 无 SDK 也能运行。
+- 测试证明 pytest 中构造 live OpenAI 或 Anthropic client 会失败。
+- fixture hash 包含 prompt version、schema version、model、temperature、
+  max_tokens 和 request body。
+
+### 2. Token budget 与成本估算
+
+涉及代码/文档：
+
+- `src/vibration_agent/llm/budget.py`（新增）
+- `src/vibration_agent/config.py`
+- `src/vibration_agent/storage/qa_logs.py`
+- `src/vibration_agent/schemas.py`
+- `db/postgres/migrations/004_phase3_llm_costs.sql`（按需新增）
+- `tests/unit/test_budget.py`
+- `tests/unit/test_qa_logs.py`
+
+功能板块：
+
+- 新增 `BudgetGuard`，支持 per-task token、per-session token 和可选 USD ceiling。
+- live call 前 reserve budget；超预算返回 deny，调用方降级 deterministic fallback。
+- 从 provider usage 读取 input/output tokens，写入 `structured_result.cost` 和
+  `qa_logs.token_cost`。
+- 成本字段作为本地估算；真实账单不由 Agent 判断。
+
+验收标准：
+
+- 超过 per-task budget 的请求不调用 provider，并返回 budget warning。
+- LLM path 运行时 `token_cost` 有估算值；deterministic path 保持 null。
+- budget 配置可通过 yaml/env 覆盖，默认沿用 4000/task、30000/session。
+- 成本缺失或 provider 未返回 usage 时不会伪造精确成本，只记录 warning。
+
+### 3. V2 LLM 输出安全门预加固
+
+涉及代码/文档：
+
+- `src/vibration_agent/skills/v2_citation_check.py`
+- `tests/unit/test_v2_citation_check.py`
+- `tests/fixtures/llm/v2_negative_*.json`
+
+功能板块：
+
+- 在真实 S3 默认启用前，用 replay/fake LLM output 压测 V2。
+- 对 `synthesis_mode=="llm"` 的 claims 增加数字、单位、符号显著项交叉检查。
+- claim 必须引用 visible chunk_id；数字/单位/符号必须能在引用 chunk 中定位。
+- deterministic mode 保持二阶段行为，不扩大拦截范围。
+
+验收标准：
+
+- LLM claim 引用不存在 chunk 时被阻断。
+- LLM claim 中出现引用 chunk 不支持的数字或单位时被阻断。
+- 二阶段 V2 既有测试保持通过。
+- strict mode 对 LLM 默认开启，对 deterministic 默认不改变。
+
+### 4. S3 real LLM synthesis
+
+涉及代码/文档：
+
+- `src/vibration_agent/skills/s3_qa_summary.py`
+- `prompts/skills/s3_qa_summary.md`
+- `agent_skills/s3_qa_summary/SKILL.md`
+- `tests/unit/test_s3_llm_synthesis.py`
+- `tests/fixtures/llm/s3_*.json`
+
+功能板块：
+
+- `s3_enabled=true` 且 client 可用时，S3 通过 OpenAI 生成结构化输出。
+- 输出 schema 至少包含 `answer` 和 `claims[]`；每个 claim 必须携带
+  `text`、`chunk_id`、`doc_id`、`pages`、`evidence_type`。
+- prompt 限定只能引用 S2 retrieval context 中 visible chunk_id。
+- schema parse failure、refusal、timeout、budget deny、empty evidence 均降级。
+- S3 输出继续经过 V2，不允许绕过 citation check。
+
+验收标准：
+
+- replay response 引用 visible chunks 时，S3 状态 ok 且通过 V2。
+- replay response 引用不可见 chunk 或伪造数字时，V2 阻断并剥离 conclusion。
+- `s3_enabled=false` 时输出与二阶段 deterministic regression 保持一致。
+- pytest 不发生 live OpenAI 调用。
+
+### 5. S4 real engineering analysis
+
+涉及代码/文档：
+
+- `src/vibration_agent/skills/s4_engineering_analysis.py`
+- `prompts/skills/s4_engineering_analysis.md`
+- `agent_skills/s4_engineering_analysis/SKILL.md`
+- `tests/unit/test_s4_engineering.py`
+- `tests/fixtures/llm/s4_*.json`
+
+功能板块：
+
+- `s4_llm_enabled=true` 时，S4 通过 OpenAI 生成工程意义、典型场景、
+  失效模式、下一步行动建议。
+- 输出必须落入现有 `engineering_meaning`、`premises`、`failure_modes`、
+  `next_action` 等结构化字段。
+- 所有工程判断必须引用通过 V2 的 claims 或 evidence。
+- insufficient / mode mismatch 时保持二阶段 deterministic skip/fallback。
+
+验收标准：
+
+- replay response 能生成更丰富的工程分析，且所有关键判断有 citation 支撑。
+- replay response 中伪造阈值或 unsupported numeric 时被 V2 阻断。
+- `s4_llm_enabled=false` 时保持二阶段 deterministic 输出。
+- pytest 不发生 live OpenAI 调用。
+
+### 6. S5 real formula derivation 与 cycle-check 加固
+
+涉及代码/文档：
+
+- `src/vibration_agent/skills/s5_formula_derivation.py`
+- `prompts/skills/s5_formula_derivation.md`
+- `agent_skills/s5_formula_derivation/SKILL.md`
+- `tests/unit/test_s5_derivation.py`
+- `tests/fixtures/llm/s5_*.json`
+
+功能板块：
+
+- `s5_llm_enabled=true` 时，S5 通过 OpenAI 生成结构化 premise -> steps -> conclusion。
+- derivation step 必须标记为 `evidence` 或 `axiomatic`。
+- evidence step 必须能回连 citation；axiomatic step 必须显式说明适用条件。
+- 补足二阶段 Obj15 carryforward：self-loop-only validator 升级为 DAG /
+  topological cycle check。
+- LaTeX/MathML 生成和完整符号证明仍 deferred。
+
+验收标准：
+
+- replay 多步推导能通过 V2 axiomatic/evidence handling。
+- 2-node cycle 被拒绝。
+- insufficient evidence 和 mode mismatch 保持二阶段 skip/fallback。
+- `s5_llm_enabled=false` 时保持 deterministic 输出。
+
+### 7. Claude latest / Claude Opus 4.8 supervisor 试运行与 correction executor
+
+涉及代码/文档：
+
+- `src/vibration_agent/agent/supervisor.py`
+- `src/vibration_agent/llm/anthropic_client.py`
+- `prompts/orchestrator.md`
+- `tests/unit/test_supervisor_loop.py`
+- `tests/fixtures/llm/supervisor_*.json`
+- `scripts/llm_capture.py`
+
+功能板块：
+
+- 将 supervisor review client 接入 Anthropic Claude latest model；初始试运行
+  目标为 Claude Opus 4.8。
+- 实现真实 `GPT_CORRECTION` executor：根据 reviewer report 改写 candidate，
+  而不是重复审查原 candidate。
+- 保持 bounded loop，最大 2 次 correction。
+- 仅 extreme / V3-flagged 任务触发；普通 query 不触发 supervisor live/replay。
+- 无 API key、预算不足、provider 异常、replay miss 时降级为二阶段 fallback。
+
+可行性评估：
+
+- 可行。二阶段已经有 supervisor seam、review report、invocation logging 和
+  fail-safe fallback；三阶段只需要补 provider client、record/replay、
+  correction executor 和 manual live gate。
+- 主要风险不是接入难度，而是输出一致性和成本；必须依赖结构化 review schema、
+  replay fixture、BudgetGuard 和 extreme-only trigger 限制范围。
+- Claude supervisor model 应保存在配置中，不写死在业务代码；实现时按
+  Anthropic 官方当前 model id / latest alias 解析。
+
+验收标准：
+
+- replay review -> reject -> correct -> approve 路径能产生改进后的 candidate。
+- budget deny / exception / replay miss 时 supervisor_status 进入 fallback。
+- normal query 测试证明不会触发 Anthropic client。
+- supervisor_status、supervisor_invocations、supervisor_action、token_cost 均被记录。
+- manual live probe 在配置 API key 和预算后可以完成一次 Claude latest /
+  Claude Opus 4.8 supervisor 试运行并写入脱敏 fixture。
+
+### 8. Golden-output eval 最小集与 replay regression gate
+
+涉及代码/文档：
+
+- `tests/eval/`（新增）
+- `scripts/llm_eval.py`（新增）
+- `.github/workflows/test.yml`
+- `tests/fixtures/llm/eval_*.json`
+
+功能板块：
+
+- 先建立 3-5 个小型 golden cases，再随 S3/S4/S5/supervisor 扩展。
+- 最小集覆盖中文工程问答、英文工程问答、伪造数字 negative case、
+  unsupported citation negative case、extreme supervisor case。
+- nightly 使用 replay fixture 跑 eval，不调用 live API。
+- 输出 faithfulness scorecard，作为 artifact 保存。
+
+验收标准：
+
+- eval replay set 全部通过。
+- 故意 hallucinated fixture 会被 eval 捕获。
+- scorecard 包含 citation faithfulness、unsupported numerics、scope/status、
+  reviewer_notes presence。
+- nightly CI 只运行 replay，不需要 API key。
+
+### 9. Manual live validation 与 capture lane
+
+涉及代码/文档：
+
+- `scripts/manual_e2e.py`
+- `scripts/llm_capture.py`（新增）
+- `README.md`
+- `docs/phase_3_progress.md`
+
+功能板块：
+
+- 提供本地手动 live call 入口，用于 OpenAI S3/S4/S5 和 Claude latest /
+  Claude Opus 4.8 supervisor。
+- live call 必须显式配置 API key、budget 和 capture 输出目录。
+- capture 结果写入脱敏 replay fixture，供后续 CI / eval 使用。
+- manual lane 输出 token usage 和本地成本估算。
+
+验收标准：
+
+- 无 API key 时走 replay 或 deterministic fallback，不报未处理异常。
+- 有 API key 且 budget 允许时，可以完成一次真实 live probe。
+- capture fixture 不包含 API key、长原文或敏感路径。
+- 文档记录完整 PowerShell 命令，便于人工复跑。
+
+### 10. Phase-3 interface freeze 与 Phase-4 planning
+
+涉及代码/文档：
+
+- `docs/phase_3_interface_freeze.md`（新增）
+- `docs/phase_3_deferred_and_polish_audit.md`（新增）
+- `docs/phase_3_migrations.md`
+- `docs/phase_3_progress.md`
+- `README.md`
+- `docs/architecture.md`
+- `src/vibration_agent/schemas.py`（按需）
+
+功能板块：
+
+- 冻结三阶段 LLM client contracts、structured output schemas、budget config、
+  replay fixture layout、manual live lane 和 supervisor correction 行为。
+- 汇总三阶段 accepted residual risks。
+- 将 S6/S7/S8、Web UI、部署/可观测性、deep entailment、OpenAI embeddings、
+  LaTeX/MathML、symbolic proof 等统一列为 Phase-4 candidates。
+
+验收标准：
+
+- 三阶段所有 schema/contract 变更在 migrations 中可追溯。
+- README 和 architecture 指向三阶段 freeze。
+- full non-large suite、replay eval 和 manual command 结果均记录在 progress。
+- 文档能明确判断后续变更是否破坏三阶段冻结接口。
+
+## 验证策略
+
+- Fast CI：二阶段 deterministic suite + replay-only LLM tests；禁止 live API。
+- Nightly：full suite + replay eval scorecard；禁止 live API。
+- Local manual：`scripts/manual_e2e.py` / `scripts/llm_capture.py` 才允许 live API。
+- Per-objective gate：每个目标必须跑对应 replay test、fallback regression、
+  schema test，并写入 `docs/issue_log_p3/issues_objN.txt`。
+
+## 跨目标风险与缓解
+
+- 幻觉 citation / fabricated number：由 Obj3 V2 hardening 和 Obj8 negative eval 捕获。
+- 成本膨胀：由 Obj2 BudgetGuard 和 manual-only live lane 限制。
+- CI 非确定性：由 Obj1 replay harness 和 live-call guard 限制。
+- prompt drift：fixture hash 绑定 prompt version / schema version / model settings。
+- schema churn：遵守 schemas-first 和 `docs/phase_3_migrations.md`。
+- supervisor 过度触发：仅 extreme / V3-flagged，普通 query 测试禁止调用。
+
+## 已确认的决策
+
+1. OpenAI S3/S4/S5 默认使用 OpenAI 最新高能力模型，配置为 high profile：
+   `reasoning_effort=high`、`text_verbosity=high`。模型名写入配置，不写死
+   业务代码；实现时按 OpenAI 官方当前 recommended/latest model 解析。
+2. Claude supervisor 默认使用 Anthropic 最新 model；初始试运行目标保留
+   Claude Opus 4.8。模型名写入配置，不写死业务代码；实现时按 Anthropic
+   官方当前 model id / latest alias 解析。
+3. 默认 token budget 维持 4000/task、30000/session；如 live probe 证明
+   high profile 经常被预算拒绝，再通过配置调整，而不是在业务代码中放宽。
+4. OpenAI embeddings / retrieval 本阶段保持 deferred，除非三阶段 eval 明确
+   证明 retrieval 是瓶颈。
+
+第 4 点的具体含义：
+
+- 三阶段优先验证 generation/reasoning 链路：S3 生成、S4 工程分析、S5 推导、
+  supervisor 审稿修正。retrieval lane 继续使用二阶段冻结的
+  sentence-transformers/Qdrant/token-feature fallback，不同时替换 embedding provider。
+- 这样做是为了保持问题可归因。如果同时更换 retrieval 和 synthesis，答案质量
+  变好或变差时很难判断是召回变化、chunk 排序变化、prompt 变化，还是模型
+  推理变化导致。
+- 只有当 Obj8 golden eval 或 manual live validation 显示“模型有能力回答，
+  但 S2 持续没有召回正确证据”时，才把 OpenAI embeddings / retrieval
+  作为三阶段追加目标或四阶段前置目标。
+- 触发条件应是可观测的：例如 top-k 证据缺失、正确 chunk 未进入候选集、
+  citation faithfulness 通过但 recall score 低、或同一问题在手动提供正确
+  chunk 后能稳定回答。
+- 一旦触发，不应直接混入 S3/S4/S5 目标，而应单独拆为 retrieval objective：
+  新增 OpenAI embedding client/replay、embedding schema migration、Qdrant
+  dimension migration、retrieval regression/eval，再决定是否替换默认 dense lane。

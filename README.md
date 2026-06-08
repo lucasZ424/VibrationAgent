@@ -239,6 +239,13 @@ provider call:
 .\.venv\Scripts\python.exe scripts\manual_e2e.py --s3-llm-response-json data\exports\manual_s3_response.json
 ```
 
+Phase-3 model-backed work keeps the same rule: CI is replay-only and must not
+make live OpenAI or Anthropic calls. Live provider calls are allowed only through
+explicit local manual/capture commands after the relevant Phase-3 objective adds
+provider clients, replay fixtures, budget guards, and live-call guards. Provider
+keys must stay in local environment variables or `.env.local`, never in chat,
+fixtures, logs, or commits.
+
 When validating the Obj6 Qdrant cold-start population path, enable a local
 embedding model plus Qdrant and add `--require-qdrant-population`; the command
 then exits non-zero if the benchmark falls back before Qdrant upsert succeeds.
@@ -262,6 +269,17 @@ In short, Phase 2 makes the local knowledge-base path usable: stronger fixtures 
 Post-freeze changes to schemas, chain order, structured result keys, API shapes,
 or ingestion output shapes must follow `docs/phase_2_interface_freeze.md` and
 `docs/phase_2_migrations.md`.
+
+## Phase-3 Planning
+
+Phase 3 is planned as the first usable engineering-assistant intelligence
+upgrade on top of the Phase-2 freeze. The approved development order is recorded
+in `docs/phase_3_development_order.md`; progress and contract changes are
+tracked in `docs/phase_3_progress.md` and `docs/phase_3_migrations.md`.
+
+Phase 3 keeps deterministic Phase-2 behavior as the default. OpenAI S3/S4/S5 and
+Claude supervisor paths are default-off, budget-governed, replayable, and
+manual-live-only until their dedicated objectives clear review.
 
 ## Development Start Points
 
