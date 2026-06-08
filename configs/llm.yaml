@@ -1,0 +1,20 @@
+llm:
+  replay_dir: tests/fixtures/llm
+  capture_enabled: false
+  live_enabled: false
+  token_budget_per_task: 4000
+  token_budget_per_session: 30000
+  openai:
+    model: gpt-5.2
+    api_key_env: OPENAI_API_KEY
+    temperature: 0.0
+    max_tokens: 1024
+    timeout: 30.0
+    reasoning_effort: high
+    text_verbosity: high
+  anthropic:
+    model: claude-opus-4-8
+    api_key_env: ANTHROPIC_API_KEY
+    temperature: 0.0
+    max_tokens: 1024
+    timeout: 30.0

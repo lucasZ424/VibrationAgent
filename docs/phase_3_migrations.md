@@ -57,3 +57,32 @@ contract changed.
 
 Rollback: remove the Obj0 docs and README Phase-3 planning paragraph. No runtime
 state depends on this migration.
+
+### Obj1 - Provider client and record/replay baseline (2026-06-08)
+
+Runtime/provider contract additions:
+
+- Added `configs/llm.yaml` as the Phase-3 LLM settings file.
+- Expanded `LlmSettings` with `replay_dir`, `capture_enabled`, `live_enabled`,
+  token-budget defaults, and `openai` / `anthropic` provider profiles.
+- Added `LlmProviderSettings` for provider, model, API-key env name,
+  temperature, max tokens, timeout, and provider-specific reasoning/verbosity
+  knobs.
+- Added `LlmRequest` and `LlmFixture` replay contracts in
+  `src/vibration_agent/llm/replay.py`.
+- Replay fixture metadata now includes request hash, prompt version, schema
+  version, provider, model, temperature, max tokens, reasoning effort,
+  text verbosity, and request body.
+- Added `ReplayClient`, `RecordingClient`, `ReplayMissError`, and
+  `RecordingDisabledError`.
+- Added lazy `OpenAIClient` and `AnthropicClient` wrappers. Live construction
+  requires an explicit `allow_live=True` manual gate and is forbidden under
+  pytest.
+- Added `tests/fixtures/llm/` as the replay fixture location.
+
+No frozen Phase-2 API schema, ingestion file shape, query response shape, or
+chain order changed.
+
+Rollback: remove `configs/llm.yaml`, the new provider/replay modules, Obj1
+tests, and the Obj1 additions to `LlmSettings`; restore `src/vibration_agent/llm/__init__.py`
+to exporting only `chat`.

@@ -93,10 +93,43 @@ class EmbeddingSettings(BaseModel):
     fallback_to_token_features: bool = True
 
 
+class LlmProviderSettings(BaseModel):
+    provider: str
+    model: str
+    api_key_env: str
+    temperature: float = Field(default=0.0, ge=0.0)
+    max_tokens: int = Field(default=1024, ge=1)
+    timeout: float = Field(default=30.0, gt=0.0)
+    reasoning_effort: str | None = None
+    text_verbosity: str | None = None
+
+
 class LlmSettings(BaseModel):
     providers: dict[str, str] = Field(default_factory=dict)
     s3_enabled: bool = False
     s3_timeout: float = Field(default=10.0, gt=0.0)
+    replay_dir: Path = Path("tests/fixtures/llm")
+    capture_enabled: bool = False
+    live_enabled: bool = False
+    token_budget_per_task: int = Field(default=4000, ge=1)
+    token_budget_per_session: int = Field(default=30000, ge=1)
+    openai: LlmProviderSettings = Field(
+        default_factory=lambda: LlmProviderSettings(
+            provider="openai",
+            model="gpt-5.2",
+            api_key_env="OPENAI_API_KEY",
+            reasoning_effort="high",
+            text_verbosity="high",
+        )
+    )
+    anthropic: LlmProviderSettings = Field(
+        default_factory=lambda: LlmProviderSettings(
+            provider="anthropic",
+            model="claude-opus-4-8",
+            api_key_env="ANTHROPIC_API_KEY",
+            max_tokens=1024,
+        )
+    )
 
 
 class NormalizationSettings(BaseModel):
@@ -168,6 +201,17 @@ def _read_yaml(path: Path) -> dict[str, Any]:
     return data if isinstance(data, dict) else {}
 
 
+def _merged_section(*sections: dict[str, Any]) -> dict[str, Any]:
+    merged: dict[str, Any] = {}
+    for section in sections:
+        for key, value in section.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**merged[key], **value}
+            else:
+                merged[key] = value
+    return merged
+
+
 def _resolve(workspace: Path, value: str | Path) -> Path:
     path = Path(value)
     return path if path.is_absolute() else (workspace / path).resolve()
@@ -200,10 +244,11 @@ def load(workspace: Path | None = None) -> Settings:
     retrieval_yaml = _read_yaml(config_dir / "retrieval.yaml")
     embeddings_yaml = _read_yaml(config_dir / "embeddings.yaml")
     api_yaml = _read_yaml(config_dir / "api.yaml")
+    llm_yaml = _read_yaml(config_dir / "llm.yaml")
 
     app_section = app_yaml.get("app", {})
     orchestrator_section = app_yaml.get("orchestrator", {})
-    llm_section = app_yaml.get("llm", {})
+    llm_section = _merged_section(app_yaml.get("llm", {}), llm_yaml.get("llm", {}))
     normalization_section = app_yaml.get("normalization", {})
     api_section = api_yaml.get("api", {})
     classify_section = ingestion_yaml.get("classify", {})
@@ -307,6 +352,56 @@ def load(workspace: Path | None = None) -> Settings:
             providers=dict(llm_section.get("providers", {})),
             s3_enabled=_env_bool("S3_LLM_ENABLED", bool(llm_section.get("s3_enabled", False))),
             s3_timeout=float(_env("S3_LLM_TIMEOUT", llm_section.get("s3_timeout", 10.0))),
+            replay_dir=_resolve(root, _env("LLM_REPLAY_DIR", llm_section.get("replay_dir", "tests/fixtures/llm"))),
+            capture_enabled=_env_bool("LLM_CAPTURE_ENABLED", bool(llm_section.get("capture_enabled", False))),
+            live_enabled=_env_bool("LLM_LIVE_ENABLED", bool(llm_section.get("live_enabled", False))),
+            token_budget_per_task=int(
+                _env("LLM_TOKEN_BUDGET_PER_TASK", llm_section.get("token_budget_per_task", 4000))
+            ),
+            token_budget_per_session=int(
+                _env("LLM_TOKEN_BUDGET_PER_SESSION", llm_section.get("token_budget_per_session", 30000))
+            ),
+            openai=LlmProviderSettings(
+                provider="openai",
+                model=str(
+                    _env("OPENAI_MODEL", llm_section.get("openai", {}).get("model", "gpt-5.2"))
+                ),
+                api_key_env=str(
+                    _env("OPENAI_API_KEY_ENV", llm_section.get("openai", {}).get("api_key_env", "OPENAI_API_KEY"))
+                ),
+                temperature=float(
+                    _env("OPENAI_TEMPERATURE", llm_section.get("openai", {}).get("temperature", 0.0))
+                ),
+                max_tokens=int(_env("OPENAI_MAX_TOKENS", llm_section.get("openai", {}).get("max_tokens", 1024))),
+                timeout=float(_env("OPENAI_TIMEOUT", llm_section.get("openai", {}).get("timeout", 30.0))),
+                reasoning_effort=str(
+                    _env("OPENAI_REASONING_EFFORT", llm_section.get("openai", {}).get("reasoning_effort", "high"))
+                ),
+                text_verbosity=str(
+                    _env("OPENAI_TEXT_VERBOSITY", llm_section.get("openai", {}).get("text_verbosity", "high"))
+                ),
+            ),
+            anthropic=LlmProviderSettings(
+                provider="anthropic",
+                model=str(
+                    _env("ANTHROPIC_MODEL", llm_section.get("anthropic", {}).get("model", "claude-opus-4-8"))
+                ),
+                api_key_env=str(
+                    _env(
+                        "ANTHROPIC_API_KEY_ENV",
+                        llm_section.get("anthropic", {}).get("api_key_env", "ANTHROPIC_API_KEY"),
+                    )
+                ),
+                temperature=float(
+                    _env("ANTHROPIC_TEMPERATURE", llm_section.get("anthropic", {}).get("temperature", 0.0))
+                ),
+                max_tokens=int(
+                    _env("ANTHROPIC_MAX_TOKENS", llm_section.get("anthropic", {}).get("max_tokens", 1024))
+                ),
+                timeout=float(_env("ANTHROPIC_TIMEOUT", llm_section.get("anthropic", {}).get("timeout", 30.0))),
+                reasoning_effort=llm_section.get("anthropic", {}).get("reasoning_effort"),
+                text_verbosity=llm_section.get("anthropic", {}).get("text_verbosity"),
+            ),
         ),
         normalization=NormalizationSettings(
             v1_enabled=_env_bool("V1_ENABLED", bool(normalization_section.get("v1_enabled", True))),
@@ -337,6 +432,7 @@ __all__ = [
     "DatabaseSettings",
     "EmbeddingSettings",
     "LlmSettings",
+    "LlmProviderSettings",
     "NormalizationSettings",
     "OcrSettings",
     "PathSettings",

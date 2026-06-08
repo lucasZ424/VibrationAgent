@@ -4,6 +4,7 @@ from __future__ import annotations
 import os
 import re
 import tempfile
+from contextlib import nullcontext
 from pathlib import Path
 from typing import Any
 
@@ -171,8 +172,10 @@ def run(
     use_textline_orientation: bool = False,
 ) -> OcrPage:
     configure_paddle_cache(workspace)
-    with tempfile.TemporaryDirectory() as tmpdir:
+    temp_dir = nullcontext(None) if image_dir else tempfile.TemporaryDirectory()
+    with temp_dir as tmpdir:
         if image_dir:
+            Path(image_dir).mkdir(parents=True, exist_ok=True)
             image_path = Path(image_dir) / f"page_{page_no:04d}.png"
         else:
             image_path = Path(tmpdir) / f"page_{page_no:04d}.png"

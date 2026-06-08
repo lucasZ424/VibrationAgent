@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import re
 import tempfile
+from contextlib import nullcontext
 from pathlib import Path
 
 from vibration_agent.schemas import OcrPage, PageBlock
@@ -49,8 +50,10 @@ def run(
     except ModuleNotFoundError as exc:
         return _empty_page(doc_id, page_no, f"tesseract dependency missing: {exc}")
 
-    with tempfile.TemporaryDirectory() as tmpdir:
+    temp_dir = nullcontext(None) if image_dir else tempfile.TemporaryDirectory()
+    with temp_dir as tmpdir:
         if image_dir:
+            Path(image_dir).mkdir(parents=True, exist_ok=True)
             image_path = Path(image_dir) / f"page_{page_no:04d}.tesseract.png"
         else:
             image_path = Path(tmpdir) / f"page_{page_no:04d}.png"

@@ -19,7 +19,7 @@ Every Obj must record:
 ## Objective Status
 
 0. Phase-3 execution baseline: done
-1. Provider client and record/replay baseline: pending
+1. Provider client and record/replay baseline: done
 2. Token budget and cost estimation: pending
 3. V2 LLM-output safety gate pre-hardening: pending
 4. S3 real LLM synthesis: pending
@@ -60,3 +60,79 @@ Every Obj must record:
 ## Obj0 Next Obj Gate
 
 - Local documentation checks cleared. Obj1 may start after user review of Obj0.
+
+## Obj1 Notes
+
+- Added `configs/llm.yaml` and expanded `LlmSettings` with replay/capture/live
+  gates, per-task/session token budget defaults, and provider profiles.
+- Added `src/vibration_agent/llm/replay.py` with stable request hashing,
+  fixture metadata, replay miss failures, manual-only recording, and fixture
+  redaction.
+- Added lazy OpenAI and Anthropic provider wrappers. SDK imports occur only in
+  live `complete()` calls; importing the modules does not require either SDK.
+- OpenAI exposes S3/S4/S5 structured-output seams through `synthesize`,
+  `analyze_engineering`, and `derive_formula`.
+- Anthropic exposes supervisor review/correction seams through `review` and
+  `correct`.
+- Added a pytest guard via `tests/conftest.py`; constructing live provider
+  clients during pytest fails even when `allow_live=True`.
+- Provider model ids remain configuration values. Obj1 defaults are
+  `gpt-5.2` and `claude-opus-4-8`, based on current official provider docs
+  checked during implementation.
+
+## Obj1 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_anthropic_client.py -q -p no:cacheprovider`
+- Result: passed, 14 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_anthropic_client.py tests\unit\test_s3_llm_synthesis.py tests\unit\test_supervisor_loop.py -q -p no:cacheprovider`
+- Result: passed, 28 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s3_llm_synthesis.py tests\unit\test_supervisor_loop.py -q -p no:cacheprovider`
+- Result: passed, 12 tests.
+- Attempted command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not integration" --basetemp=data\exports\pytest-p3-obj1-fast -p no:cacheprovider`
+- Result: environment-blocked by Windows sandbox `PermissionError` during
+  pytest temp cleanup at `data\exports\pytest-p3-obj1-fast`.
+- Attempted unsandboxed retry of the same broader fast gate with
+  `--basetemp=data\exports\pytest-p3-obj1-fast-escalated`.
+- Result: escalation approval timed out twice, so the broader fast gate was not
+  completed.
+- Post-sandbox-fix verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not integration" --basetemp=data\exports\pytest-p3-obj1-fast -p no:cacheprovider`
+- Result: passed, 308 tests; 13 deselected.
+- Post-sandbox-fix verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-nonlarge-safe -p no:cacheprovider`
+- Result: passed, 318 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+
+## Obj1 Residual Risk
+
+- Provider live-call methods are scaffolds and remain unexercised by CI; live
+  validation is intentionally deferred to the manual capture lane.
+- Replay fixtures record a redacted request body plus the original request hash.
+  The hash binds the unredacted runtime request; fixture replay still validates
+  the stored hash but does not recompute it from redacted metadata.
+- The local pytest/tempfile ACL issue was traced to Python/pytest and stdlib
+  temp helpers creating Windows temp directories with restrictive permissions
+  that the sandbox token could not later enumerate or clean.
+- Tests now redirect pytest `tmp_path` and stdlib `tempfile` roots to
+  `data\exports\.pytest_tmp_safe`, clean that run directory at session finish,
+  and avoid global user Temp pollution.
+- Replay tests still use ignored workspace-local scratch files for fixture
+  writing, but the general pytest `tmp_path` path is now verified by the full
+  non-large suite.
+
+## Obj1 Post-Review Fixes
+
+- Fixed provider package import coupling by changing `src/vibration_agent/llm/__init__.py`
+  to lazy re-exports through `__getattr__`.
+- Moved live-provider pytest guard and `LiveProviderDisabledError` into shared
+  `src/vibration_agent/llm/_guards.py`.
+- Added `ReplayClient.correct()` for supervisor correction replay symmetry.
+- Changed replay convenience default model from `openai:unknown` to
+  `unknown:unknown`.
+- Added a sandbox-local pytest/tempfile temp-root patch in `tests/conftest.py`.
+- Removed unnecessary external `TemporaryDirectory()` creation from PaddleOCR
+  and Tesseract paths when an `image_dir` is already supplied.
+
+## Obj1 Next Obj Gate
+
+- Obj1 focused replay/provider tests and nearby seam regressions passed.
+- Full non-large suite passed after the sandbox temp-root fix.
+- Obj2 may start after user review of Obj1.
