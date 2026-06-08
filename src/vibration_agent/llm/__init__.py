@@ -2,6 +2,9 @@ from .client import chat
 
 _EXPORTS = {
     "AnthropicClient": ("anthropic_client", "AnthropicClient"),
+    "BudgetDecision": ("budget", "BudgetDecision"),
+    "BudgetDeniedError": ("budget", "BudgetDeniedError"),
+    "BudgetGuard": ("budget", "BudgetGuard"),
     "LiveProviderDisabledError": ("_guards", "LiveProviderDisabledError"),
     "LlmFixture": ("replay", "LlmFixture"),
     "LlmRequest": ("replay", "LlmRequest"),
@@ -10,7 +13,10 @@ _EXPORTS = {
     "RecordingDisabledError": ("replay", "RecordingDisabledError"),
     "ReplayClient": ("replay", "ReplayClient"),
     "ReplayMissError": ("replay", "ReplayMissError"),
+    "attach_cost_metadata": ("budget", "attach_cost_metadata"),
+    "estimate_cost": ("budget", "estimate_cost"),
     "stable_request_hash": ("replay", "stable_request_hash"),
+    "usage_from_response": ("budget", "usage_from_response"),
     "write_fixture": ("replay", "write_fixture"),
 }
 
@@ -26,6 +32,9 @@ def __getattr__(name: str):
 
 __all__ = [
     "AnthropicClient",
+    "BudgetDecision",
+    "BudgetDeniedError",
+    "BudgetGuard",
     "LiveProviderDisabledError",
     "LlmFixture",
     "LlmRequest",
@@ -34,7 +43,10 @@ __all__ = [
     "RecordingDisabledError",
     "ReplayClient",
     "ReplayMissError",
+    "attach_cost_metadata",
     "chat",
+    "estimate_cost",
     "stable_request_hash",
+    "usage_from_response",
     "write_fixture",
 ]

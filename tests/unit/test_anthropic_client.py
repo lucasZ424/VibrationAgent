@@ -37,3 +37,6 @@ def test_anthropic_settings_load_from_llm_yaml():
     assert settings.model == "claude-opus-4-8"
     assert settings.api_key_env == "ANTHROPIC_API_KEY"
     assert settings.max_tokens == 1024
+    assert settings.input_usd_per_million_tokens == 5.0
+    assert settings.output_usd_per_million_tokens == 25.0
+    assert settings.cached_input_usd_per_million_tokens == 0.5

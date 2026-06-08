@@ -10,20 +10,30 @@ from vibration_agent.agent.supervisor import ReviewReport
 from vibration_agent.config import LlmProviderSettings
 
 from ._guards import LiveProviderDisabledError, pytest_guard_active
+from .budget import BudgetGuard, attach_cost_metadata, usage_from_response
 from .replay import LlmRequest
 
 
 class AnthropicClient:
     """Anthropic live client with supervisor review/correction seams."""
 
-    def __init__(self, settings: LlmProviderSettings, *, allow_live: bool = False) -> None:
+    def __init__(
+        self,
+        settings: LlmProviderSettings,
+        *,
+        allow_live: bool = False,
+        budget_guard: BudgetGuard | None = None,
+    ) -> None:
         if not allow_live:
             raise LiveProviderDisabledError("AnthropicClient requires allow_live=True for manual live use.")
         if pytest_guard_active():
             raise LiveProviderDisabledError("Live Anthropic clients are forbidden during pytest.")
         self.settings = settings
+        self.budget_guard = budget_guard
 
     def complete(self, request: LlmRequest) -> dict[str, Any]:
+        if self.budget_guard is not None:
+            self.budget_guard.reserve_request(request, task_id=str(request.request_body.get("task_id") or "default"))
         api_key = os.getenv(self.settings.api_key_env)
         if not api_key:
             raise RuntimeError(f"Missing Anthropic API key env var: {self.settings.api_key_env}")
@@ -36,7 +46,16 @@ class AnthropicClient:
             temperature=request.temperature,
             messages=[{"role": "user", "content": request.request_body.get("prompt", "")}],
         )
-        return _message_to_mapping(message)
+        mapped = _message_to_mapping(message)
+        if self.budget_guard is not None:
+            parsed_usage = usage_from_response(mapped)
+            if parsed_usage is not None:
+                self.budget_guard.record_usage(
+                    parsed_usage,
+                    task_id=str(request.request_body.get("task_id") or "default"),
+                    reservation_id=request.request_hash,
+                )
+        return attach_cost_metadata(mapped, provider_settings=self.settings)
 
     def review(self, **kwargs: Any) -> ReviewReport:
         response = self.complete(self._request(task="supervisor_review", schema_version="supervisor.v1", kwargs=kwargs))
@@ -69,7 +88,10 @@ def _message_to_mapping(message: Any) -> dict[str, Any]:
         if isinstance(data, dict):
             text = _content_text(data.get("content"))
             if text:
-                return _json_or_text(text)
+                parsed = _json_or_text(text)
+                if isinstance(data.get("usage"), dict):
+                    parsed.setdefault("usage", data["usage"])
+                return parsed
             return data
     content = getattr(message, "content", None)
     text = _content_text(content)

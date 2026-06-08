@@ -50,7 +50,10 @@ def test_openai_settings_load_from_llm_yaml():
 
     assert settings.live_enabled is False
     assert settings.capture_enabled is False
-    assert settings.openai.model == "gpt-5.2"
+    assert settings.openai.model == "gpt-5.5"
+    assert settings.openai.input_usd_per_million_tokens == 5.0
+    assert settings.openai.output_usd_per_million_tokens == 30.0
+    assert settings.openai.cached_input_usd_per_million_tokens == 0.5
     assert settings.openai.reasoning_effort == "high"
     assert settings.openai.text_verbosity == "high"
     assert settings.token_budget_per_task == 4000

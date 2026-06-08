@@ -86,3 +86,36 @@ chain order changed.
 Rollback: remove `configs/llm.yaml`, the new provider/replay modules, Obj1
 tests, and the Obj1 additions to `LlmSettings`; restore `src/vibration_agent/llm/__init__.py`
 to exporting only `chat`.
+
+### Obj2 - Token budget and cost estimation (2026-06-08)
+
+Runtime/provider contract additions:
+
+- Added `LlmTokenUsage` and `LlmCostEstimate` schemas.
+- Added `src/vibration_agent/llm/budget.py` with `BudgetGuard`,
+  `BudgetDeniedError`, `BudgetDecision`, usage parsing, local cost estimation,
+  and cost metadata attachment.
+- Extended `LlmSettings` with `usd_budget_per_task`.
+- Extended `LlmProviderSettings` with local rate fields:
+  `input_usd_per_million_tokens`, `output_usd_per_million_tokens`, and
+  `cached_input_usd_per_million_tokens`.
+- Provider live clients now accept an optional `budget_guard` and reserve budget
+  before SDK import/API key checks. A budget denial raises
+  `BudgetDeniedError`, allowing callers to fall back before any live provider
+  call.
+- Provider responses with usage now get `token_cost` and `cost` metadata.
+- `configs/llm.yaml` now carries default local pricing estimates and token
+  budget defaults.
+- Post-review correction: OpenAI defaults were updated from stale `gpt-5.2`
+  pricing to `gpt-5.5`; Anthropic Opus 4.8 defaults were updated to the
+  published Opus 4.8 price level. Replay redaction was narrowed so token-count
+  fields remain available in captured fixtures.
+
+No DB migration was added. Phase-2 migration `002_qa_logs_runtime.sql` already
+added `qa_logs.token_cost`, and Obj2 continues to write total tokens through
+that existing nullable column. No frozen API request/response shape, ingestion
+file shape, or chain order changed.
+
+Rollback: remove `src/vibration_agent/llm/budget.py`, Obj2 tests, the Obj2
+schema additions, provider `budget_guard` hooks, and Obj2 additions to
+`LlmSettings` / `LlmProviderSettings` / `configs/llm.yaml`.

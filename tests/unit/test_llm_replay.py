@@ -29,7 +29,7 @@ def _case_dir(name: str) -> Path:
 def _request(**overrides) -> LlmRequest:
     data = {
         "provider": "openai",
-        "model": "gpt-5.2",
+        "model": "gpt-5.5",
         "prompt_version": "s3.v1",
         "schema_version": "s3.schema.v1",
         "request_body": {"prompt": "Use only chunk c1.", "chunk_id": "c1"},
@@ -48,7 +48,7 @@ def test_stable_request_hash_includes_prompt_schema_model_settings_and_body():
     assert stable_request_hash(base) == stable_request_hash(_request())
     assert stable_request_hash(base) != stable_request_hash(_request(prompt_version="s3.v2"))
     assert stable_request_hash(base) != stable_request_hash(_request(schema_version="s3.schema.v2"))
-    assert stable_request_hash(base) != stable_request_hash(_request(model="gpt-5.2-mini"))
+    assert stable_request_hash(base) != stable_request_hash(_request(model="gpt-5.5-mini"))
     assert stable_request_hash(base) != stable_request_hash(_request(max_tokens=129))
     assert stable_request_hash(base) != stable_request_hash(_request(request_body={"prompt": "Different"}))
 
@@ -109,6 +109,15 @@ class FakeLiveClient:
         return {"answer": "captured", "authorization": "Bearer secret-token"}
 
 
+class FakeLiveClientWithUsage:
+    def complete(self, request: LlmRequest) -> dict:
+        return {
+            "answer": "captured",
+            "token_cost": 15,
+            "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+        }
+
+
 def test_recording_client_is_manual_only():
     fixture_dir = _case_dir("manual_only")
 
@@ -131,3 +140,22 @@ def test_recording_client_writes_redacted_fixture():
     assert "sk-secret" not in fixture_text
     assert "secret-token" not in fixture_text
     assert "[REDACTED]" in fixture_text
+
+
+def test_recording_client_preserves_token_count_fields():
+    fixture_dir = _case_dir("token_counts")
+    request = _request(request_body={"prompt": "Capture usage.", "access_token": "secret-token"})
+    client = RecordingClient(
+        client=FakeLiveClientWithUsage(),
+        fixture_dir=fixture_dir,
+        capture_enabled=True,
+        manual_lane=True,
+    )
+
+    client.complete(request)
+    fixture_text = (fixture_dir / f"{request.request_hash}.json").read_text(encoding="utf-8")
+
+    assert "secret-token" not in fixture_text
+    assert '"input_tokens": 10' in fixture_text
+    assert '"output_tokens": 5' in fixture_text
+    assert '"token_cost": 15' in fixture_text

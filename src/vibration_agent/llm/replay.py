@@ -165,7 +165,7 @@ def _redact(value: Any) -> Any:
         redacted: dict[str, Any] = {}
         for key, item in value.items():
             lowered = str(key).lower()
-            if any(marker in lowered for marker in ("api_key", "authorization", "secret", "token")):
+            if _is_secret_key(lowered):
                 redacted[key] = "[REDACTED]"
             else:
                 redacted[key] = _redact(item)
@@ -178,6 +178,12 @@ def _redact(value: Any) -> Any:
         if "Bearer " in value:
             return "Bearer [REDACTED]"
     return value
+
+
+def _is_secret_key(lowered: str) -> bool:
+    if lowered in {"token", "access_token", "refresh_token", "auth_token", "bearer_token"}:
+        return True
+    return any(marker in lowered for marker in ("api_key", "authorization", "secret", "password"))
 
 
 __all__ = [

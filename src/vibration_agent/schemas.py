@@ -16,6 +16,7 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 UserMode = Literal["engineering", "definition", "derivation", "research"]
 SkillStatus = Literal["ok", "insufficient", "fail"]
 EvidenceType = Literal["documented", "inferred", "heuristic"]
+LlmCostSource = Literal["local_estimate"]
 Intent = Literal[
     "definition",
     "comparison",
@@ -79,6 +80,25 @@ class SkillOutput(BaseModel):
     citations: list[Citation] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     handoff_recommendation: str | None = None
+
+
+class LlmTokenUsage(BaseModel):
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    cached_input_tokens: int = Field(default=0, ge=0)
+    total_tokens: int = Field(default=0, ge=0)
+
+
+class LlmCostEstimate(BaseModel):
+    provider: str
+    model: str
+    input_tokens: int = Field(default=0, ge=0)
+    output_tokens: int = Field(default=0, ge=0)
+    cached_input_tokens: int = Field(default=0, ge=0)
+    total_tokens: int = Field(default=0, ge=0)
+    estimated_usd: float | None = None
+    source: LlmCostSource = "local_estimate"
+    notes: list[str] = Field(default_factory=list)
 
 
 class DocumentClassification(BaseModel):

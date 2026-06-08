@@ -102,6 +102,9 @@ class LlmProviderSettings(BaseModel):
     timeout: float = Field(default=30.0, gt=0.0)
     reasoning_effort: str | None = None
     text_verbosity: str | None = None
+    input_usd_per_million_tokens: float | None = Field(default=None, ge=0.0)
+    output_usd_per_million_tokens: float | None = Field(default=None, ge=0.0)
+    cached_input_usd_per_million_tokens: float | None = Field(default=None, ge=0.0)
 
 
 class LlmSettings(BaseModel):
@@ -113,13 +116,17 @@ class LlmSettings(BaseModel):
     live_enabled: bool = False
     token_budget_per_task: int = Field(default=4000, ge=1)
     token_budget_per_session: int = Field(default=30000, ge=1)
+    usd_budget_per_task: float | None = Field(default=None, ge=0.0)
     openai: LlmProviderSettings = Field(
         default_factory=lambda: LlmProviderSettings(
             provider="openai",
-            model="gpt-5.2",
+            model="gpt-5.5",
             api_key_env="OPENAI_API_KEY",
             reasoning_effort="high",
             text_verbosity="high",
+            input_usd_per_million_tokens=5.0,
+            output_usd_per_million_tokens=30.0,
+            cached_input_usd_per_million_tokens=0.5,
         )
     )
     anthropic: LlmProviderSettings = Field(
@@ -128,6 +135,9 @@ class LlmSettings(BaseModel):
             model="claude-opus-4-8",
             api_key_env="ANTHROPIC_API_KEY",
             max_tokens=1024,
+            input_usd_per_million_tokens=5.0,
+            output_usd_per_million_tokens=25.0,
+            cached_input_usd_per_million_tokens=0.5,
         )
     )
 
@@ -227,6 +237,12 @@ def _env_bool(name: str, default: bool) -> bool:
     if value is None or value == "":
         return default
     return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _optional_float(value: Any) -> float | None:
+    if value in (None, ""):
+        return None
+    return float(value)
 
 
 def _first_fallback_threshold(items: list[Any], default: float = 0.6) -> float:
@@ -361,10 +377,13 @@ def load(workspace: Path | None = None) -> Settings:
             token_budget_per_session=int(
                 _env("LLM_TOKEN_BUDGET_PER_SESSION", llm_section.get("token_budget_per_session", 30000))
             ),
+            usd_budget_per_task=_optional_float(
+                _env("LLM_USD_BUDGET_PER_TASK", llm_section.get("usd_budget_per_task"))
+            ),
             openai=LlmProviderSettings(
                 provider="openai",
                 model=str(
-                    _env("OPENAI_MODEL", llm_section.get("openai", {}).get("model", "gpt-5.2"))
+                    _env("OPENAI_MODEL", llm_section.get("openai", {}).get("model", "gpt-5.5"))
                 ),
                 api_key_env=str(
                     _env("OPENAI_API_KEY_ENV", llm_section.get("openai", {}).get("api_key_env", "OPENAI_API_KEY"))
@@ -379,6 +398,24 @@ def load(workspace: Path | None = None) -> Settings:
                 ),
                 text_verbosity=str(
                     _env("OPENAI_TEXT_VERBOSITY", llm_section.get("openai", {}).get("text_verbosity", "high"))
+                ),
+                input_usd_per_million_tokens=_optional_float(
+                    _env(
+                        "OPENAI_INPUT_USD_PER_MILLION_TOKENS",
+                        llm_section.get("openai", {}).get("input_usd_per_million_tokens", 5.0),
+                    )
+                ),
+                output_usd_per_million_tokens=_optional_float(
+                    _env(
+                        "OPENAI_OUTPUT_USD_PER_MILLION_TOKENS",
+                        llm_section.get("openai", {}).get("output_usd_per_million_tokens", 30.0),
+                    )
+                ),
+                cached_input_usd_per_million_tokens=_optional_float(
+                    _env(
+                        "OPENAI_CACHED_INPUT_USD_PER_MILLION_TOKENS",
+                        llm_section.get("openai", {}).get("cached_input_usd_per_million_tokens", 0.5),
+                    )
                 ),
             ),
             anthropic=LlmProviderSettings(
@@ -401,6 +438,24 @@ def load(workspace: Path | None = None) -> Settings:
                 timeout=float(_env("ANTHROPIC_TIMEOUT", llm_section.get("anthropic", {}).get("timeout", 30.0))),
                 reasoning_effort=llm_section.get("anthropic", {}).get("reasoning_effort"),
                 text_verbosity=llm_section.get("anthropic", {}).get("text_verbosity"),
+                input_usd_per_million_tokens=_optional_float(
+                    _env(
+                        "ANTHROPIC_INPUT_USD_PER_MILLION_TOKENS",
+                        llm_section.get("anthropic", {}).get("input_usd_per_million_tokens", 5.0),
+                    )
+                ),
+                output_usd_per_million_tokens=_optional_float(
+                    _env(
+                        "ANTHROPIC_OUTPUT_USD_PER_MILLION_TOKENS",
+                        llm_section.get("anthropic", {}).get("output_usd_per_million_tokens", 25.0),
+                    )
+                ),
+                cached_input_usd_per_million_tokens=_optional_float(
+                    _env(
+                        "ANTHROPIC_CACHED_INPUT_USD_PER_MILLION_TOKENS",
+                        llm_section.get("anthropic", {}).get("cached_input_usd_per_million_tokens", 0.5),
+                    )
+                ),
             ),
         ),
         normalization=NormalizationSettings(

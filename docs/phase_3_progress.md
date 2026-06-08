@@ -20,7 +20,7 @@ Every Obj must record:
 
 0. Phase-3 execution baseline: done
 1. Provider client and record/replay baseline: done
-2. Token budget and cost estimation: pending
+2. Token budget and cost estimation: done
 3. V2 LLM-output safety gate pre-hardening: pending
 4. S3 real LLM synthesis: pending
 5. S4 real engineering analysis: pending
@@ -76,9 +76,9 @@ Every Obj must record:
   `correct`.
 - Added a pytest guard via `tests/conftest.py`; constructing live provider
   clients during pytest fails even when `allow_live=True`.
-- Provider model ids remain configuration values. Obj1 defaults are
-  `gpt-5.2` and `claude-opus-4-8`, based on current official provider docs
-  checked during implementation.
+- Provider model ids remain configuration values. Obj1/Obj2 post-review defaults
+  are `gpt-5.5` and `claude-opus-4-8`, based on current official provider docs
+  checked during implementation and review.
 
 ## Obj1 Verification
 
@@ -136,3 +136,61 @@ Every Obj must record:
 - Obj1 focused replay/provider tests and nearby seam regressions passed.
 - Full non-large suite passed after the sandbox temp-root fix.
 - Obj2 may start after user review of Obj1.
+
+## Obj2 Notes
+
+- Added `src/vibration_agent/llm/budget.py` with `BudgetGuard`,
+  `BudgetDeniedError`, usage parsing, prompt-token estimation, and local cost
+  estimation.
+- Added additive `LlmTokenUsage` and `LlmCostEstimate` schemas.
+- Extended `configs/llm.yaml` and `LlmSettings` with token budgets, optional
+  per-task USD ceiling, and provider token-rate settings.
+- Provider clients now reserve budget before SDK import/API key checks and
+  attach `token_cost` plus local `cost` metadata when provider usage is present.
+- Deterministic paths still leave `token_cost` null unless an LLM-backed path
+  returns usage.
+- No DB migration was needed. Phase-2 already added `qa_logs.token_cost`; Obj2
+  continues to write total tokens through that existing column.
+- Cost estimates are local operational estimates only, not billing facts.
+  Default rates were checked against current official provider pages during
+  implementation.
+
+## Obj2 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_budget.py tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_anthropic_client.py -q -p no:cacheprovider`
+- Result: passed, 25 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_budget.py tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_anthropic_client.py -q -p no:cacheprovider`
+- Result: passed, 26 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s3_llm_synthesis.py tests\unit\test_supervisor_loop.py tests\unit\test_qa_logs.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider`
+- Result: passed, 42 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj2-nonlarge -p no:cacheprovider`
+- Result: passed, 327 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj2-postreview -p no:cacheprovider`
+- Result: passed, 328 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+
+## Obj2 Residual Risk
+
+- Provider usage shapes are parsed for common OpenAI/Anthropic forms, but live
+  provider validation remains deferred to the manual capture lane.
+- Prompt-token reservation uses a deterministic character-based estimate because
+  Obj2 intentionally avoids adding tokenizer dependencies.
+- Provider rates can change; they remain configuration values and can be
+  overridden by YAML or environment variables.
+
+## Obj2 Post-Review Fixes
+
+- Corrected stale OpenAI default from `gpt-5.2` to `gpt-5.5` to match the
+  project model lane and current OpenAI docs.
+- Updated local pricing defaults to OpenAI `gpt-5.5` standard short-context
+  rates and Anthropic Claude Opus 4.8 published rates.
+- Narrowed replay fixture redaction so secret auth tokens are still redacted but
+  budget fields such as `input_tokens`, `output_tokens`, `total_tokens`, and
+  `token_cost` are preserved.
+
+## Obj2 Next Obj Gate
+
+- Obj2 focused and compatibility tests passed.
+- Full non-large suite passed.
+- Obj3 may start after user review of Obj2.
