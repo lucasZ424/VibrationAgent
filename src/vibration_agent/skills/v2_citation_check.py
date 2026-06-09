@@ -45,6 +45,20 @@ _STOPWORDS = {
     "to",
     "with",
 }
+_UNSUPPORTED_SAFE_KEYS = (
+    "task_id",
+    "mode",
+    "language",
+    "answer_language",
+    "query_language",
+    "synthesis_mode",
+    "token_cost",
+    "cost",
+    "evidence_count",
+    "assets",
+    "s4_analysis",
+    "s5_analysis",
+)
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
@@ -245,6 +259,32 @@ def _answer_has_uncited_claim(answer: str, claims: list[Mapping[str, Any]]) -> b
     return bool(answer.strip()) and not claims
 
 
+def _blocked_result(
+    structured: Mapping[str, Any],
+    *,
+    supported_claims: list[dict[str, Any]],
+    unsupported: list[dict[str, Any]],
+    visible_rows: Mapping[str, Mapping[str, Any]],
+    refs: set[str],
+    derivation_steps: list[dict[str, Any]],
+) -> dict[str, Any]:
+    checked = {key: structured[key] for key in _UNSUPPORTED_SAFE_KEYS if key in structured}
+    checked.update(
+        {
+            "answer": "",
+            "claims": supported_claims,
+            "unsupported_claims": unsupported,
+            "citation_check": {
+                "visible_chunk_ids": sorted(visible_rows),
+                "visible_answer_refs": sorted(refs),
+                "unsupported_count": len(unsupported),
+                "derivation_step_count": len(derivation_steps),
+            },
+        }
+    )
+    return checked
+
+
 class CitationCheckSkill(Skill):
     name = "v2_citation_check"
 
@@ -307,7 +347,14 @@ class CitationCheckSkill(Skill):
         warnings = list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else []
 
         if unsupported:
-            checked["answer"] = ""
+            checked = _blocked_result(
+                structured,
+                supported_claims=supported_claims,
+                unsupported=unsupported,
+                visible_rows=visible_rows,
+                refs=refs,
+                derivation_steps=derivation_steps,
+            )
             warnings.append(f"V2 blocked {len(unsupported)} unsupported claim(s).")
             return SkillOutput(
                 status="insufficient",

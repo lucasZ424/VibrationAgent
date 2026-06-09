@@ -176,3 +176,38 @@ dropping non-visible LLM claims before V2, remove `S3LlmClaim` /
 `S3LlmResponse`, remove `request_from_kwargs()`, remove the Obj4 S3
 fixtures/tests, and remove the additive `cost` field from S3 LLM structured
 results.
+
+### Obj5 - S4 real engineering analysis (2026-06-09)
+
+Runtime/provider contract additions:
+
+- Added `LlmSettings.s4_enabled`, `configs/llm.yaml` default `s4_enabled:
+  false`, and `S4_LLM_ENABLED` environment override.
+- Added `S4LlmResponse` as the S4 LLM response contract. S4 LLM output must
+  include `answer`, `engineering_meaning`, `premises`, `failure_modes`,
+  `next_action`, and cited `claims[]`.
+- S4 LLM requests now pass prompt version `s4_engineering_analysis.v1`, schema
+  version `s4.v1`, model settings, task id, query, S3 answer, visible S3
+  claims, and visible evidence through the Obj1 `analyze_engineering()` seam.
+- S4 LLM `structured_result` remains additive and may include `token_cost` and
+  `cost` when provider/replay metadata supplies usage and local cost estimates.
+- V2 now clears engineering section fields when unsupported claims are blocked,
+  preventing V4 from rendering unsupported S4 LLM section prose.
+- Added S4 LLM response fixtures under `tests/fixtures/llm/s4_*.json` for
+  replay-visible engineering analysis and fabricated threshold output.
+- Post-review correction: `S4LlmResponse` now permits clean
+  `status="insufficient"` responses while still requiring non-empty engineering
+  fields for `ok` responses at runtime.
+- Post-review correction: V2's unsupported-output path now rebuilds the checked
+  payload from a conservative safe-key allowlist instead of blanking a fixed
+  section denylist. This prevents future S4/S5 free-text fields from reaching V4
+  after unsupported claims are blocked.
+
+No database migration was added. The default S4 path remains deterministic while
+`s4_enabled` is false or no injected replay/live client is available.
+
+Rollback: remove `S4LlmResponse`, remove `LlmSettings.s4_enabled` and the YAML
+/ env override, remove the S4 prompt/request metadata changes, restore V2 to
+clearing only `answer`, remove Obj5 S4 fixtures/tests, restore the old S4
+insufficient/schema behavior, and remove S4 LLM `token_cost` / `cost`
+structured result additions.

@@ -50,6 +50,7 @@ def test_openai_settings_load_from_llm_yaml():
 
     assert settings.live_enabled is False
     assert settings.capture_enabled is False
+    assert settings.s4_enabled is False
     assert settings.openai.model == "gpt-5.5"
     assert settings.openai.input_usd_per_million_tokens == 5.0
     assert settings.openai.output_usd_per_million_tokens == 30.0

@@ -13,6 +13,7 @@ from vibration_agent.llm.replay import (
     ReplayClient,
     ReplayMissError,
     fixture_metadata,
+    request_from_kwargs,
     stable_request_hash,
     write_fixture,
 )
@@ -90,6 +91,20 @@ def test_replay_convenience_methods_have_provider_neutral_unknown_default():
 
     with pytest.raises(ReplayMissError, match="No replay fixture"):
         ReplayClient(fixture_dir).correct(prompt="correct the candidate")
+
+
+def test_replay_request_builder_supports_s4_analyze_engineering_shape():
+    request = request_from_kwargs(
+        task="s4_engineering_analysis",
+        schema_version="s4.v1",
+        kwargs={"model": "openai:gpt-5.5", "prompt": "Analyze S4.", "prompt_version": "s4_engineering_analysis.v1"},
+    )
+
+    assert request.provider == "openai"
+    assert request.model == "gpt-5.5"
+    assert request.prompt_version == "s4_engineering_analysis.v1"
+    assert request.schema_version == "s4.v1"
+    assert request.request_body["prompt"] == "Analyze S4."
 
 
 def test_replay_hash_mismatch_fails_loud():

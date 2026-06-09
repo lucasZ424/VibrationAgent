@@ -1,3 +1,9 @@
+import json
+from pathlib import Path
+
+from vibration_agent.config import load
+from vibration_agent.llm.budget import BudgetDeniedError
+from vibration_agent.llm.replay import ReplayClient, request_from_kwargs, write_fixture
 from vibration_agent.orchestrator import TutorOrchestrator
 from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 from vibration_agent.skills import CitationCheckSkill, EngineeringAnalysisSkill
@@ -34,6 +40,24 @@ def _payload(*, user_mode="engineering", s2: dict | None = None, s3: dict | None
     )
 
 
+def _fixture(name: str) -> dict:
+    path = Path(__file__).resolve().parents[1] / "fixtures" / "llm" / name
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+class FakeS4LlmClient:
+    def __init__(self, response=None, exc: Exception | None = None) -> None:
+        self.response = response
+        self.exc = exc
+        self.calls: list[dict] = []
+
+    def analyze_engineering(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.exc is not None:
+            raise self.exc
+        return self.response
+
+
 def test_s4_engineering_analysis_uses_visible_cited_evidence_and_passes_v2():
     output = EngineeringAnalysisSkill().run(_payload())
 
@@ -52,6 +76,175 @@ def test_s4_engineering_analysis_uses_visible_cited_evidence_and_passes_v2():
 
     assert checked.status == "ok"
     assert checked.structured_result["unsupported_claims"] == []
+
+
+def test_s4_llm_replay_response_generates_rich_analysis_and_passes_v2(tmp_path):
+    # WHY: Obj5 activates replayable S4 engineering analysis while keeping V2
+    # as the single quality gate before V4 can render engineering sections.
+    payload = _payload()
+    payload.constraints["s4_llm_enabled"] = True
+    response = _fixture("s4_visible_response.json")
+    probe = FakeS4LlmClient(response)
+    probe_output = EngineeringAnalysisSkill(llm_client=probe).run(payload)
+    request = request_from_kwargs(task="s4_engineering_analysis", schema_version="s4.v1", kwargs=probe.calls[0])
+    write_fixture(tmp_path, request, response)
+
+    s4_output = EngineeringAnalysisSkill(llm_client=ReplayClient(tmp_path)).run(payload)
+    checked = CitationCheckSkill().run(
+        SkillInput(
+            task_id="t1",
+            user_query="critical speed",
+            context={"s2_result": _s2(), "s3_result": s4_output.model_dump(mode="python")},
+        )
+    )
+
+    assert probe_output.status == "ok"
+    assert s4_output.status == "ok"
+    assert s4_output.structured_result["synthesis_mode"] == "llm"
+    assert s4_output.structured_result["engineering_meaning"].startswith("Critical speed")
+    assert s4_output.structured_result["token_cost"] == 96
+    assert checked.status == "ok"
+    assert checked.structured_result["unsupported_claims"] == []
+
+
+def test_s4_llm_fabricated_threshold_is_blocked_and_stripped_before_v4():
+    client = FakeS4LlmClient(_fixture("s4_fabricated_threshold_response.json"))
+    s2 = StaticSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_row()], "retrieval_output": {"hits": [{"chunk_id": "c1"}]}},
+        )
+    )
+    s3 = StaticSkill(
+        SkillOutput(
+            status="ok",
+            summary="S3 ok",
+            structured_result={**_s3()["structured_result"], "synthesis_mode": "llm"},
+            citations=[Citation(chunk_id="c1", doc_id="d1", pages=[2])],
+        )
+    )
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        engineering_analysis_skill=EngineeringAnalysisSkill(llm_client=client),
+    )
+
+    output = orchestrator.handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "s4_llm_enabled": True},
+        task_id="t1",
+    )
+
+    assert output.status == "insufficient"
+    assert output.structured_result["skill_results"]["s4"]["synthesis_mode"] == "llm"
+    assert "engineering_meaning" not in output.structured_result["skill_results"]["v2"]
+    assert "999kn" in output.structured_result["skill_results"]["v2"]["unsupported_claims"][0]["reasons"][-1]
+    assert "999 kN" not in output.structured_result["answer"]
+
+
+def test_default_config_keeps_s4_llm_disabled(monkeypatch):
+    monkeypatch.delenv("S4_LLM_ENABLED", raising=False)
+
+    assert load().llm.s4_enabled is False
+
+
+def test_s4_llm_disabled_uses_deterministic_path_without_calling_client():
+    client = FakeS4LlmClient(_fixture("s4_visible_response.json"))
+    payload = _payload()
+    payload.constraints["s4_llm_enabled"] = False
+
+    output = EngineeringAnalysisSkill(llm_client=client).run(payload)
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert client.calls == []
+
+
+def test_s4_llm_replay_miss_falls_back_to_deterministic_s4(tmp_path):
+    payload = _payload()
+    payload.constraints["s4_llm_enabled"] = True
+
+    output = EngineeringAnalysisSkill(llm_client=ReplayClient(tmp_path)).run(payload)
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("ReplayMissError" in warning for warning in output.warnings)
+
+
+def test_s4_llm_insufficient_response_uses_clean_fallback_branch():
+    client = FakeS4LlmClient({"status": "insufficient", "warnings": ["model needs more evidence"]})
+    payload = _payload()
+    payload.constraints["s4_llm_enabled"] = True
+
+    output = EngineeringAnalysisSkill(llm_client=client).run(payload)
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("S4 LLM returned insufficient" in warning for warning in output.warnings)
+    assert not any("ValidationError" in warning for warning in output.warnings)
+
+
+def test_s4_llm_schema_failure_falls_back_to_deterministic_s4():
+    client = FakeS4LlmClient(
+        {
+            "answer": "Critical speed can amplify rotor response [c1].",
+            "engineering_meaning": "Critical speed can amplify rotor response [c1].",
+            "premises": "Use only cited evidence [c1].",
+        }
+    )
+    payload = _payload()
+    payload.constraints["s4_llm_enabled"] = True
+
+    output = EngineeringAnalysisSkill(llm_client=client).run(payload)
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("missing required engineering fields" in warning for warning in output.warnings)
+
+
+def test_s4_llm_refusal_and_budget_deny_fall_back_to_deterministic_s4():
+    for client in (
+        FakeS4LlmClient({"refusal": True, "answer": "", "claims": []}),
+        FakeS4LlmClient(exc=BudgetDeniedError("per-task token budget exceeded")),
+    ):
+        payload = _payload()
+        payload.constraints["s4_llm_enabled"] = True
+
+        output = EngineeringAnalysisSkill(llm_client=client).run(payload)
+
+        assert output.status == "ok"
+        assert output.structured_result["synthesis_mode"] == "deterministic"
+
+
+def test_v2_unsupported_block_strips_unknown_free_text_fields():
+    bad_s4 = SkillOutput(
+        status="ok",
+        summary="bad S4",
+        structured_result={
+            "answer": "Bearing load is 999 kN [c1].",
+            "claims": [{"text": "Bearing load is 999 kN.", "chunk_id": "c1", "doc_id": "d1", "pages": [2]}],
+            "synthesis_mode": "llm",
+            "engineering_meaning": "Bearing load is 999 kN [c1].",
+            "future_s5_narrative": "A future unsupported derivation says 999 kN [c1].",
+            "sections": {"future_s5_narrative": "A future unsupported derivation says 999 kN [c1]."},
+        },
+        citations=[Citation(chunk_id="c1", doc_id="d1", pages=[2])],
+    )
+
+    checked = CitationCheckSkill().run(
+        SkillInput(
+            task_id="t1",
+            user_query="critical speed",
+            context={"s2_result": _s2(), "s3_result": bad_s4.model_dump(mode="python")},
+        )
+    )
+
+    assert checked.status == "insufficient"
+    assert checked.structured_result["answer"] == ""
+    assert "engineering_meaning" not in checked.structured_result
+    assert "future_s5_narrative" not in checked.structured_result
+    assert "sections" not in checked.structured_result
 
 
 def test_s4_engineering_analysis_skips_when_evidence_is_insufficient():

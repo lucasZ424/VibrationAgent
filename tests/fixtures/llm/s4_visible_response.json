@@ -1,0 +1,30 @@
+{
+  "answer": "Critical speed can amplify rotor vibration response and should be treated as a resonance-risk operating region [c1]. The next action is to inspect the cited run-up evidence before applying thresholds or maintenance actions [c1].",
+  "claims": [
+    {
+      "chunk_id": "c1",
+      "doc_id": "d1",
+      "evidence_type": "documented",
+      "pages": [2],
+      "text": "Critical speed can amplify rotor vibration response and should be treated as a resonance-risk operating region."
+    },
+    {
+      "chunk_id": "c1",
+      "doc_id": "d1",
+      "evidence_type": "documented",
+      "pages": [2],
+      "text": "Critical speed evidence should be inspected before applying thresholds or maintenance actions."
+    }
+  ],
+  "engineering_meaning": "Critical speed can amplify rotor vibration response, so it marks an operating region that needs engineering attention [c1].",
+  "failure_modes": "Do not infer a specific failure mode or threshold beyond the cited critical-speed evidence [c1].",
+  "next_action": "Inspect the cited run-up evidence before applying thresholds or maintenance actions [c1].",
+  "premises": "Apply this framing only to the retrieved critical-speed evidence [c1].",
+  "status": "ok",
+  "token_cost": 96,
+  "usage": {
+    "input_tokens": 58,
+    "output_tokens": 38,
+    "total_tokens": 96
+  }
+}

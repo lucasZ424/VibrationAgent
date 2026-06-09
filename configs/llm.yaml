@@ -1,5 +1,6 @@
 llm:
   replay_dir: tests/fixtures/llm
+  s4_enabled: false
   capture_enabled: false
   live_enabled: false
   token_budget_per_task: 4000

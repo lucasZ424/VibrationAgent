@@ -110,6 +110,7 @@ class LlmProviderSettings(BaseModel):
 class LlmSettings(BaseModel):
     providers: dict[str, str] = Field(default_factory=dict)
     s3_enabled: bool = False
+    s4_enabled: bool = False
     s3_timeout: float = Field(default=10.0, gt=0.0)
     replay_dir: Path = Path("tests/fixtures/llm")
     capture_enabled: bool = False
@@ -367,6 +368,7 @@ def load(workspace: Path | None = None) -> Settings:
         llm=LlmSettings(
             providers=dict(llm_section.get("providers", {})),
             s3_enabled=_env_bool("S3_LLM_ENABLED", bool(llm_section.get("s3_enabled", False))),
+            s4_enabled=_env_bool("S4_LLM_ENABLED", bool(llm_section.get("s4_enabled", False))),
             s3_timeout=float(_env("S3_LLM_TIMEOUT", llm_section.get("s3_timeout", 10.0))),
             replay_dir=_resolve(root, _env("LLM_REPLAY_DIR", llm_section.get("replay_dir", "tests/fixtures/llm"))),
             capture_enabled=_env_bool("LLM_CAPTURE_ENABLED", bool(llm_section.get("capture_enabled", False))),

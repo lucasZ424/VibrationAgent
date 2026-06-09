@@ -116,6 +116,17 @@ class S3LlmResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class S4LlmResponse(BaseModel):
+    status: Literal["ok", "insufficient", "refusal", "refused"] = "ok"
+    answer: str = ""
+    engineering_meaning: str = ""
+    premises: str = ""
+    failure_modes: str = ""
+    next_action: str = ""
+    claims: list[S3LlmClaim] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class DocumentClassification(BaseModel):
     doc_id: str
     source_path: str

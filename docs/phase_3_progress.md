@@ -23,7 +23,7 @@ Every Obj must record:
 2. Token budget and cost estimation: done
 3. V2 LLM-output safety gate pre-hardening: done
 4. S3 real LLM synthesis: done
-5. S4 real engineering analysis: pending
+5. S4 real engineering analysis: done
 6. S5 real formula derivation and cycle-check hardening: pending
 7. Claude latest / Claude Opus 4.8 supervisor trial and correction executor: pending
 8. Golden-output eval minimum set and replay regression gate: pending
@@ -314,3 +314,72 @@ Every Obj must record:
   tests passed.
 - Full non-large suite passed.
 - Obj5 may start after user review of Obj4.
+
+## Obj5 Notes
+
+- Added default-off S4 LLM enablement through `LlmSettings.s4_enabled`,
+  `configs/llm.yaml`, and `S4_LLM_ENABLED`.
+- Added `S4LlmResponse` as the validated response contract for S4 LLM analysis.
+  Responses must include `answer`, `engineering_meaning`, `premises`,
+  `failure_modes`, `next_action`, and cited `claims[]`.
+- S4 now accepts an injected replay/live `llm_client` and calls
+  `analyze_engineering()` with prompt version `s4_engineering_analysis.v1`,
+  schema version `s4.v1`, model settings, task id, query, S3 answer, visible
+  claims, and visible evidence.
+- S4 LLM output remains routed through V2 before V4. When V2 blocks unsupported
+  claims, it now also clears engineering section fields so V4 cannot render
+  unsupported S4 analysis.
+- Replay miss, budget denial, refusal, schema validation failure, and other
+  provider/runtime exceptions degrade to deterministic S4 with warnings.
+- Added small S4 LLM fixtures for visible engineering analysis and fabricated
+  threshold output.
+- `docs/issue_log_p3/issues_obj5.txt` was not generated in this implementation
+  pass; Obj5 issue log remains pending user review.
+
+## Obj5 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s4_engineering.py -q -p no:cacheprovider`
+- Result: passed, 13 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_v4_style_skill.py tests\unit\test_tutor_orchestrator.py tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_budget.py -q -p no:cacheprovider`
+- Result: passed, 62 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s4_engineering.py tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_budget.py -q -p no:cacheprovider`
+- Result: passed, 36 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj5-nonlarge -p no:cacheprovider`
+- Result: passed, 348 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s4_engineering.py tests\unit\test_v2_citation_check.py tests\unit\test_v4_style_skill.py -q -p no:cacheprovider`
+- Result: passed, 41 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_budget.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider`
+- Result: passed, 37 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj5-postreview -p no:cacheprovider`
+- Result: passed, 350 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+
+## Obj5 Residual Risk
+
+- Live OpenAI S4 behavior remains unvalidated by CI and is deferred to the
+  manual capture lane.
+- V2's strict significant-item check remains string-based and may over-block
+  legitimate S4 paraphrases or rounded values; Obj8 eval should calibrate this.
+- S4 LLM prompt compliance depends on every engineering judgment being mirrored
+  in `claims[]`. V2 cannot verify uncaptured section prose beyond clearing
+  sections when any unsupported claim is detected.
+
+## Obj5 Post-Review Fixes
+
+- Relaxed `S4LlmResponse` defaults so `status="insufficient"` can validate and
+  use the clean insufficient fallback branch.
+- Kept `ok` S4 LLM responses strict by explicitly failing when required
+  engineering fields are empty.
+- Hardened V2's unsupported-output path from a section denylist to a conservative
+  safe-key rebuild, preventing future free-text fields from leaking to V4 after
+  V2 blocks unsupported claims.
+- Added tests for clean S4 insufficient fallback and unknown free-text field
+  stripping.
+
+## Obj5 Next Obj Gate
+
+- Obj5 focused replay/provider seam tests and nearby S4/V2/V4 compatibility
+  tests passed.
+- Full non-large suite passed.
+- Obj6 may start after user review of Obj5.

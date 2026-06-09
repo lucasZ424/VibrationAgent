@@ -1,0 +1,23 @@
+{
+  "answer": "Critical speed requires a 999 kN bearing-load threshold response [c1].",
+  "claims": [
+    {
+      "chunk_id": "c1",
+      "doc_id": "d1",
+      "evidence_type": "documented",
+      "pages": [2],
+      "text": "Critical speed requires a 999 kN bearing-load threshold response."
+    }
+  ],
+  "engineering_meaning": "Critical speed requires a 999 kN bearing-load threshold response [c1].",
+  "failure_modes": "Crossing 999 kN creates an unsupported failure threshold [c1].",
+  "next_action": "Apply the 999 kN threshold before maintenance planning [c1].",
+  "premises": "Use the cited critical-speed evidence as the source for the 999 kN threshold [c1].",
+  "status": "ok",
+  "token_cost": 88,
+  "usage": {
+    "input_tokens": 52,
+    "output_tokens": 36,
+    "total_tokens": 88
+  }
+}
