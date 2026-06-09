@@ -1,0 +1,39 @@
+{
+  "answer": "Premise: the cited relation is F = k x [c1]. The evidence step adds a 999 N force limit [c1].",
+  "claims": [
+    {
+      "chunk_id": "c1",
+      "doc_id": "d1",
+      "evidence_type": "documented",
+      "pages": [4],
+      "text": "The cited formula is F = k x for linear stiffness."
+    }
+  ],
+  "conclusion": "Conclusion: the derivation claims a 999 N force limit.",
+  "derivation_steps": [
+    {
+      "chunk_id": "c1",
+      "depends_on": [],
+      "doc_id": "d1",
+      "id": "step_1",
+      "pages": [4],
+      "source_type": "evidence",
+      "text": "Use 999 N as the force limit from the cited relation."
+    },
+    {
+      "depends_on": ["step_1"],
+      "id": "step_2",
+      "source_type": "axiomatic",
+      "text": "Algebraically compare the claimed limit with F = k x."
+    }
+  ],
+  "minimal_model": "F = k x\nF <= 999 N",
+  "premises": "Premise: use the cited relation and the claimed 999 N limit [c1].",
+  "status": "ok",
+  "token_cost": 104,
+  "usage": {
+    "input_tokens": 64,
+    "output_tokens": 40,
+    "total_tokens": 104
+  }
+}

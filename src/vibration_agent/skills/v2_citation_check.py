@@ -57,7 +57,7 @@ _UNSUPPORTED_SAFE_KEYS = (
     "evidence_count",
     "assets",
     "s4_analysis",
-    "s5_analysis",
+    "s5_derivation",
 )
 
 
@@ -234,6 +234,7 @@ def _unsupported_derivation_step(
     step: Mapping[str, Any],
     *,
     visible_rows: Mapping[str, Mapping[str, Any]],
+    strict_llm_support: bool,
 ) -> dict[str, Any] | None:
     source_type = step.get("source_type")
     if source_type == "axiomatic":
@@ -248,6 +249,14 @@ def _unsupported_derivation_step(
         reasons.append("evidence derivation step missing chunk_id")
     elif chunk_id not in visible_rows:
         reasons.append("evidence derivation step chunk not visible in retrieval")
+    elif strict_llm_support:
+        evidence = _evidence_text(visible_rows[chunk_id])
+        missing_items = _missing_significant_items(step_text, evidence)
+        if missing_items:
+            reasons.append(
+                "LLM derivation step contains number/unit/symbol not found in cited evidence: "
+                + ", ".join(missing_items)
+            )
     if reasons:
         return {"claim": step_text, "chunk_id": chunk_id or None, "step_id": step_id or None, "reasons": reasons}
     return None
@@ -318,7 +327,7 @@ class CitationCheckSkill(Skill):
             unsupported.append({"claim": "", "chunk_id": ref, "reasons": ["referenced chunk not visible in retrieval"]})
 
         for step in derivation_steps:
-            issue = _unsupported_derivation_step(step, visible_rows=visible_rows)
+            issue = _unsupported_derivation_step(step, visible_rows=visible_rows, strict_llm_support=strict_llm_support)
             if issue:
                 unsupported.append(issue)
 

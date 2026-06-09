@@ -6,12 +6,35 @@ axiomatic algebra steps, then hands the result to V2.
 """
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping
+from dataclasses import dataclass
 from typing import Any
 
-from vibration_agent.schemas import Citation, SkillInput, SkillOutput
+from vibration_agent.agent import ModelRegistry, route_task
+from vibration_agent.config import Settings, load
+from vibration_agent.schemas import Citation, S3LlmClaim, S5DerivationStep, S5LlmResponse, SkillInput, SkillOutput
 
 from .base import Skill
+
+_PROMPT_VERSION = "s5_formula_derivation.v1"
+_SCHEMA_VERSION = "s5.v1"
+S5LlmClient = Any
+
+
+@dataclass(frozen=True)
+class _LlmDerivation:
+    answer: str
+    premises: str
+    minimal_model: str
+    conclusion: str
+    derivation_steps: list[dict[str, Any]]
+    claims: list[dict[str, Any]]
+    assets: list[dict[str, Any]]
+    citations: list[Citation]
+    token_cost: int | None
+    cost: dict[str, Any] | None
+    warnings: list[str]
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
@@ -55,6 +78,36 @@ def _claims(structured: Mapping[str, Any]) -> list[dict[str, Any]]:
     return [dict(item) for item in raw if isinstance(item, Mapping) and item.get("text")]
 
 
+def _as_bool(value: Any, *, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return bool(value)
+
+
+def _first_present(*mappings: Mapping[str, Any], keys: tuple[str, ...]) -> Any:
+    for mapping in mappings:
+        for key in keys:
+            value = mapping.get(key)
+            if value not in (None, ""):
+                return value
+    return None
+
+
+def _llm_enabled(payload: SkillInput, settings: Settings) -> bool:
+    value = _first_present(
+        payload.constraints,
+        payload.context,
+        keys=("s5_llm_enabled", "llm_enabled", "use_llm_s5"),
+    )
+    if value is not None:
+        return _as_bool(value, default=False)
+    return bool(settings.llm.s5_enabled)
+
+
 def _formula_assets(row: Mapping[str, Any], claim: Mapping[str, Any]) -> list[dict[str, Any]]:
     assets: list[dict[str, Any]] = []
     for container in (claim, row):
@@ -93,6 +146,11 @@ def _source_citations(source: Mapping[str, Any], claims: list[Mapping[str, Any]]
             )
             seen.add(chunk_id)
     return citations
+
+
+def _visible_citations(source: Mapping[str, Any], claims: list[Mapping[str, Any]], visible_rows: Mapping[str, Mapping[str, Any]]) -> list[Citation]:
+    visible_claims = [claim for claim in claims if str(claim.get("chunk_id") or "") in visible_rows]
+    return _source_citations(source, visible_claims)
 
 
 def _validate_derivation_steps(steps: list[Mapping[str, Any]]) -> list[str]:
@@ -147,6 +205,200 @@ def _validate_derivation_steps(steps: list[Mapping[str, Any]]) -> list[str]:
     return warnings
 
 
+def _role_model(settings: Settings, payload: SkillInput) -> tuple[str, dict[str, Any]]:
+    route = route_task(constraints=payload.constraints, context=payload.context, settings=settings)
+    registry = ModelRegistry.from_settings(settings)
+    role = "main_answer"
+    if role not in registry.roles:
+        role = "interaction_main"
+    spec = registry.get(role)
+    return spec.ref, {"role": role, **route.model_dump(mode="json")}
+
+
+def _provider_settings(settings: Settings, model: str) -> Any:
+    provider = model.split(":", 1)[0] if ":" in model else settings.llm.openai.provider
+    if provider == "anthropic":
+        return settings.llm.anthropic
+    return settings.llm.openai
+
+
+def _evidence_prompt(
+    *,
+    payload: SkillInput,
+    claims: list[dict[str, Any]],
+    visible_rows: Mapping[str, Mapping[str, Any]],
+) -> str:
+    blocks: list[str] = []
+    for claim in claims:
+        chunk_id = str(claim["chunk_id"])
+        row = visible_rows[chunk_id]
+        blocks.append(
+            "\n".join(
+                [
+                    f"[{chunk_id}]",
+                    f"doc_id: {claim.get('doc_id') or row.get('doc_id')}",
+                    f"pages: {claim.get('pages') or row.get('pages')}",
+                    f"s3_claim: {claim['text']}",
+                    f"evidence: {row.get('text') or row.get('api_context') or ''}",
+                ]
+            )
+        )
+    return "\n\n".join(
+        [
+            "You are S5 formula derivation for a vibration engineering assistant.",
+            "Use only supplied S3 claims and visible S2 evidence.",
+            "Return JSON only. Do not include markdown fences.",
+            "Schema: {\"status\":\"ok|insufficient\",\"answer\":\"...\",\"premises\":\"...\",\"minimal_model\":\"...\",\"conclusion\":\"...\",\"derivation_steps\":[{\"id\":\"step_1\",\"source_type\":\"evidence|axiomatic\",\"text\":\"...\",\"chunk_id\":\"...\",\"doc_id\":\"...\",\"pages\":[1],\"asset_ids\":[],\"depends_on\":[]}],\"claims\":[{\"text\":\"...\",\"chunk_id\":\"...\",\"doc_id\":\"...\",\"pages\":[1],\"evidence_type\":\"documented\"}],\"assets\":[],\"warnings\":[]}",
+            "Every evidence step must cite a visible chunk_id. Axiomatic steps must explain algebraic assumptions and may omit chunk_id.",
+            "The step graph must be acyclic. Do not invent formulas, units, parameters, or measured values.",
+            f"query: {payload.user_query}",
+            "evidence:",
+            "\n\n".join(blocks),
+        ]
+    )
+
+
+def _call_llm_client(
+    client: S5LlmClient,
+    *,
+    prompt: str,
+    model: str,
+    payload: SkillInput,
+    claims: list[dict[str, Any]],
+    visible_rows: Mapping[str, Mapping[str, Any]],
+    provider_settings: Any,
+) -> Any:
+    kwargs = {
+        "prompt": prompt,
+        "model": model,
+        "prompt_version": _PROMPT_VERSION,
+        "schema_version": _SCHEMA_VERSION,
+        "temperature": float(provider_settings.temperature),
+        "max_tokens": int(provider_settings.max_tokens),
+        "reasoning_effort": provider_settings.reasoning_effort,
+        "text_verbosity": provider_settings.text_verbosity,
+        "claims": claims,
+        "evidence": [dict(visible_rows[str(claim["chunk_id"])]) for claim in claims],
+        "query": payload.user_query,
+        "mode": "formula_derivation",
+        "timeout": provider_settings.timeout,
+        "task_id": payload.task_id,
+    }
+    if hasattr(client, "derive_formula"):
+        return client.derive_formula(**kwargs)
+    if callable(client):
+        return client(**kwargs)
+    raise TypeError("S5 LLM client must be callable or expose derive_formula().")
+
+
+def _response_mapping(response: Any) -> Mapping[str, Any]:
+    if isinstance(response, Mapping):
+        return response
+    if hasattr(response, "model_dump"):
+        dumped = response.model_dump(mode="python")
+        return dumped if isinstance(dumped, Mapping) else {}
+    if isinstance(response, str):
+        try:
+            parsed = json.loads(response)
+        except json.JSONDecodeError:
+            return {"answer": response}
+        return parsed if isinstance(parsed, Mapping) else {}
+    return {}
+
+
+def _token_cost(response: Mapping[str, Any]) -> int | None:
+    for key in ("token_cost", "total_tokens"):
+        value = response.get(key)
+        if value not in (None, ""):
+            return int(value)
+    for usage_key in ("token_usage", "usage"):
+        usage = response.get(usage_key)
+        if isinstance(usage, Mapping):
+            for key in ("total_tokens", "tokens", "total"):
+                value = usage.get(key)
+                if value not in (None, ""):
+                    return int(value)
+    return None
+
+
+def _cost(response: Mapping[str, Any]) -> dict[str, Any] | None:
+    value = response.get("cost")
+    return dict(value) if isinstance(value, Mapping) else None
+
+
+def _claim_record(claim: S3LlmClaim) -> dict[str, Any]:
+    return claim.model_dump(mode="json")
+
+
+def _step_record(step: S5DerivationStep) -> dict[str, Any]:
+    return step.model_dump(mode="json")
+
+
+def _try_llm_derivation(
+    *,
+    client: S5LlmClient | None,
+    settings: Settings,
+    payload: SkillInput,
+    claims: list[dict[str, Any]],
+    visible_rows: Mapping[str, Mapping[str, Any]],
+    source: Mapping[str, Any],
+) -> _LlmDerivation | None:
+    if client is None:
+        raise RuntimeError("S5 LLM is enabled but no LLM client is configured.")
+    model, route = _role_model(settings, payload)
+    provider_settings = _provider_settings(settings, model)
+    prompt = _evidence_prompt(payload=payload, claims=claims, visible_rows=visible_rows)
+    raw_response = _response_mapping(
+        _call_llm_client(
+            client,
+            prompt=prompt,
+            model=model,
+            payload=payload,
+            claims=claims,
+            visible_rows=visible_rows,
+            provider_settings=provider_settings,
+        )
+    )
+    if raw_response.get("refusal"):
+        raise RuntimeError("S5 LLM refused the request.")
+    response = S5LlmResponse.model_validate(raw_response)
+    if response.status == "insufficient":
+        return None
+    if response.status in {"refusal", "refused"}:
+        raise RuntimeError("S5 LLM refused the request.")
+    required_sections = {
+        "answer": response.answer,
+        "premises": response.premises,
+        "minimal_model": response.minimal_model,
+        "conclusion": response.conclusion,
+    }
+    missing_sections = [key for key, value in required_sections.items() if not value.strip()]
+    if missing_sections:
+        raise RuntimeError("S5 LLM response missing required derivation fields: " + ", ".join(missing_sections))
+    if not response.claims:
+        raise RuntimeError("S5 LLM response did not contain cited claims.")
+    if not response.derivation_steps:
+        raise RuntimeError("S5 LLM response did not contain derivation steps.")
+    steps = [_step_record(step) for step in response.derivation_steps]
+    step_warnings = _validate_derivation_steps(steps)
+    if step_warnings:
+        raise RuntimeError("; ".join(step_warnings))
+    claim_records = [_claim_record(claim) for claim in response.claims]
+    return _LlmDerivation(
+        answer=response.answer.strip(),
+        premises=response.premises.strip(),
+        minimal_model=response.minimal_model.strip(),
+        conclusion=response.conclusion.strip(),
+        derivation_steps=steps,
+        claims=claim_records,
+        assets=[dict(asset) for asset in response.assets if isinstance(asset, Mapping)],
+        citations=_visible_citations(source, claim_records, visible_rows),
+        token_cost=_token_cost(raw_response),
+        cost=_cost(raw_response),
+        warnings=[*response.warnings, f"S5 LLM route: {route['role']} -> {model}."],
+    )
+
+
 def _step_text(step: Mapping[str, Any]) -> str:
     source = step.get("source_type")
     marker = "axiomatic" if source == "axiomatic" else f"evidence: {step.get('chunk_id')}"
@@ -155,6 +407,10 @@ def _step_text(step: Mapping[str, Any]) -> str:
 
 class FormulaDerivationSkill(Skill):
     name = "s5_formula_derivation"
+
+    def __init__(self, *, settings: Settings | None = None, llm_client: S5LlmClient | None = None) -> None:
+        self._settings = settings
+        self._llm_client = llm_client
 
     def run(self, payload: SkillInput) -> SkillOutput:
         if payload.user_mode != "derivation":
@@ -177,6 +433,57 @@ class FormulaDerivationSkill(Skill):
                 warnings=["S5 found no cited claims tied to visible retrieval evidence."],
                 handoff_recommendation="Run S2/S3 with enough cited evidence before S5.",
             )
+
+        active_settings = self._settings or load()
+        llm_warnings: list[str] = []
+        if _llm_enabled(payload, active_settings):
+            try:
+                llm = _try_llm_derivation(
+                    client=self._llm_client,
+                    settings=active_settings,
+                    payload=payload,
+                    claims=claims,
+                    visible_rows=visible_rows,
+                    source=source,
+                )
+            except Exception as exc:  # noqa: BLE001 - LLM S5 must degrade to deterministic S5
+                llm_warnings.append(
+                    f"S5 LLM derivation unavailable; using deterministic fallback: {type(exc).__name__}: {exc}"
+                )
+            else:
+                if llm is not None:
+                    result = {
+                        **dict(structured),
+                        "task_id": payload.task_id,
+                        "mode": "formula_derivation",
+                        "answer": llm.answer,
+                        "premises": llm.premises,
+                        "minimal_model": llm.minimal_model,
+                        "conclusion": llm.conclusion,
+                        "derivation_steps": llm.derivation_steps,
+                        "claims": llm.claims,
+                        "assets": llm.assets,
+                        "synthesis_mode": "llm",
+                        "token_cost": llm.token_cost,
+                        "cost": llm.cost,
+                        "s5_derivation": {
+                            "source_claim_count": len(claims),
+                            "visible_chunk_ids": [str(claim["chunk_id"]) for claim in claims],
+                            "policy": "llm_evidence_and_axiomatic_steps",
+                        },
+                    }
+                    return SkillOutput(
+                        status="ok",
+                        summary=f"S5 formula LLM ok: {len(llm.derivation_steps)} step(s).",
+                        structured_result=result,
+                        citations=llm.citations,
+                        warnings=[
+                            *(list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else []),
+                            *llm.warnings,
+                        ],
+                        handoff_recommendation="Pass S5 output through V2 before V4 rendering.",
+                    )
+                llm_warnings.append("S5 LLM returned insufficient; using deterministic fallback.")
 
         evidence_claim = claims[0]
         chunk_id = str(evidence_claim.get("chunk_id"))
@@ -230,6 +537,8 @@ class FormulaDerivationSkill(Skill):
             "derivation_steps": steps,
             "claims": claims,
             "assets": formula_assets,
+            "synthesis_mode": "deterministic",
+            "token_cost": None,
             "s5_derivation": {
                 "source_claim_count": len(claims),
                 "visible_chunk_ids": [chunk_id],
@@ -241,6 +550,9 @@ class FormulaDerivationSkill(Skill):
             summary=f"S5 formula derivation ok: {len(steps)} step(s).",
             structured_result=result,
             citations=_source_citations(source, claims),
-            warnings=list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else [],
+            warnings=[
+                *(list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else []),
+                *llm_warnings,
+            ],
             handoff_recommendation="Pass S5 output through V2 before V4 rendering.",
         )

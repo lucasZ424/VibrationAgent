@@ -1,3 +1,9 @@
+import json
+from pathlib import Path
+
+from vibration_agent.config import load
+from vibration_agent.llm.budget import BudgetDeniedError
+from vibration_agent.llm.replay import ReplayClient, request_from_kwargs, write_fixture
 from vibration_agent.orchestrator import TutorOrchestrator
 from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 from vibration_agent.skills import CitationCheckSkill, FormulaDerivationSkill
@@ -47,6 +53,24 @@ def _payload(*, user_mode="derivation", s2: dict | None = None, s3: dict | None 
     )
 
 
+def _fixture(name: str) -> dict:
+    path = Path(__file__).resolve().parents[1] / "fixtures" / "llm" / name
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+class FakeS5LlmClient:
+    def __init__(self, response=None, exc: Exception | None = None) -> None:
+        self.response = response
+        self.exc = exc
+        self.calls: list[dict] = []
+
+    def derive_formula(self, **kwargs):
+        self.calls.append(kwargs)
+        if self.exc is not None:
+            raise self.exc
+        return self.response
+
+
 def test_s5_formula_derivation_builds_evidence_and_axiomatic_step_chain():
     output = FormulaDerivationSkill().run(_payload())
 
@@ -69,6 +93,129 @@ def test_s5_formula_derivation_builds_evidence_and_axiomatic_step_chain():
     assert checked.status == "ok"
     assert checked.structured_result["unsupported_claims"] == []
     assert checked.structured_result["citation_check"]["derivation_step_count"] == 2
+
+
+def test_s5_llm_replay_multistep_derivation_passes_v2(tmp_path):
+    # WHY: Obj6 activates replayable S5 formula derivation while V2 remains the
+    # gate for evidence steps and axiomatic steps.
+    payload = _payload()
+    payload.constraints["s5_llm_enabled"] = True
+    response = _fixture("s5_visible_multistep_response.json")
+    probe = FakeS5LlmClient(response)
+    probe_output = FormulaDerivationSkill(llm_client=probe).run(payload)
+    request = request_from_kwargs(task="s5_formula_derivation", schema_version="s5.v1", kwargs=probe.calls[0])
+    write_fixture(tmp_path, request, response)
+
+    s5_output = FormulaDerivationSkill(llm_client=ReplayClient(tmp_path)).run(payload)
+    checked = CitationCheckSkill().run(
+        SkillInput(
+            task_id="t1",
+            user_query="derive stiffness",
+            context={"s2_result": _s2(), "s3_result": s5_output.model_dump(mode="python")},
+            user_mode="derivation",
+        )
+    )
+
+    assert probe_output.status == "ok"
+    assert s5_output.status == "ok"
+    assert s5_output.structured_result["synthesis_mode"] == "llm"
+    assert s5_output.structured_result["token_cost"] == 112
+    assert len(s5_output.structured_result["derivation_steps"]) == 3
+    assert checked.status == "ok"
+    assert checked.structured_result["unsupported_claims"] == []
+    assert checked.structured_result["citation_check"]["derivation_step_count"] == 3
+
+
+def test_s5_llm_two_node_cycle_is_rejected_and_falls_back():
+    client = FakeS5LlmClient(_fixture("s5_cycle_response.json"))
+    payload = _payload()
+    payload.constraints["s5_llm_enabled"] = True
+
+    output = FormulaDerivationSkill(llm_client=client).run(payload)
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("dependency cycle" in warning for warning in output.warnings)
+
+
+def test_s5_llm_unsupported_numeric_step_is_blocked_by_v2():
+    client = FakeS5LlmClient(_fixture("s5_fabricated_step_number_response.json"))
+    payload = _payload()
+    payload.constraints["s5_llm_enabled"] = True
+
+    s5_output = FormulaDerivationSkill(llm_client=client).run(payload)
+    checked = CitationCheckSkill().run(
+        SkillInput(
+            task_id="t1",
+            user_query="derive stiffness",
+            context={"s2_result": _s2(), "s3_result": s5_output.model_dump(mode="python")},
+            user_mode="derivation",
+        )
+    )
+
+    assert s5_output.structured_result["synthesis_mode"] == "llm"
+    assert checked.status == "insufficient"
+    assert checked.structured_result["answer"] == ""
+    assert "999n" in checked.structured_result["unsupported_claims"][0]["reasons"][-1]
+    assert checked.structured_result["s5_derivation"]["policy"] == "llm_evidence_and_axiomatic_steps"
+    assert "minimal_model" not in checked.structured_result
+
+
+def test_default_config_keeps_s5_llm_disabled(monkeypatch):
+    monkeypatch.delenv("S5_LLM_ENABLED", raising=False)
+
+    assert load().llm.s5_enabled is False
+
+
+def test_s5_llm_disabled_uses_deterministic_path_without_calling_client():
+    client = FakeS5LlmClient(_fixture("s5_visible_multistep_response.json"))
+    payload = _payload()
+    payload.constraints["s5_llm_enabled"] = False
+
+    output = FormulaDerivationSkill(llm_client=client).run(payload)
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert client.calls == []
+
+
+def test_s5_llm_replay_miss_falls_back_to_deterministic_s5(tmp_path):
+    payload = _payload()
+    payload.constraints["s5_llm_enabled"] = True
+
+    output = FormulaDerivationSkill(llm_client=ReplayClient(tmp_path)).run(payload)
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("ReplayMissError" in warning for warning in output.warnings)
+
+
+def test_s5_llm_insufficient_response_uses_clean_fallback_branch():
+    client = FakeS5LlmClient({"status": "insufficient", "warnings": ["model needs more evidence"]})
+    payload = _payload()
+    payload.constraints["s5_llm_enabled"] = True
+
+    output = FormulaDerivationSkill(llm_client=client).run(payload)
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("S5 LLM returned insufficient" in warning for warning in output.warnings)
+    assert not any("ValidationError" in warning for warning in output.warnings)
+
+
+def test_s5_llm_schema_failure_refusal_and_budget_deny_fall_back():
+    for client in (
+        FakeS5LlmClient({"answer": "F = k x [c1].", "premises": "F = k x [c1]."}),
+        FakeS5LlmClient({"refusal": True, "answer": "", "claims": []}),
+        FakeS5LlmClient(exc=BudgetDeniedError("per-task token budget exceeded")),
+    ):
+        payload = _payload()
+        payload.constraints["s5_llm_enabled"] = True
+
+        output = FormulaDerivationSkill(llm_client=client).run(payload)
+
+        assert output.status == "ok"
+        assert output.structured_result["synthesis_mode"] == "deterministic"
 
 
 def test_s5_formula_derivation_skips_without_visible_evidence():

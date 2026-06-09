@@ -24,7 +24,7 @@ Every Obj must record:
 3. V2 LLM-output safety gate pre-hardening: done
 4. S3 real LLM synthesis: done
 5. S4 real engineering analysis: done
-6. S5 real formula derivation and cycle-check hardening: pending
+6. S5 real formula derivation and cycle-check hardening: done
 7. Claude latest / Claude Opus 4.8 supervisor trial and correction executor: pending
 8. Golden-output eval minimum set and replay regression gate: pending
 9. Manual live validation and capture lane: pending
@@ -383,3 +383,68 @@ Every Obj must record:
   tests passed.
 - Full non-large suite passed.
 - Obj6 may start after user review of Obj5.
+
+## Obj6 Notes
+
+- Added default-off S5 LLM enablement through `LlmSettings.s5_enabled`,
+  `configs/llm.yaml`, and `S5_LLM_ENABLED`.
+- Added `S5DerivationStep` and `S5LlmResponse` as the validated response
+  contract for S5 LLM derivation. Responses must include `answer`, `premises`,
+  `minimal_model`, `conclusion`, `derivation_steps[]`, and cited `claims[]`.
+- S5 now accepts an injected replay/live `llm_client` and calls
+  `derive_formula()` with prompt version `s5_formula_derivation.v1`, schema
+  version `s5.v1`, model settings, task id, query, visible claims, and visible
+  evidence.
+- S5 LLM step graphs reuse the existing structural validator. Missing
+  dependencies, self-loops, and multi-node cycles reject the LLM response and
+  degrade to deterministic S5.
+- V2 now checks significant numbers/units/symbols in LLM evidence derivation
+  steps against the cited evidence chunk. Axiomatic steps remain citation-free
+  but must be marked `source_type="axiomatic"`.
+- Replay miss, budget denial, refusal, schema validation failure, model
+  insufficient, and cycle/missing-dependency failures degrade to deterministic
+  S5 with warnings.
+- Added small S5 LLM fixtures for visible multi-step derivation, two-node cycle,
+  and fabricated evidence-step numeric output.
+- Obj6 issue log review is recorded in `docs/issue_log_p3/issues_obj6.txt`.
+
+## Obj6 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py -q -p no:cacheprovider`
+- Result: passed, 17 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_v4_style_skill.py tests\unit\test_tutor_orchestrator.py tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_budget.py tests\unit\test_s4_engineering.py -q -p no:cacheprovider`
+- Result: passed, 79 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj6-nonlarge -p no:cacheprovider`
+- Result: passed, 359 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py -q -p no:cacheprovider`
+- Result: passed, 17 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py -q -p no:cacheprovider`
+- Result: passed, 18 tests.
+
+## Obj6 Residual Risk
+
+- Live OpenAI S5 behavior remains unvalidated by CI and is deferred to the
+  manual capture lane.
+- S5 derivation is still not a formal symbolic proof engine. Axiomatic steps are
+  trusted when structurally valid and may need Obj8 eval calibration.
+- The cycle detector rejects cyclic derivations correctly; its warning text may
+  over-label pure dependents of a cycle, but the invalid LLM derivation is still
+  blocked before rendering.
+- LaTeX/MathML rendering and full symbol-proof validation remain out of Phase-3
+  scope as documented in the development order.
+
+## Obj6 Post-Review Fixes
+
+- Reconciled V2's unsupported-output safe-key allowlist with Obj6's actual
+  metadata field by replacing the dead `s5_analysis` entry with
+  `s5_derivation`.
+- Added S5 coverage proving V2 unsupported-output blocks still preserve safe S5
+  metadata while stripping unsupported derivation prose such as `minimal_model`.
+
+## Obj6 Next Obj Gate
+
+- Obj6 focused replay/provider seam tests and nearby S5/V2/V4 compatibility
+  tests passed.
+- Full non-large suite passed.
+- Obj7 may start after user review of Obj6.

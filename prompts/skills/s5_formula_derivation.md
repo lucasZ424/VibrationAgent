@@ -19,3 +19,27 @@ Rules:
   `insufficient`.
 
 V2 must check S5 output before V4 renders it.
+
+## Phase-3 Obj6 LLM Contract
+
+LLM-backed S5 is disabled by default. It may run only when `s5_llm_enabled=true`
+or configuration enables it, and a replay/live `llm_client` is injected.
+
+When active, return JSON only:
+
+- `status`: `ok`, `insufficient`, `refusal`, or `refused`
+- `answer`
+- `premises`
+- `minimal_model`
+- `conclusion`
+- `derivation_steps[]`
+- `claims[]`
+- optional `assets[]`
+- optional `warnings`
+
+Each derivation step must include `id`, `source_type`, `text`, and
+`depends_on`. Evidence steps must include a visible `chunk_id`; axiomatic steps
+must explicitly state the algebraic assumption and may omit citations. The step
+graph must be acyclic. Runtime degrades to deterministic S5 on replay miss,
+timeout, budget denial, refusal, schema validation failure, missing dependency,
+or dependency cycle.

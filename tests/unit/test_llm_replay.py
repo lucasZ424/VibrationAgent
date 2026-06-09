@@ -107,6 +107,20 @@ def test_replay_request_builder_supports_s4_analyze_engineering_shape():
     assert request.request_body["prompt"] == "Analyze S4."
 
 
+def test_replay_request_builder_supports_s5_derive_formula_shape():
+    request = request_from_kwargs(
+        task="s5_formula_derivation",
+        schema_version="s5.v1",
+        kwargs={"model": "openai:gpt-5.5", "prompt": "Derive S5.", "prompt_version": "s5_formula_derivation.v1"},
+    )
+
+    assert request.provider == "openai"
+    assert request.model == "gpt-5.5"
+    assert request.prompt_version == "s5_formula_derivation.v1"
+    assert request.schema_version == "s5.v1"
+    assert request.request_body["prompt"] == "Derive S5."
+
+
 def test_replay_hash_mismatch_fails_loud():
     fixture_dir = _case_dir("mismatch")
     request = _request()

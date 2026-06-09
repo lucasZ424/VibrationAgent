@@ -30,3 +30,15 @@ S5 must pass its output to V2 before V4 renders the final answer.
 Obj15 note: the runtime is deterministic scaffolding. It threads formula asset
 references and renders available formula text, but deep symbolic algebra and
 LaTeX/MathML generation are future model-backed capabilities.
+
+Phase-3 Obj6 adds an optional replay/live-client derivation branch through an
+injected `llm_client`. It remains disabled by default. Enabling the flag without
+an injected client degrades to deterministic S5 with a warning.
+
+LLM responses must be JSON with `status`, `answer`, `premises`,
+`minimal_model`, `conclusion`, `derivation_steps[]`, `claims[]`, optional
+`assets[]`, and optional `warnings`. Evidence steps must cite visible S2/S3
+chunks; axiomatic steps may omit citations but must state their algebraic
+assumption. The derivation dependency graph must be acyclic. V2 checks S5 output
+before V4, including unsupported number/unit/symbol checks for LLM evidence
+steps.

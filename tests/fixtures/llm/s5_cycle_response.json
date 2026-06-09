@@ -1,0 +1,39 @@
+{
+  "answer": "Premise: the cited relation is F = k x [c1].",
+  "claims": [
+    {
+      "chunk_id": "c1",
+      "doc_id": "d1",
+      "evidence_type": "documented",
+      "pages": [4],
+      "text": "The cited formula is F = k x for linear stiffness."
+    }
+  ],
+  "conclusion": "Conclusion: the cyclic derivation is invalid.",
+  "derivation_steps": [
+    {
+      "chunk_id": "c1",
+      "depends_on": ["step_2"],
+      "doc_id": "d1",
+      "id": "step_1",
+      "pages": [4],
+      "source_type": "evidence",
+      "text": "Use the cited relation F = k x."
+    },
+    {
+      "depends_on": ["step_1"],
+      "id": "step_2",
+      "source_type": "axiomatic",
+      "text": "Algebraically rearrange the cited relation."
+    }
+  ],
+  "minimal_model": "F = k x",
+  "premises": "Premise: use only the cited linear-stiffness relation [c1].",
+  "status": "ok",
+  "token_cost": 91,
+  "usage": {
+    "input_tokens": 58,
+    "output_tokens": 33,
+    "total_tokens": 91
+  }
+}

@@ -127,6 +127,29 @@ class S4LlmResponse(BaseModel):
     warnings: list[str] = Field(default_factory=list)
 
 
+class S5DerivationStep(BaseModel):
+    id: str = Field(min_length=1)
+    source_type: Literal["evidence", "axiomatic"]
+    text: str = Field(min_length=1)
+    depends_on: list[str] = Field(default_factory=list)
+    chunk_id: str | None = None
+    doc_id: str | None = None
+    pages: list[int] | None = None
+    asset_ids: list[str] = Field(default_factory=list)
+
+
+class S5LlmResponse(BaseModel):
+    status: Literal["ok", "insufficient", "refusal", "refused"] = "ok"
+    answer: str = ""
+    premises: str = ""
+    minimal_model: str = ""
+    conclusion: str = ""
+    derivation_steps: list[S5DerivationStep] = Field(default_factory=list)
+    claims: list[S3LlmClaim] = Field(default_factory=list)
+    assets: list[dict[str, Any]] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class DocumentClassification(BaseModel):
     doc_id: str
     source_path: str

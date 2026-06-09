@@ -211,3 +211,39 @@ Rollback: remove `S4LlmResponse`, remove `LlmSettings.s4_enabled` and the YAML
 clearing only `answer`, remove Obj5 S4 fixtures/tests, restore the old S4
 insufficient/schema behavior, and remove S4 LLM `token_cost` / `cost`
 structured result additions.
+
+### Obj6 - S5 real formula derivation and cycle-check hardening (2026-06-09)
+
+Runtime/provider contract additions:
+
+- Added `LlmSettings.s5_enabled`, `configs/llm.yaml` default `s5_enabled:
+  false`, and `S5_LLM_ENABLED` environment override.
+- Added `S5DerivationStep` and `S5LlmResponse` as the S5 LLM response contract.
+  S5 LLM output must include `answer`, `premises`, `minimal_model`,
+  `conclusion`, `derivation_steps[]`, and cited `claims[]`.
+- S5 LLM requests now pass prompt version `s5_formula_derivation.v1`, schema
+  version `s5.v1`, model settings, task id, query, visible S3 claims, and
+  visible evidence through the Obj1 `derive_formula()` seam.
+- S5 LLM `structured_result` remains additive and may include `token_cost` and
+  `cost` when provider/replay metadata supplies usage and local cost estimates.
+- S5 LLM derivation steps reuse the existing step validator; invalid source
+  types, missing dependencies, self-loops, and multi-node dependency cycles
+  reject the LLM response and degrade to deterministic S5.
+- V2 now applies LLM-mode significant-item checks to evidence derivation steps,
+  while axiomatic steps remain allowed without citations.
+- Added S5 LLM response fixtures under `tests/fixtures/llm/s5_*.json` for
+  replay-visible multi-step derivation, two-node cycle rejection, and fabricated
+  evidence-step numeric output.
+- Post-review correction: V2's unsupported-output safe-key allowlist now keeps
+  Obj6's actual `s5_derivation` metadata field instead of the unused
+  `s5_analysis` placeholder.
+
+No database migration was added. The default S5 path remains deterministic while
+`s5_enabled` is false or no injected replay/live client is available.
+
+Rollback: remove `S5DerivationStep` / `S5LlmResponse`, remove
+`LlmSettings.s5_enabled` and the YAML / env override, remove the S5
+prompt/request metadata changes, restore V2 derivation-step checking to
+visibility/source-type only, restore the old V2 safe-key placeholder if needed,
+remove Obj6 S5 fixtures/tests, and remove S5 LLM `token_cost` / `cost`
+structured result additions.
