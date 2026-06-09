@@ -17,12 +17,14 @@ from vibration_agent.agent import ModelRegistry, route_task
 from vibration_agent.config import Settings, load
 from vibration_agent.knowledge.evidence import citation_from_evidence, retrieval_evidence_row
 from vibration_agent.retrieval.bm25 import tokenize
-from vibration_agent.schemas import Citation, SkillInput, SkillOutput
+from vibration_agent.schemas import Citation, S3LlmClaim, S3LlmResponse, SkillInput, SkillOutput
 
 from .base import Skill
 
 _SUPPORTED_MODES = {"whole_doc_summary", "section_summary", "qa"}
 _DEFAULT_MAX_CLAIMS = {"qa": 4, "section_summary": 5, "whole_doc_summary": 6}
+_PROMPT_VERSION = "s3_qa_summary.v1"
+_SCHEMA_VERSION = "s3.v1"
 S3Runner = Callable[[list[dict[str, Any]], SkillInput, str, str], tuple[str, list[dict[str, Any]], list[str]]]
 S3LlmClient = Any
 
@@ -33,6 +35,7 @@ class _LlmSynthesis:
     claims: list[dict[str, Any]]
     citations: list[Citation]
     token_cost: int | None
+    cost: dict[str, Any] | None
     warnings: list[str]
 
 
@@ -252,6 +255,7 @@ def _evidence_prompt(
                     f"[{row['chunk_id']}]",
                     f"doc_id: {row['doc_id']}",
                     f"pages: {row.get('pages')}",
+                    f"evidence_type: {row.get('evidence_type', 'documented')}",
                     str(row.get("text") or ""),
                 ]
             )
@@ -260,7 +264,11 @@ def _evidence_prompt(
         [
             "You are S3 evidence-bound synthesis for a vibration engineering assistant.",
             "Use only the supplied evidence blocks.",
-            "Every claim must include a visible [chunk_id] citation from the supplied evidence.",
+            "Return JSON only. Do not include markdown fences.",
+            "Schema: {\"status\":\"ok|insufficient\",\"answer\":\"...\",\"claims\":[{\"text\":\"...\",\"chunk_id\":\"...\",\"doc_id\":\"...\",\"pages\":[1],\"evidence_type\":\"documented\"}],\"warnings\":[]}",
+            "Every claim must include text, chunk_id, doc_id, pages, and evidence_type.",
+            "Every claim must cite a visible [chunk_id] from the supplied evidence in the answer.",
+            "Use only chunk_id values present in the supplied evidence blocks.",
             "If evidence is insufficient, return insufficient instead of filling gaps.",
             f"mode: {mode}",
             f"language: {language}",
@@ -281,28 +289,36 @@ def _call_llm_client(
     mode: str,
     language: str,
     timeout: float,
+    provider_settings: Any,
 ) -> Any:
+    kwargs = {
+        "prompt": prompt,
+        "model": model,
+        "prompt_version": _PROMPT_VERSION,
+        "schema_version": _SCHEMA_VERSION,
+        "temperature": float(provider_settings.temperature),
+        "max_tokens": int(provider_settings.max_tokens),
+        "reasoning_effort": provider_settings.reasoning_effort,
+        "text_verbosity": provider_settings.text_verbosity,
+        "evidence": rows,
+        "query": payload.user_query,
+        "mode": mode,
+        "language": language,
+        "timeout": timeout,
+        "task_id": payload.task_id,
+    }
     if hasattr(client, "synthesize"):
-        return client.synthesize(
-            prompt=prompt,
-            model=model,
-            evidence=rows,
-            query=payload.user_query,
-            mode=mode,
-            language=language,
-            timeout=timeout,
-        )
+        return client.synthesize(**kwargs)
     if callable(client):
-        return client(
-            prompt=prompt,
-            model=model,
-            evidence=rows,
-            query=payload.user_query,
-            mode=mode,
-            language=language,
-            timeout=timeout,
-        )
+        return client(**kwargs)
     raise TypeError("S3 LLM client must be callable or expose synthesize().")
+
+
+def _provider_settings(settings: Settings, model: str) -> Any:
+    provider = model.split(":", 1)[0] if ":" in model else settings.llm.openai.provider
+    if provider == "anthropic":
+        return settings.llm.anthropic
+    return settings.llm.openai
 
 
 def _response_mapping(response: Any) -> Mapping[str, Any]:
@@ -320,6 +336,10 @@ def _response_mapping(response: Any) -> Mapping[str, Any]:
     return {}
 
 
+def _llm_response(response: Mapping[str, Any]) -> S3LlmResponse:
+    return S3LlmResponse.model_validate(response)
+
+
 def _token_cost(response: Mapping[str, Any]) -> int | None:
     for key in ("token_cost", "total_tokens"):
         value = response.get(key)
@@ -331,49 +351,43 @@ def _token_cost(response: Mapping[str, Any]) -> int | None:
             value = usage.get(key)
             if value not in (None, ""):
                 return int(value)
+    usage = response.get("usage")
+    if isinstance(usage, Mapping):
+        for key in ("total_tokens", "tokens", "total"):
+            value = usage.get(key)
+            if value not in (None, ""):
+                return int(value)
     return None
 
 
-def _claim_text(value: Mapping[str, Any]) -> str:
-    for key in ("text", "claim", "content"):
-        text = value.get(key)
-        if isinstance(text, str) and text.strip():
-            return text.strip()
-    return ""
+def _cost(response: Mapping[str, Any]) -> dict[str, Any] | None:
+    value = response.get("cost")
+    return dict(value) if isinstance(value, Mapping) else None
 
 
-def _claim_chunk_id(value: Mapping[str, Any]) -> str | None:
-    for key in ("chunk_id", "citation", "source_chunk_id"):
-        chunk_id = value.get(key)
-        if chunk_id:
-            return str(chunk_id).strip("[]")
-    citations = value.get("citations")
-    if isinstance(citations, list) and citations:
-        first = citations[0]
-        if isinstance(first, Mapping) and first.get("chunk_id"):
-            return str(first["chunk_id"])
-        if isinstance(first, str):
-            return first.strip("[]")
-    return None
+def _fallback_evidence(claim: S3LlmClaim) -> dict[str, Any]:
+    return {
+        "evidence_kind": "text",
+        "chunk_id": claim.chunk_id,
+        "doc_id": claim.doc_id,
+        "pages": claim.pages,
+        "text": "",
+        "evidence_type": claim.evidence_type,
+        "confidence": 1.0,
+        "metadata": {"s3_llm_visible_evidence": False},
+        "assets": [],
+    }
 
 
-def _llm_claims(response: Mapping[str, Any], rows_by_chunk: Mapping[str, dict[str, Any]]) -> list[dict[str, Any]]:
-    raw_claims = response.get("claims")
-    if not isinstance(raw_claims, list):
-        return []
+def _llm_claims(response: S3LlmResponse, rows_by_chunk: Mapping[str, dict[str, Any]]) -> list[dict[str, Any]]:
     claims: list[dict[str, Any]] = []
-    for raw in raw_claims:
-        if not isinstance(raw, Mapping):
-            continue
-        text = _claim_text(raw)
-        chunk_id = _claim_chunk_id(raw)
-        if not text or not chunk_id or chunk_id not in rows_by_chunk:
-            continue
+    for raw in response.claims:
+        evidence = rows_by_chunk.get(raw.chunk_id) or _fallback_evidence(raw)
         claims.append(
             {
-                "text": text,
-                "evidence": rows_by_chunk[chunk_id],
-                "assets": rows_by_chunk[chunk_id].get("assets", []),
+                "text": raw.text,
+                "evidence": evidence,
+                "assets": evidence.get("assets", []),
                 "score": 1.0,
                 "order": (len(claims), 0),
             }
@@ -402,8 +416,9 @@ def _try_llm_synthesis(
     if client is None:
         raise RuntimeError("S3 LLM is enabled but no LLM client is configured.")
     model, route = _role_model(settings, payload)
+    provider_settings = _provider_settings(settings, model)
     prompt = _evidence_prompt(payload=payload, rows=rows, mode=mode, language=language)
-    response = _response_mapping(
+    raw_response = _response_mapping(
         _call_llm_client(
             client,
             prompt=prompt,
@@ -413,11 +428,17 @@ def _try_llm_synthesis(
             mode=mode,
             language=language,
             timeout=settings.llm.s3_timeout,
+            provider_settings=provider_settings,
         )
     )
-    if response.get("status") == "insufficient":
+    if raw_response.get("refusal"):
+        raise RuntimeError("S3 LLM refused the request.")
+    response = _llm_response(raw_response)
+    if response.status == "insufficient":
         return None
-    answer = str(response.get("answer") or "").strip()
+    if response.status in {"refusal", "refused"}:
+        raise RuntimeError("S3 LLM refused the request.")
+    answer = response.answer.strip()
     rows_by_chunk = {str(row["chunk_id"]): row for row in rows}
     claims = _llm_claims(response, rows_by_chunk)
     if not answer or not claims:
@@ -425,12 +446,13 @@ def _try_llm_synthesis(
     citation_warnings = _validate_llm_answer(answer, claims)
     if citation_warnings:
         raise RuntimeError("; ".join(citation_warnings))
-    warnings = list(response.get("warnings", [])) if isinstance(response.get("warnings"), list) else []
+    warnings = list(response.warnings)
     return _LlmSynthesis(
         answer=answer,
         claims=claims,
         citations=_citations(claims),
-        token_cost=_token_cost(response),
+        token_cost=_token_cost(raw_response),
+        cost=_cost(raw_response),
         warnings=[*warnings, f"S3 LLM route: {route['role']} -> {model}."],
     )
 
@@ -522,6 +544,9 @@ def _citations(claims: list[dict[str, Any]]) -> list[Citation]:
     citations: list[Citation] = []
     seen: set[str] = set()
     for claim in claims:
+        metadata = claim["evidence"].get("metadata")
+        if isinstance(metadata, Mapping) and metadata.get("s3_llm_visible_evidence") is False:
+            continue
         citation = citation_from_evidence(claim["evidence"])
         if citation.chunk_id in seen:
             continue
@@ -538,7 +563,7 @@ def _claim_record(claim: Mapping[str, Any]) -> dict[str, Any]:
         "chunk_id": evidence["chunk_id"],
         "doc_id": evidence["doc_id"],
         "pages": evidence.get("pages"),
-        "evidence_type": "documented",
+        "evidence_type": evidence.get("evidence_type") or "documented",
         "assets": assets,
         "asset_ids": [asset.get("asset_id") for asset in assets if isinstance(asset, Mapping) and asset.get("asset_id")],
     }
@@ -620,6 +645,7 @@ class QASummarySkill(Skill):
                             "unsupported_claims": [],
                             "synthesis_mode": "llm",
                             "token_cost": llm.token_cost,
+                            "cost": llm.cost,
                         },
                         citations=llm.citations,
                         warnings=[*evidence_warnings, *llm.warnings],

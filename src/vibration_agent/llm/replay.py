@@ -87,19 +87,19 @@ class ReplayClient:
         return fixture.response
 
     def synthesize(self, **kwargs: Any) -> dict[str, Any]:
-        return self.complete(_request_from_kwargs(task="s3_qa_summary", schema_version="s3.v1", kwargs=kwargs))
+        return self.complete(request_from_kwargs(task="s3_qa_summary", schema_version="s3.v1", kwargs=kwargs))
 
     def analyze_engineering(self, **kwargs: Any) -> dict[str, Any]:
-        return self.complete(_request_from_kwargs(task="s4_engineering_analysis", schema_version="s4.v1", kwargs=kwargs))
+        return self.complete(request_from_kwargs(task="s4_engineering_analysis", schema_version="s4.v1", kwargs=kwargs))
 
     def derive_formula(self, **kwargs: Any) -> dict[str, Any]:
-        return self.complete(_request_from_kwargs(task="s5_formula_derivation", schema_version="s5.v1", kwargs=kwargs))
+        return self.complete(request_from_kwargs(task="s5_formula_derivation", schema_version="s5.v1", kwargs=kwargs))
 
     def review(self, **kwargs: Any) -> dict[str, Any]:
-        return self.complete(_request_from_kwargs(task="supervisor_review", schema_version="supervisor.v1", kwargs=kwargs))
+        return self.complete(request_from_kwargs(task="supervisor_review", schema_version="supervisor.v1", kwargs=kwargs))
 
     def correct(self, **kwargs: Any) -> dict[str, Any]:
-        return self.complete(_request_from_kwargs(task="supervisor_correction", schema_version="correction.v1", kwargs=kwargs))
+        return self.complete(request_from_kwargs(task="supervisor_correction", schema_version="correction.v1", kwargs=kwargs))
 
 
 class RecordingClient:
@@ -138,7 +138,7 @@ def write_fixture(fixture_dir: str | Path, request: LlmRequest, response: Mappin
     return path
 
 
-def _request_from_kwargs(*, task: str, schema_version: str, kwargs: Mapping[str, Any]) -> LlmRequest:
+def request_from_kwargs(*, task: str, schema_version: str, kwargs: Mapping[str, Any]) -> LlmRequest:
     provider, model = _split_model_ref(str(kwargs.get("model") or "unknown:unknown"))
     return LlmRequest(
         provider=provider,
@@ -151,6 +151,10 @@ def _request_from_kwargs(*, task: str, schema_version: str, kwargs: Mapping[str,
         reasoning_effort=kwargs.get("reasoning_effort"),
         text_verbosity=kwargs.get("text_verbosity"),
     )
+
+
+def _request_from_kwargs(*, task: str, schema_version: str, kwargs: Mapping[str, Any]) -> LlmRequest:
+    return request_from_kwargs(task=task, schema_version=schema_version, kwargs=kwargs)
 
 
 def _split_model_ref(value: str) -> tuple[str, str]:
@@ -194,6 +198,7 @@ __all__ = [
     "ReplayClient",
     "ReplayMissError",
     "fixture_metadata",
+    "request_from_kwargs",
     "stable_request_hash",
     "write_fixture",
 ]

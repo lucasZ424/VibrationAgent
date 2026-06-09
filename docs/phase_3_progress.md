@@ -1,6 +1,6 @@
 # Phase 3 Progress
 
-Updated: 2026-06-08
+Updated: 2026-06-09
 
 ## Execution Model
 
@@ -22,7 +22,7 @@ Every Obj must record:
 1. Provider client and record/replay baseline: done
 2. Token budget and cost estimation: done
 3. V2 LLM-output safety gate pre-hardening: done
-4. S3 real LLM synthesis: pending
+4. S3 real LLM synthesis: done
 5. S4 real engineering analysis: pending
 6. S5 real formula derivation and cycle-check hardening: pending
 7. Claude latest / Claude Opus 4.8 supervisor trial and correction executor: pending
@@ -243,3 +243,74 @@ Every Obj must record:
 - Obj3 focused and nearby compatibility tests passed.
 - Full non-large suite passed.
 - Obj4 may start after user review of Obj3.
+
+## Obj4 Notes
+
+- S3 LLM synthesis now sends replay/live requests through the Obj1 client seam
+  with prompt version `s3_qa_summary.v1`, schema version `s3.v1`, model,
+  temperature, `max_tokens`, reasoning effort, text verbosity, timeout, task id,
+  query, mode, language, prompt, and evidence bound into the replay request body.
+- The S3 prompt contract now requires JSON output with `status`, `answer`,
+  `claims[]`, and optional `warnings`. Each claim must carry `text`, `chunk_id`,
+  `doc_id`, `pages`, and `evidence_type`.
+- S3 preserves structured LLM claims that cite unknown chunks instead of
+  silently dropping them, so V2 can block invisible citations before V4.
+- Provider cost metadata is propagated from LLM responses into S3
+  `structured_result.cost`; deterministic S3 still leaves `token_cost` and
+  `cost` null.
+- Replay miss, timeout, quota/runtime exception, budget denial, refusal, schema
+  parse failure, and model-insufficient responses continue to degrade to the
+  deterministic S3 path with warnings.
+- Added small S3 LLM response fixtures for visible citation, invisible chunk,
+  and fabricated numeric cases.
+- `docs/issue_log_p3/issues_obj4.txt` was not generated in this implementation
+  pass; Obj4 issue log remains pending user review.
+
+## Obj4 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s3_llm_synthesis.py -q -p no:cacheprovider`
+- Result: passed, 14 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py -q -p no:cacheprovider`
+- Result: passed, 18 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_tutor_orchestrator.py tests\unit\test_v4_style_skill.py tests\unit\test_qa_logs.py -q -p no:cacheprovider`
+- Result: passed, 38 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_budget.py -q -p no:cacheprovider`
+- Result: passed, 22 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj4-nonlarge -p no:cacheprovider`
+- Result: passed, 338 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s3_llm_synthesis.py -q -p no:cacheprovider`
+- Result: passed, 16 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_llm_replay.py tests\unit\test_v2_citation_check.py -q -p no:cacheprovider`
+- Result: passed, 26 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_s3_qa_summary_skill.py -q -p no:cacheprovider`
+- Result: passed, 15 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj4-postreview -p no:cacheprovider`
+- Result: passed, 340 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+
+## Obj4 Residual Risk
+
+- Live OpenAI S3 behavior remains unvalidated by CI and is still deferred to the
+  manual capture lane.
+- V2's LLM-mode significant-item check is intentionally string-based and can
+  over-block legitimate paraphrases or rounded values; Obj8 eval remains the
+  calibration point.
+
+## Obj4 Post-Review Fixes
+
+- Added `S3LlmClaim` and `S3LlmResponse` schemas and routed S3 LLM parsing
+  through that validated response shape. Missing mandatory claim fields now
+  raise validation errors and fall back to deterministic S3.
+- Kept invisible-chunk LLM claims available for V2, but stopped emitting
+  pre-V2 `Citation` objects for those invisible chunks.
+- Added public `request_from_kwargs()` for replay request construction and
+  updated Obj4 replay tests to avoid importing the private helper.
+- Added tests for schema failure and refusal-flag fallback.
+
+## Obj4 Next Obj Gate
+
+- Obj4 focused replay/provider seam tests and nearby S3/V2/V4 compatibility
+  tests passed.
+- Full non-large suite passed.
+- Obj5 may start after user review of Obj4.

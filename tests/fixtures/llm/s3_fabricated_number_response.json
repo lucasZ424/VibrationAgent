@@ -1,0 +1,19 @@
+{
+  "answer": "Critical speed is 50 Hz and amplifies rotor response [c1].",
+  "claims": [
+    {
+      "chunk_id": "c1",
+      "doc_id": "doc1",
+      "evidence_type": "documented",
+      "pages": [1],
+      "text": "Critical speed is 50 Hz and amplifies rotor response."
+    }
+  ],
+  "status": "ok",
+  "token_cost": 72,
+  "usage": {
+    "input_tokens": 44,
+    "output_tokens": 28,
+    "total_tokens": 72
+  }
+}

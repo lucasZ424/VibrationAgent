@@ -28,10 +28,16 @@ S3 requires retrieved text evidence from S2. Preferred input is
 ## Answering Model
 
 The default S3 path produces cited sentence selections from retrieved chunks.
-Phase-2 Obj9 adds an explicitly feature-flagged LLM synthesis path. It is not
-the default until V2 citation checking or an equivalent citation interception
-layer is active in the main chain. The feature flag only enables the branch; a
-runtime `llm_client` must still be injected by a future provider integration.
+Phase-3 Obj4 adds a replay/live-client synthesis path through the injected
+`llm_client`. It remains disabled by default. The feature flag only enables the
+branch; a runtime client must still be injected, and replay/live errors degrade
+to deterministic S3.
+
+LLM responses must be JSON with `status`, `answer`, `claims[]`, and optional
+`warnings`. Each claim must include `text`, `chunk_id`, `doc_id`, `pages`, and
+`evidence_type`. S3 preserves structured LLM claims and the orchestrator sends
+them through V2 before V4, so invisible citations and fabricated significant
+numbers/units/symbols are stripped before the final answer.
 
 ## Guardrails
 
@@ -39,6 +45,8 @@ runtime `llm_client` must still be injected by a future provider integration.
 - Never fill retrieval gaps with model-world knowledge.
 - Every returned claim must be tied to a documented chunk citation.
 - LLM-backed claims must include visible `[chunk_id]` references in the answer.
+- LLM-backed claims must use only visible S2 `chunk_id` values; V2 is the final
+  enforcement layer.
 - Match the dominant source language.
 - Keep S4 engineering analysis and S5 formula derivation out of S3; they run as separate optional skills after S3.
 

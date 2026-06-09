@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from vibration_agent.config import load
+from vibration_agent.llm.budget import BudgetDeniedError
+from vibration_agent.llm.replay import ReplayClient, request_from_kwargs, write_fixture
 from vibration_agent.orchestrator import TutorOrchestrator
 from vibration_agent.schemas import SkillInput, SkillOutput
-from vibration_agent.skills import QASummarySkill
+from vibration_agent.skills import CitationCheckSkill, QASummarySkill
 from vibration_agent.skills.base import Skill
 
 
@@ -21,6 +26,11 @@ def _evidence(chunk_id: str = "c1", text: str = "Critical speed amplifies rotor 
         "assets": [],
         "metadata": {},
     }
+
+
+def _fixture(name: str) -> dict:
+    path = Path(__file__).resolve().parents[1] / "fixtures" / "llm" / name
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 class FakeLlmClient:
@@ -61,8 +71,17 @@ def test_s3_llm_synthesis_ok_requires_visible_chunk_citations():
     client = FakeLlmClient(
         {
             "answer": "Rotor response is amplified near critical speed [c1].",
-            "claims": [{"text": "Rotor response is amplified near critical speed.", "chunk_id": "c1"}],
+            "claims": [
+                {
+                    "text": "Rotor response is amplified near critical speed.",
+                    "chunk_id": "c1",
+                    "doc_id": "doc1",
+                    "pages": [1],
+                    "evidence_type": "documented",
+                }
+            ],
             "token_usage": {"total_tokens": 42},
+            "cost": {"provider": "openai", "model": "gpt-5.5", "total_tokens": 42, "source": "local_estimate"},
         }
     )
 
@@ -74,10 +93,94 @@ def test_s3_llm_synthesis_ok_requires_visible_chunk_citations():
     assert output.status == "ok"
     assert output.structured_result["synthesis_mode"] == "llm"
     assert output.structured_result["token_cost"] == 42
+    assert output.structured_result["cost"]["total_tokens"] == 42
     assert output.structured_result["claims"][0]["chunk_id"] == "c1"
     assert output.citations[0].chunk_id == "c1"
     assert client.calls[0]["model"].startswith("openai:")
+    assert client.calls[0]["prompt_version"] == "s3_qa_summary.v1"
+    assert client.calls[0]["schema_version"] == "s3.v1"
+    assert client.calls[0]["reasoning_effort"] == "high"
+    assert client.calls[0]["text_verbosity"] == "high"
     assert "Every claim must include" in client.calls[0]["prompt"]
+
+
+def test_s3_replay_response_with_visible_claim_passes_v2(tmp_path):
+    # WHY: Obj4 turns S3 from an injected fake seam into replayable model
+    # synthesis. A replay hit with visible citations must survive V2 unchanged.
+    payload = _payload(evidence=[_evidence()])
+    response = _fixture("s3_visible_response.json")
+    probe = FakeLlmClient(response)
+    probe_output = QASummarySkill(llm_client=probe).run(payload)
+    request = request_from_kwargs(task="s3_qa_summary", schema_version="s3.v1", kwargs=probe.calls[0])
+    write_fixture(tmp_path, request, response)
+
+    s3_output = QASummarySkill(llm_client=ReplayClient(tmp_path)).run(payload)
+    v2_output = CitationCheckSkill().run(
+        SkillInput(
+            task_id="t1",
+            user_query=payload.user_query,
+            context={
+                "s2_result": {"status": "ok", "structured_result": {"retrieval_context": [_evidence()]}},
+                "s3_result": s3_output.model_dump(mode="python"),
+            },
+        )
+    )
+
+    assert probe_output.status == "ok"
+    assert s3_output.status == "ok"
+    assert s3_output.structured_result["synthesis_mode"] == "llm"
+    assert v2_output.status == "ok"
+    assert v2_output.structured_result["unsupported_claims"] == []
+
+
+def test_s3_replay_miss_falls_back_to_deterministic_s3(tmp_path):
+    output = QASummarySkill(llm_client=ReplayClient(tmp_path)).run(_payload(evidence=[_evidence()]))
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("ReplayMissError" in warning for warning in output.warnings)
+
+
+def test_s3_llm_invisible_chunk_reaches_v2_and_strips_conclusion():
+    client = FakeLlmClient(_fixture("s3_invisible_chunk_response.json"))
+
+    s3_output = QASummarySkill(llm_client=client).run(_payload(evidence=[_evidence()]))
+    v2_output = CitationCheckSkill().run(
+        SkillInput(
+            task_id="t1",
+            user_query="What happens near critical speed?",
+            context={
+                "s2_result": {"status": "ok", "structured_result": {"retrieval_context": [_evidence()]}},
+                "s3_result": s3_output.model_dump(mode="python"),
+            },
+        )
+    )
+
+    assert s3_output.status == "ok"
+    assert s3_output.structured_result["claims"][0]["chunk_id"] == "ghost"
+    assert s3_output.citations == []
+    assert v2_output.status == "insufficient"
+    assert v2_output.structured_result["answer"] == ""
+    assert "chunk not visible in retrieval" in v2_output.structured_result["unsupported_claims"][0]["reasons"]
+
+
+def test_s3_llm_fabricated_number_is_blocked_in_default_chain():
+    client = FakeLlmClient(_fixture("s3_fabricated_number_response.json"))
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=StaticRetrievalSkill(),
+        qa_summary_skill=QASummarySkill(llm_client=client),
+    )
+
+    output = orchestrator.handle_query(
+        "What happens near critical speed?",
+        constraints={"scope": "in_scope", "s3_llm_enabled": True, "s4_enabled": False},
+        task_id="t1",
+    )
+
+    assert output.status == "insufficient"
+    assert output.structured_result["skill_results"]["s3"]["synthesis_mode"] == "llm"
+    assert output.structured_result["skill_results"]["v2"]["answer"] == ""
+    assert "50hz" in output.structured_result["skill_results"]["v2"]["unsupported_claims"][0]["reasons"][-1]
 
 
 def test_default_config_keeps_s3_llm_disabled(monkeypatch):
@@ -132,7 +235,15 @@ def test_s3_llm_malformed_uncited_output_falls_back_with_warning():
     client = FakeLlmClient(
         {
             "answer": "Rotor response is amplified near critical speed.",
-            "claims": [{"text": "Rotor response is amplified near critical speed.", "chunk_id": "c1"}],
+            "claims": [
+                {
+                    "text": "Rotor response is amplified near critical speed.",
+                    "chunk_id": "c1",
+                    "doc_id": "doc1",
+                    "pages": [1],
+                    "evidence_type": "documented",
+                }
+            ],
         }
     )
 
@@ -141,6 +252,31 @@ def test_s3_llm_malformed_uncited_output_falls_back_with_warning():
     assert output.status == "ok"
     assert output.structured_result["synthesis_mode"] == "deterministic"
     assert any("missing visible citation" in warning for warning in output.warnings)
+
+
+def test_s3_llm_schema_failure_falls_back_to_deterministic_s3():
+    client = FakeLlmClient(
+        {
+            "answer": "Rotor response is amplified near critical speed [c1].",
+            "claims": [{"text": "Rotor response is amplified near critical speed.", "chunk_id": "c1"}],
+        }
+    )
+
+    output = QASummarySkill(llm_client=client).run(_payload(evidence=[_evidence()]))
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("ValidationError" in warning for warning in output.warnings)
+
+
+def test_s3_llm_refusal_flag_falls_back_to_deterministic_s3():
+    client = FakeLlmClient({"refusal": True, "answer": "", "claims": []})
+
+    output = QASummarySkill(llm_client=client).run(_payload(evidence=[_evidence()]))
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("refused" in warning for warning in output.warnings)
 
 
 def test_s3_llm_timeout_falls_back_to_deterministic_s3():
@@ -161,3 +297,13 @@ def test_s3_llm_quota_failure_falls_back_to_deterministic_s3():
     assert output.status == "ok"
     assert output.structured_result["synthesis_mode"] == "deterministic"
     assert any("quota exceeded" in warning for warning in output.warnings)
+
+
+def test_s3_llm_budget_deny_falls_back_to_deterministic_s3():
+    client = FakeLlmClient(exc=BudgetDeniedError("per-task token budget exceeded"))
+
+    output = QASummarySkill(llm_client=client).run(_payload(evidence=[_evidence()]))
+
+    assert output.status == "ok"
+    assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert any("BudgetDeniedError" in warning for warning in output.warnings)

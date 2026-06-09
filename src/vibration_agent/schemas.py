@@ -101,6 +101,21 @@ class LlmCostEstimate(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+class S3LlmClaim(BaseModel):
+    text: str = Field(min_length=1)
+    chunk_id: str = Field(min_length=1)
+    doc_id: str = Field(min_length=1)
+    pages: list[int] | None = Field(...)
+    evidence_type: EvidenceType = Field(...)
+
+
+class S3LlmResponse(BaseModel):
+    status: Literal["ok", "insufficient", "refusal", "refused"] = "ok"
+    answer: str = ""
+    claims: list[S3LlmClaim] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
 class DocumentClassification(BaseModel):
     doc_id: str
     source_path: str

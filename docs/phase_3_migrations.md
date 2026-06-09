@@ -1,6 +1,6 @@
 # Phase 3 Migrations
 
-Updated: 2026-06-08
+Updated: 2026-06-09
 
 ## Purpose
 
@@ -140,3 +140,39 @@ chain order changed. Unsupported LLM claims continue to use the existing
 Rollback: remove the significant-item checks from
 `src/vibration_agent/skills/v2_citation_check.py` and remove the Obj3 V2 tests
 and negative fixtures.
+
+### Obj4 - S3 real LLM synthesis (2026-06-09)
+
+Runtime/provider contract additions:
+
+- S3 LLM requests now pass prompt version `s3_qa_summary.v1`, schema version
+  `s3.v1`, model settings, timeout, task id, query, mode, language, prompt, and
+  evidence through the Obj1 `synthesize()` seam.
+- The S3 prompt contract now requires JSON with `status`, `answer`, `claims[]`,
+  and optional `warnings`. Each claim must include `text`, `chunk_id`, `doc_id`,
+  `pages`, and `evidence_type`.
+- LLM S3 `structured_result` remains additive and now may include `cost` when
+  provider/replay metadata supplies a local cost estimate. `token_cost` keeps
+  storing total tokens.
+- S3 no longer drops LLM claims merely because the cited `chunk_id` is not
+  visible in S2 evidence. It preserves the claim and citation metadata so V2 can
+  block the unsupported output before V4.
+- Added S3 LLM response fixtures under `tests/fixtures/llm/s3_*.json` for
+  replay-visible, invisible chunk, and fabricated numeric outputs.
+- Post-review addition: `S3LlmClaim` and `S3LlmResponse` schemas now formalize
+  the S3 LLM response contract. Missing mandatory claim fields fail validation
+  and degrade to deterministic S3.
+- Post-review addition: `request_from_kwargs()` is the public replay request
+  builder for tests/manual fixture preparation that need to mirror convenience
+  client methods.
+- Post-review correction: S3 preserves invisible-chunk claims for V2 but no
+  longer emits pre-V2 `Citation` objects for those invisible chunks.
+
+No database migration was added. The default S3 path remains deterministic while
+`s3_enabled` is false or no injected replay/live client is available.
+
+Rollback: remove the Obj4 S3 prompt/request metadata changes, restore S3 to
+dropping non-visible LLM claims before V2, remove `S3LlmClaim` /
+`S3LlmResponse`, remove `request_from_kwargs()`, remove the Obj4 S3
+fixtures/tests, and remove the additive `cost` field from S3 LLM structured
+results.

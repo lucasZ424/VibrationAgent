@@ -1,0 +1,19 @@
+{
+  "answer": "Rotor response is amplified near critical speed [ghost].",
+  "claims": [
+    {
+      "chunk_id": "ghost",
+      "doc_id": "doc1",
+      "evidence_type": "documented",
+      "pages": [9],
+      "text": "Rotor response is amplified near critical speed."
+    }
+  ],
+  "status": "ok",
+  "token_cost": 67,
+  "usage": {
+    "input_tokens": 42,
+    "output_tokens": 25,
+    "total_tokens": 67
+  }
+}
