@@ -16,12 +16,14 @@ from .routing import (
 )
 from .skill_registry import AgentSkill, AgentSkillRegistry
 from .supervisor import (
+    CorrectionClient,
     ExecutionResult,
     ReviewIssue,
     ReviewReport,
     RevisionRequest,
     SupervisorAction,
     SupervisorClient,
+    SupervisorCorrectionResponse,
     SupervisorLoop,
     SupervisorLoopResult,
     SupervisorPlan,
@@ -31,6 +33,7 @@ from .supervisor import (
 __all__ = [
     "AgentSkill",
     "AgentSkillRegistry",
+    "CorrectionClient",
     "Difficulty",
     "ExecutionResult",
     "ModelRegistry",
@@ -42,6 +45,7 @@ __all__ = [
     "RoutingPolicy",
     "SupervisorAction",
     "SupervisorClient",
+    "SupervisorCorrectionResponse",
     "SupervisorLoop",
     "SupervisorLoopResult",
     "SupervisorPlan",

@@ -1,0 +1,21 @@
+{
+  "status": "ok",
+  "task_id": "t1",
+  "approved": false,
+  "issues": [
+    {
+      "severity": "medium",
+      "description": "missing boundary condition",
+      "recommendation": "Add the operating-region boundary condition before finalizing."
+    }
+  ],
+  "residual_risk": "Candidate lacks the boundary condition needed for safe interpretation.",
+  "token_cost": 20,
+  "cost": {
+    "provider": "anthropic",
+    "model": "claude-opus-4-8",
+    "total_tokens": 20,
+    "estimated_usd": 0.001,
+    "source": "local_estimate"
+  }
+}

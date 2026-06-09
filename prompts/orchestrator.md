@@ -43,6 +43,20 @@ registries but not called by the current orchestrator.
 - The supervisor runs only for `extreme` routed queries or reviewer-flagged
   answers. Supervisor failure or missing supervisor client must degrade to the
   deterministic answer and mark `structured_result.supervisor_status`.
+- Phase-3 supervisor review/correction is default-off and dependency-injected.
+  In replay/live mode the supervisor first reviews the V4 candidate; when the
+  review rejects and the bounded loop has remaining attempts, the correction
+  executor must produce a revised candidate before the next review. The loop
+  must not re-review the same rejected candidate as a substitute for correction.
+- Supervisor review and correction responses must be structured JSON. Review
+  responses use `status`, `task_id`, `approved`, `issues[]`,
+  `residual_risk`, optional `warnings`, and optional `token_cost` / `cost`.
+  Correction responses use `status`, `answer` or `structured_result`,
+  optional `summary`, optional `warnings`, and optional `token_cost` / `cost`.
+- Replay/manual capture requests bind `prompt_version`, `schema_version`,
+  provider/model settings, query, candidate, loop count, and reviewer notes.
+  Live Anthropic capture is manual-only and requires explicit config plus the
+  configured API key environment variable.
 
 ## Output contract
 
@@ -57,4 +71,8 @@ For in-scope successful answers:
 - `structured_result.supervisor_status` and
   `structured_result.supervisor_invocations` expose supervisor routing for logs
   and `qa_logs`.
+- `structured_result.supervisor_corrections`,
+  `structured_result.supervisor_token_cost`, and optional
+  `structured_result.supervisor_cost` expose replay/live supervisor correction
+  work when the supervisor path runs.
 - `structured_result.skill_results` groups nested S2/S3/S4/S5/V2/V4 and optional V3 structured results by key.

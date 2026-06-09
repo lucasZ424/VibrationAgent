@@ -199,7 +199,7 @@ def test_supervisor_action_loop_limit():
     assert next_supervisor_action(approved, loop_count=0) == SupervisorAction.FINALIZE
     assert next_supervisor_action(issue_report, loop_count=0) == SupervisorAction.GPT_CORRECTION
     assert next_supervisor_action(issue_report, loop_count=1) == SupervisorAction.GPT_CORRECTION
-    assert next_supervisor_action(issue_report, loop_count=2) == SupervisorAction.OPUS_TAKEOVER
+    assert next_supervisor_action(issue_report, loop_count=2) == SupervisorAction.CORRECTION_LIMIT_FALLBACK
 
 
 def test_config_loads_gpt_first_routing_policy():

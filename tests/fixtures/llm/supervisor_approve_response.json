@@ -1,0 +1,15 @@
+{
+  "status": "ok",
+  "task_id": "t1",
+  "approved": true,
+  "issues": [],
+  "residual_risk": "Low residual risk after correction.",
+  "token_cost": 10,
+  "cost": {
+    "provider": "anthropic",
+    "model": "claude-opus-4-8",
+    "total_tokens": 10,
+    "estimated_usd": 0.0005,
+    "source": "local_estimate"
+  }
+}

@@ -121,6 +121,30 @@ def test_replay_request_builder_supports_s5_derive_formula_shape():
     assert request.request_body["prompt"] == "Derive S5."
 
 
+def test_replay_request_builder_supports_supervisor_shapes():
+    review = request_from_kwargs(
+        task="supervisor_review",
+        schema_version="supervisor.v1",
+        kwargs={"model": "anthropic:claude-opus-4-8", "prompt": "Review.", "prompt_version": "supervisor_review.v1"},
+    )
+    correction = request_from_kwargs(
+        task="supervisor_correction",
+        schema_version="correction.v1",
+        kwargs={
+            "model": "anthropic:claude-opus-4-8",
+            "prompt": "Correct.",
+            "prompt_version": "supervisor_correction.v1",
+        },
+    )
+
+    assert review.provider == "anthropic"
+    assert review.model == "claude-opus-4-8"
+    assert review.schema_version == "supervisor.v1"
+    assert correction.provider == "anthropic"
+    assert correction.model == "claude-opus-4-8"
+    assert correction.schema_version == "correction.v1"
+
+
 def test_replay_hash_mismatch_fails_loud():
     fixture_dir = _case_dir("mismatch")
     request = _request()

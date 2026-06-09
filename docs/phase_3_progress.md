@@ -25,7 +25,7 @@ Every Obj must record:
 4. S3 real LLM synthesis: done
 5. S4 real engineering analysis: done
 6. S5 real formula derivation and cycle-check hardening: done
-7. Claude latest / Claude Opus 4.8 supervisor trial and correction executor: pending
+7. Claude latest / Claude Opus 4.8 supervisor trial and correction executor: done
 8. Golden-output eval minimum set and replay regression gate: pending
 9. Manual live validation and capture lane: pending
 10. Phase-3 interface freeze and Phase-4 planning: pending
@@ -448,3 +448,77 @@ Every Obj must record:
   tests passed.
 - Full non-large suite passed.
 - Obj7 may start after user review of Obj6.
+
+## Obj7 Notes
+
+- Added a real supervisor correction executor to `SupervisorLoop`. A rejecting
+  review now calls an injected `correct()` client and re-reviews the revised
+  candidate instead of repeatedly reviewing the same deterministic answer.
+- Supervisor review/correction remains dependency-injected and default-off. The
+  loop does not construct a live Anthropic client by itself.
+- Replay/live supervisor requests now carry prompt version, schema version,
+  provider/model settings, task id, query, serialized candidate, loop count,
+  reviewer notes, and review issues where applicable.
+- Added `SupervisorCorrectionResponse` for structured correction output.
+  Correction responses must provide either `answer` or `structured_result`.
+- Supervisor annotations now include `supervisor_corrections`,
+  `supervisor_token_cost`, optional `supervisor_cost`, and aggregate top-level
+  `token_cost` when replay/live supervisor responses report usage.
+- Budget denial, replay miss, provider exception, refusal/insufficient review,
+  and correction schema failure degrade to the original deterministic answer
+  with `supervisor_status="fallback"`.
+- Added `scripts/llm_capture.py` as a manual-only Anthropic capture helper for
+  supervisor review/correction replay fixtures. It requires explicit live and
+  capture config plus the configured Anthropic API key environment variable.
+- Added small supervisor replay response fixtures for reject, correction, and
+  approve paths.
+- Obj7 issue log review is recorded in `docs/issue_log_p3/issues_obj7.txt`.
+
+## Obj7 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_supervisor_loop.py tests\unit\test_llm_replay.py tests\unit\test_anthropic_client.py -q -p no:cacheprovider`
+- Result: passed, 22 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_tutor_orchestrator.py tests\unit\test_agent_control_plane.py tests\unit\test_qa_logs.py -q -p no:cacheprovider`
+- Result: passed, 46 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj7-nonlarge -p no:cacheprovider`
+- Result: passed, 364 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_supervisor_loop.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider`
+- Result: passed, 23 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_supervisor_loop.py tests\unit\test_llm_replay.py tests\unit\test_anthropic_client.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider`
+- Result: passed, 38 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj7-polish -p no:cacheprovider`
+- Result: passed, 364 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+
+## Obj7 Residual Risk
+
+- Live Anthropic supervisor behavior remains unvalidated by CI and is deferred
+  to the manual capture lane. This implementation did not require or use an API
+  key.
+- The configured Anthropic model id remains a configuration value
+  (`claude-opus-4-8`). Business code does not hard-code it. Operators should
+  override `ANTHROPIC_MODEL` or `configs/llm.yaml` if the provider's current
+  official model id differs.
+- Correction output is still a model-generated rewrite, not a proof of factual
+  correctness. It remains bounded by the follow-up supervisor review and the
+  two-correction loop limit.
+- Extreme/V3-flagged default local queries still annotate
+  `supervisor_status="fallback"` when no supervisor client is injected. This is
+  intentional fail-loud behavior for manual-select mode.
+
+## Obj7 Post-Review Fixes
+
+- Renamed the correction-loop exhaustion action from the misleading
+  `opus_takeover` value to `correction_limit_fallback`, matching the actual
+  behavior: the loop returns the original deterministic answer after the
+  correction limit is reached.
+- Updated supervisor control-plane and loop tests to assert the new recorded
+  action value before the Phase-3 freeze.
+
+## Obj7 Next Obj Gate
+
+- Obj7 focused replay/provider seam tests and nearby supervisor/orchestrator
+  compatibility tests passed.
+- Full non-large suite passed.
+- Obj8 may start after user review of Obj7.

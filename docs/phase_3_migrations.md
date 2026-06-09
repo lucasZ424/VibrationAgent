@@ -247,3 +247,43 @@ prompt/request metadata changes, restore V2 derivation-step checking to
 visibility/source-type only, restore the old V2 safe-key placeholder if needed,
 remove Obj6 S5 fixtures/tests, and remove S5 LLM `token_cost` / `cost`
 structured result additions.
+
+### Obj7 - Claude supervisor trial and correction executor (2026-06-09)
+
+Runtime/provider contract additions:
+
+- `SupervisorLoop` now accepts an optional injected `correction_client`. If no
+  explicit correction client is supplied, the review client is reused when it
+  exposes `correct()`.
+- Supervisor review/correction LLM requests now bind prompt version, schema
+  version, provider/model settings, task id, query, candidate output, loop
+  count, reviewer notes, and review issues through the Obj1 replay request
+  shape.
+- Added `SupervisorCorrectionResponse` as the structured correction response
+  contract. An `ok` correction must include either `answer` or
+  `structured_result`.
+- A rejecting supervisor review now triggers a correction call before the next
+  review. The loop still permits at most two correction attempts and falls back
+  to the original deterministic answer if approval is not reached.
+- Supervisor annotations may now include additive
+  `structured_result.supervisor_corrections`,
+  `structured_result.supervisor_token_cost`, optional
+  `structured_result.supervisor_cost`, and aggregate top-level `token_cost`.
+- Added supervisor replay response fixtures under `tests/fixtures/llm/` for
+  reject, correction, and approve responses.
+- Added `scripts/llm_capture.py` as the manual-only Anthropic capture helper.
+  It refuses to run unless live and capture are explicitly enabled and the
+  configured Anthropic API key environment variable is present.
+- Post-review correction: the recorded correction-loop exhaustion action was
+  renamed from `opus_takeover` to `correction_limit_fallback`, because the
+  actual runtime behavior is deterministic fallback after the bounded
+  correction loop is exhausted.
+
+No database migration was added. Existing `qa_logs.token_cost` and
+`qa_logs.supervisor_invocations` fields continue to carry nullable runtime
+metadata. The default local runtime still constructs no live Anthropic client.
+
+Rollback: remove `SupervisorCorrectionResponse`, remove the correction-client
+branch from `SupervisorLoop`, restore the old repeat-review loop behavior,
+restore the previous supervisor action value if compatibility requires it,
+remove supervisor replay fixtures/tests, and remove `scripts/llm_capture.py`.

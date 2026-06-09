@@ -1,0 +1,14 @@
+{
+  "status": "ok",
+  "answer": "## Conclusion\nCritical speed affects rotor response.\n\n## Evidence\nCritical speed affects response.\n\nBoundary condition: use the cited operating region.",
+  "summary": "Corrected candidate with boundary condition.",
+  "warnings": [],
+  "token_cost": 30,
+  "cost": {
+    "provider": "anthropic",
+    "model": "claude-opus-4-8",
+    "total_tokens": 30,
+    "estimated_usd": 0.0015,
+    "source": "local_estimate"
+  }
+}
