@@ -75,6 +75,7 @@ TempPathFactory.mktemp = _sandbox_mktemp
 
 def pytest_configure(config):
     os.environ["VIBRATION_AGENT_PYTEST"] = "1"
+    os.environ.setdefault("VIBRATION_AGENT_DISABLE_DOTENV", "1")
     _clear_safe_tmp_root()
     safe_root = _pytest_tmp_root()
     os.environ["TMP"] = str(safe_root)

@@ -1,6 +1,6 @@
 # Phase 3 Progress
 
-Updated: 2026-06-10
+Updated: 2026-06-11
 
 ## Execution Model
 
@@ -27,7 +27,7 @@ Every Obj must record:
 6. S5 real formula derivation and cycle-check hardening: done
 7. Claude latest / Claude Opus 4.8 supervisor trial and correction executor: done
 8. Golden-output eval minimum set and replay regression gate: done
-9. Manual live validation and capture lane: pending
+9. Manual live validation and capture lane: implemented; live run pending API key
 10. Phase-3 interface freeze and Phase-4 planning: pending
 
 ## Obj0 Notes
@@ -248,7 +248,7 @@ Every Obj must record:
 
 - S3 LLM synthesis now sends replay/live requests through the Obj1 client seam
   with prompt version `s3_qa_summary.v1`, schema version `s3.v1`, model,
-  temperature, `max_tokens`, reasoning effort, text verbosity, timeout, task id,
+  `max_tokens`, reasoning effort, text verbosity, timeout, task id,
   query, mode, language, prompt, and evidence bound into the replay request body.
 - The S3 prompt contract now requires JSON output with `status`, `answer`,
   `claims[]`, and optional `warnings`. Each claim must carry `text`, `chunk_id`,
@@ -596,3 +596,175 @@ Every Obj must record:
 - Obj8 eval tests and nearby replay/provider compatibility tests passed.
 - Full non-large suite passed.
 - Obj9 may start after user review of Obj8.
+
+## Obj9 Notes
+
+- Extended `RecordingClient` with the same convenience methods as
+  `ReplayClient`: `synthesize()`, `analyze_engineering()`, `derive_formula()`,
+  `review()`, and `correct()`. Manual capture can now inject one recorder into
+  S3/S4/S5 or supervisor seams and write replay-compatible redacted fixtures.
+- Extended `scripts/llm_capture.py` from Anthropic-supervisor-only capture to a
+  Phase-3 task capture helper. OpenAI tasks are `s3_qa_summary`,
+  `s4_engineering_analysis`, and `s5_formula_derivation`; Anthropic tasks are
+  `supervisor_review` and `supervisor_correction`.
+- Extended `scripts/manual_e2e.py` into the Phase-3 manual E2E probe. The
+  default path remains deterministic and requires no API key. `--live-openai`
+  explicitly enables OpenAI S3/S4/S5 live capture, while `--live-supervisor`
+  explicitly enables Anthropic supervisor live capture.
+- Manual live/capture requires all of: `LLM_LIVE_ENABLED=true`,
+  `LLM_CAPTURE_ENABLED=true`, the relevant provider API key environment
+  variable, and an explicit live CLI flag. Missing gates fail before provider
+  client construction.
+- Added gitignored `.env.local` / `.env` auto-loading in `config.load()`.
+  Local env files only fill missing process environment variables; explicit
+  PowerShell environment values remain higher priority. Tests can disable this
+  behavior with `VIBRATION_AGENT_DISABLE_DOTENV=1`.
+- Manual summaries now print aggregate `token_cost`, `cost`, per-skill token
+  costs, and per-skill local cost estimates when provider usage is returned.
+- README now records deterministic, live OpenAI, live Anthropic, and
+  single-request capture commands. The recommended repeated-use setup is a
+  local `.env.local` file, and example capture output uses
+  `data\exports\manual_llm_fixtures` so local live captures do not directly
+  pollute committed replay fixtures.
+- Manual live validation completed for the OpenAI S3/S4/S5 lanes and the
+  Anthropic supervisor lane after the operator supplied local API keys and
+  explicit live/capture gates.
+
+## Obj9 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_llm_replay.py tests\unit\test_manual_live_lane.py -q -p no:cacheprovider`
+- Result: passed, 16 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_config_env_file.py tests\unit\test_manual_live_lane.py -q -p no:cacheprovider`
+- Result: passed, 6 tests.
+- Post-cleanup verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_config_env_file.py tests\unit\test_openai_client.py tests\unit\test_anthropic_client.py tests\unit\test_manual_live_lane.py -q -p no:cacheprovider`
+- Result: passed, 15 tests.
+- Verified command: `.\.venv\Scripts\python.exe scripts\manual_e2e.py --difficulty low`
+- Result: passed; deterministic manual probe returned `status="ok"`,
+  supervisor `not_triggered`, and no token/cost metadata.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_llm_replay.py tests\unit\test_manual_live_lane.py tests\unit\test_s3_llm_synthesis.py tests\unit\test_s4_engineering.py tests\unit\test_s5_derivation.py tests\unit\test_supervisor_loop.py -q -p no:cacheprovider`
+- Result: passed, 71 tests.
+- Verified fail-loud command: `.\.venv\Scripts\python.exe scripts\manual_e2e.py --live-openai`
+- Result: failed before provider construction with the expected manual-gate
+  error: `LLM_LIVE_ENABLED=true` is required.
+- Attempted command: `.\.venv\Scripts\python.exe -m compileall -q scripts\manual_e2e.py scripts\llm_capture.py src\vibration_agent\llm\replay.py tests\unit\test_manual_live_lane.py tests\unit\test_llm_replay.py`
+- Result: blocked by Windows sandbox/pycache `PermissionError` under
+  `scripts\__pycache__`.
+- Verified fallback syntax command: `.\.venv\Scripts\python.exe -c "import ast, pathlib; files=['scripts/manual_e2e.py','scripts/llm_capture.py','src/vibration_agent/llm/replay.py','tests/unit/test_manual_live_lane.py','tests/unit/test_llm_replay.py']; [ast.parse(pathlib.Path(f).read_text(encoding='utf-8-sig'), filename=f) for f in files]; print('ok')"`
+- Result: passed.
+- Verified command: `git diff --check`
+- Result: passed with README CRLF/LF normalization warning only.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj9-nonlarge -p no:cacheprovider`
+- Result: passed, 371 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+- Post-dotenv verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj9-dotenv-nonlarge-2 -p no:cacheprovider`
+- Result: passed, 373 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+- Manual operator OpenAI live attempt exposed a provider compatibility error:
+  GPT-5.5 rejected a legacy sampling request parameter.
+- Fixed the OpenAI Responses request builder so live provider requests omit
+  the legacy sampling parameter.
+- Follow-up manual OpenAI live attempt reached the provider but returned
+  `status="incomplete"` with `incomplete_details.reason="max_output_tokens"`.
+  The captured Responses payload also showed JSON text nested under
+  `output[].content[].text`, not top-level `output_text`.
+- Fixed OpenAI response parsing to extract nested Responses API output text and
+  preserve provider `usage` on parsed JSON. Truncated/incomplete non-JSON output
+  still remains fail-loud as the raw provider mapping.
+- Updated `.env.example` to use `OPENAI_MAX_TOKENS=4096` for manual live
+  captures. The local ignored `.env` must be updated manually because it
+  contains operator secrets.
+- Manual operator rerun after the parser/token-limit fix completed the OpenAI
+  engineering lane: S3 and S4 both returned `gpt-5.5` LLM route warnings,
+  `status="ok"`, and per-skill token/cost metadata.
+- Polished `scripts/manual_e2e.py` summary aggregation so V2/V4 pass-through
+  token/cost metadata is not double-counted as another live model call. The
+  summary now aggregates real model skill costs from S3/S4/S5 plus supervisor
+  metadata when present.
+- Local agent attempt to run the OpenAI derivation lane still hit sandbox
+  `APIConnectionError`; two unsandboxed retries requested through the approval
+  mechanism timed out, so the operator PowerShell lane remains required for
+  that live check.
+- Local agent attempt to run Anthropic supervisor first hit the default budget
+  gate, then with a higher temporary budget reached the dependency boundary:
+  `ModuleNotFoundError: No module named 'anthropic'`. Added the Anthropic SDK to
+  `pyproject.toml`, `requirements_min.txt`, and `requirements-full.txt`.
+  Installing it inside this session required package-index network access; two
+  unsandboxed install approval attempts timed out.
+- Manual operator OpenAI derivation run showed S3 live success but S5 fallback
+  due to `BudgetDeniedError: per-task token budget exceeded`; this indicates
+  the local `.env` budget remained too low for S5 manual validation.
+- Fixed S4/S5 deterministic fallback outputs so they clear inherited upstream
+  `cost`, and hardened `scripts/manual_e2e.py` cost aggregation to include a
+  skill cost only when that same skill has a non-null `token_cost`. This avoids
+  double-counting S3 cost as failed S4/S5 live spend.
+- Manual operator rerun with higher local token budget completed the OpenAI
+  derivation lane: warnings included both `S3 LLM route: main_answer ->
+  openai:gpt-5.5.` and `S5 LLM route: main_answer -> openai:gpt-5.5.`, and
+  the summary showed skill costs for both S3 and S5. The S5 model stayed within
+  evidence scope by declining quantitative formulas/numeric predictions when
+  the retrieved evidence only supported qualitative conclusions.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_openai_client.py tests\unit\test_budget.py tests\unit\test_manual_live_lane.py -q -p no:cacheprovider`
+- Result: passed, 20 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-openai-sampling-fix -p no:cacheprovider`
+- Result: passed, 375 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_manual_live_lane.py -q -p no:cacheprovider`
+- Result: passed, 5 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_manual_live_lane.py tests\unit\test_openai_client.py tests\unit\test_anthropic_client.py -q -p no:cacheprovider`
+- Result: passed, 18 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_manual_live_lane.py tests\unit\test_s4_engineering.py tests\unit\test_s5_derivation.py -q -p no:cacheprovider`
+- Result: passed, 37 tests.
+- Manual operator Anthropic supervisor run exposed the same provider
+  compatibility class: the live model lane rejects or deprecates the legacy
+  sampling parameter.
+- Removed the legacy sampling parameter globally from provider settings,
+  `.env.example`, local ignored `.env`, YAML config, replay request metadata,
+  OpenAI/Anthropic provider requests, S3/S4/S5 request kwargs, supervisor
+  kwargs, and prompt/design documentation. The local `.env` API key values were
+  not read or modified.
+- Verified scan: no legacy sampling-parameter references remain under
+  `src`, `configs`, `prompts`, `scripts`, root templates, or non-issue-log
+  docs.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_llm_replay.py tests\unit\test_openai_client.py tests\unit\test_anthropic_client.py tests\unit\test_manual_live_lane.py tests\unit\test_s3_llm_synthesis.py tests\unit\test_s4_engineering.py tests\unit\test_s5_derivation.py tests\unit\test_supervisor_loop.py -q -p no:cacheprovider`
+- Result: passed, 85 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-remove-sampling-param -p no:cacheprovider`
+- Result: passed, 378 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+- Live supervisor sandboxed attempt after removing the legacy sampling
+  parameter failed only at the network boundary with `APIConnectionError`, not a
+  provider request-parameter error.
+- Unsandboxed live supervisor attempt reached Anthropic and returned usage/cost
+  metadata, but exposed two schema-normalization gaps in local parsing:
+  missing review `task_id` and issue objects using `message`/`code` instead of
+  `description`.
+- Fixed supervisor review parsing to fill missing `task_id` from the candidate
+  request and normalize issue descriptions from `message`, `recommendation`, or
+  `code` when needed.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_supervisor_loop.py tests\unit\test_manual_live_lane.py tests\unit\test_anthropic_client.py -q -p no:cacheprovider`
+- Result: passed, 18 tests.
+- Verified live command: `.\.venv\Scripts\python.exe scripts\manual_e2e.py --live-supervisor --difficulty extreme --fixture-dir data\exports\manual_llm_fixtures`
+- Result: passed with `supervisor_status="approved"`, `supervisor_invocations=1`,
+  and supervisor token/cost metadata from `anthropic:claude-opus-4-8`.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-supervisor-live-polish -p no:cacheprovider`
+- Result: passed, 380 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+- Post-review hardening: capture redaction now scrubs local absolute Windows,
+  UNC, and common POSIX paths from fixture metadata/responses while still
+  preserving non-secret token-count fields.
+
+## Obj9 Residual Risk
+
+- Captured model outputs still require human inspection before promotion from
+  `data\exports\manual_llm_fixtures` into `tests\fixtures\llm\`.
+- Provider SDK behavior, network failures, budget ceilings, and current model
+  aliases remain live-only operational risks. CI continues to cover only
+  replay/deterministic behavior.
+- `requirements_min.txt` intentionally includes the live SDKs because that file
+  is the initial urgent runtime dependency set, while `pyproject.toml` keeps SDKs
+  in the optional `llm` extra for package installs.
+
+## Obj9 Next Obj Gate
+
+- Obj9 offline tests, deterministic manual probe, OpenAI S3/S4/S5 manual live
+  runs, and Anthropic supervisor manual live run passed.
+- Obj9 live validation gate is cleared for Obj10 freeze preparation.

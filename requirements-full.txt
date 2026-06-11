@@ -24,6 +24,7 @@
 
 # Core LLM / orchestration
 openai>=1.30.0,<2.0.0
+anthropic>=0.34.0,<1.0.0
 tiktoken>=0.7.0,<1.0.0
 pydantic>=2.7.0,<3.0.0
 pydantic-settings>=2.2.1,<3.0.0

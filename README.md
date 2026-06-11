@@ -155,7 +155,10 @@ Legacy compatibility:
 
 - `scripts/ingest_folder.py` is deprecated as a primary interface. It remains as a thin wrapper around `python -m apps.cli.main` for older commands.
 API keys should not be pasted into chat or committed. When model-backed API work
-is activated, put provider keys in local environment variables or `.env.local`.
+is activated, put provider keys in local environment variables or a local
+`.env.local` file. `config.load()` reads `.env.local` and `.env` from the
+workspace, only fills missing process environment variables, and never
+overrides values already set in PowerShell.
 
 
 ## Testing
@@ -245,6 +248,44 @@ explicit local manual/capture commands after the relevant Phase-3 objective adds
 provider clients, replay fixtures, budget guards, and live-call guards. Provider
 keys must stay in local environment variables or `.env.local`, never in chat,
 fixtures, logs, or commits.
+
+Run the Phase-3 manual E2E probe without live provider calls:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\manual_e2e.py --difficulty low
+```
+
+For repeated manual live validation, create ignored local `.env.local` content
+like this:
+
+```dotenv
+LLM_LIVE_ENABLED=true
+LLM_CAPTURE_ENABLED=true
+OPENAI_API_KEY=<local key>
+ANTHROPIC_API_KEY=<local key>
+```
+
+Run a manual OpenAI S3/S4/S5 live capture:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\manual_e2e.py --live-openai --user-mode engineering --fixture-dir data\exports\manual_llm_fixtures
+```
+
+Run a manual Anthropic supervisor live capture:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\manual_e2e.py --live-supervisor --difficulty extreme --fixture-dir data\exports\manual_llm_fixtures
+```
+
+Capture a single provider request from prepared JSON kwargs:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\llm_capture.py s3_qa_summary --request-json data\exports\manual_s3_request.json --fixture-dir data\exports\manual_llm_fixtures
+```
+
+Manual live fixtures should be inspected, redacted by the capture helper, and
+promoted to `tests\fixtures\llm\` only when they are intentionally becoming
+replay regression fixtures.
 
 When validating the Obj6 Qdrant cold-start population path, enable a local
 embedding model plus Qdrant and add `--require-qdrant-population`; the command

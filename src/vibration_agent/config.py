@@ -97,7 +97,6 @@ class LlmProviderSettings(BaseModel):
     provider: str
     model: str
     api_key_env: str
-    temperature: float = Field(default=0.0, ge=0.0)
     max_tokens: int = Field(default=1024, ge=1)
     timeout: float = Field(default=30.0, gt=0.0)
     reasoning_effort: str | None = None
@@ -234,6 +233,34 @@ def _env(name: str, default: Any) -> Any:
     return default if value is None or value == "" else value
 
 
+def _load_local_env_files(root: Path) -> None:
+    if os.getenv("VIBRATION_AGENT_DISABLE_DOTENV"):
+        return
+    for filename in (".env.local", ".env"):
+        _load_local_env_file(root / filename)
+
+
+def _load_local_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    for raw_line in path.read_text(encoding="utf-8-sig").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if not key or key.startswith("#") or key in os.environ:
+            continue
+        os.environ[key] = _env_file_value(value)
+
+
+def _env_file_value(value: str) -> str:
+    stripped = value.strip()
+    if (stripped.startswith('"') and stripped.endswith('"')) or (stripped.startswith("'") and stripped.endswith("'")):
+        return stripped[1:-1]
+    return stripped.split(" #", 1)[0].strip()
+
+
 def _env_bool(name: str, default: bool) -> bool:
     value = os.getenv(name)
     if value is None or value == "":
@@ -256,6 +283,7 @@ def _first_fallback_threshold(items: list[Any], default: float = 0.6) -> float:
 
 def load(workspace: Path | None = None) -> Settings:
     root = _workspace_from(workspace)
+    _load_local_env_files(root)
     config_dir = root / "configs"
     app_yaml = _read_yaml(config_dir / "app.yaml")
     ingestion_yaml = _read_yaml(config_dir / "ingestion.yaml")
@@ -392,9 +420,6 @@ def load(workspace: Path | None = None) -> Settings:
                 api_key_env=str(
                     _env("OPENAI_API_KEY_ENV", llm_section.get("openai", {}).get("api_key_env", "OPENAI_API_KEY"))
                 ),
-                temperature=float(
-                    _env("OPENAI_TEMPERATURE", llm_section.get("openai", {}).get("temperature", 0.0))
-                ),
                 max_tokens=int(_env("OPENAI_MAX_TOKENS", llm_section.get("openai", {}).get("max_tokens", 1024))),
                 timeout=float(_env("OPENAI_TIMEOUT", llm_section.get("openai", {}).get("timeout", 30.0))),
                 reasoning_effort=str(
@@ -432,9 +457,6 @@ def load(workspace: Path | None = None) -> Settings:
                         "ANTHROPIC_API_KEY_ENV",
                         llm_section.get("anthropic", {}).get("api_key_env", "ANTHROPIC_API_KEY"),
                     )
-                ),
-                temperature=float(
-                    _env("ANTHROPIC_TEMPERATURE", llm_section.get("anthropic", {}).get("temperature", 0.0))
                 ),
                 max_tokens=int(
                     _env("ANTHROPIC_MAX_TOKENS", llm_section.get("anthropic", {}).get("max_tokens", 1024))

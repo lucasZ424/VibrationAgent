@@ -10,7 +10,6 @@ llm:
   openai:
     model: gpt-5.5
     api_key_env: OPENAI_API_KEY
-    temperature: 0.0
     max_tokens: 1024
     timeout: 30.0
     reasoning_effort: high
@@ -21,7 +20,6 @@ llm:
   anthropic:
     model: claude-opus-4-8
     api_key_env: ANTHROPIC_API_KEY
-    temperature: 0.0
     max_tokens: 1024
     timeout: 30.0
     input_usd_per_million_tokens: 5.0

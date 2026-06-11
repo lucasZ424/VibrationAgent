@@ -34,7 +34,6 @@ def _request(**overrides) -> LlmRequest:
         "prompt_version": "s3.v1",
         "schema_version": "s3.schema.v1",
         "request_body": {"prompt": "Use only chunk c1.", "chunk_id": "c1"},
-        "temperature": 0.0,
         "max_tokens": 128,
         "reasoning_effort": "high",
         "text_verbosity": "high",
@@ -60,7 +59,6 @@ def test_stable_request_hash_includes_prompt_schema_model_settings_and_body():
         "schema_version",
         "provider",
         "model",
-        "temperature",
         "max_tokens",
         "reasoning_effort",
         "text_verbosity",
@@ -212,3 +210,94 @@ def test_recording_client_preserves_token_count_fields():
     assert '"input_tokens": 10' in fixture_text
     assert '"output_tokens": 5' in fixture_text
     assert '"token_cost": 15' in fixture_text
+
+
+def test_recording_client_redacts_local_absolute_paths():
+    fixture_dir = _case_dir("path_redaction")
+    request = _request(
+        request_body={
+            "prompt": "Capture paths.",
+            "source_path": r"C:\Users\zhoul\secret corpus\document.pdf",
+            "trace": r"loaded C:\Challenge\Viberation\Agent\data\raw\doc.pdf",
+        }
+    )
+
+    class PathLeakingClient:
+        def complete(self, request: LlmRequest) -> dict:
+            return {
+                "answer": "captured",
+                "debug_path": "/home/zhoul/secret/document.pdf",
+                "unc_path": r"\\server\share\secret\document.pdf",
+            }
+
+    client = RecordingClient(client=PathLeakingClient(), fixture_dir=fixture_dir, capture_enabled=True, manual_lane=True)
+
+    client.complete(request)
+    fixture_text = (fixture_dir / f"{request.request_hash}.json").read_text(encoding="utf-8")
+
+    assert "secret corpus" not in fixture_text
+    assert "Viberation" not in fixture_text
+    assert "/home/zhoul" not in fixture_text
+    assert "server" not in fixture_text
+    assert "[REDACTED_PATH]" in fixture_text
+
+
+def test_recording_client_convenience_methods_write_task_fixtures():
+    # WHY: Obj9 manual capture injects RecordingClient directly into S3/S4/S5
+    # and supervisor seams. Each seam must record the same request shape that
+    # replay later consumes in CI.
+    fixture_dir = _case_dir("convenience")
+    client = RecordingClient(
+        client=FakeLiveClientWithUsage(),
+        fixture_dir=fixture_dir,
+        capture_enabled=True,
+        manual_lane=True,
+    )
+
+    calls = [
+        (
+            client.synthesize,
+            "s3_qa_summary",
+            "s3.v1",
+            {"model": "openai:gpt-5.5", "prompt": "S3", "prompt_version": "s3_qa_summary.v1"},
+        ),
+        (
+            client.analyze_engineering,
+            "s4_engineering_analysis",
+            "s4.v1",
+            {"model": "openai:gpt-5.5", "prompt": "S4", "prompt_version": "s4_engineering_analysis.v1"},
+        ),
+        (
+            client.derive_formula,
+            "s5_formula_derivation",
+            "s5.v1",
+            {"model": "openai:gpt-5.5", "prompt": "S5", "prompt_version": "s5_formula_derivation.v1"},
+        ),
+        (
+            client.review,
+            "supervisor_review",
+            "supervisor.v1",
+            {"model": "anthropic:claude-opus-4-8", "prompt": "review", "prompt_version": "supervisor_review.v1"},
+        ),
+        (
+            client.correct,
+            "supervisor_correction",
+            "correction.v1",
+            {
+                "model": "anthropic:claude-opus-4-8",
+                "prompt": "correct",
+                "prompt_version": "supervisor_correction.v1",
+            },
+        ),
+    ]
+
+    for method, task, schema_version, kwargs in calls:
+        response = method(**kwargs)
+        request = request_from_kwargs(task=task, schema_version=schema_version, kwargs=kwargs)
+        path = fixture_dir / f"{request.request_hash}.json"
+
+        assert response["token_cost"] == 15
+        assert path.exists()
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        assert payload["metadata"]["request_hash"] == request.request_hash
+        assert payload["metadata"]["schema_version"] == schema_version

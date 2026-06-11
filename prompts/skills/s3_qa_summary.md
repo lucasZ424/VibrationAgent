@@ -24,6 +24,6 @@ a warning and falls back to deterministic synthesis. When active:
   deterministic S3 and records a warning.
 - Runtime still sends LLM output through V2. Claims that cite invisible chunks or
   fabricate significant numbers, units, or symbols are stripped by V2 before V4.
-- Replay requests bind `s3_qa_summary.v1`, `s3.v1`, model, temperature,
+- Replay requests bind `s3_qa_summary.v1`, `s3.v1`, model,
   `max_tokens`, reasoning effort, text verbosity, and request body into the
   fixture hash.

@@ -123,7 +123,7 @@ S6/S7/S8 仍然作为四阶段候选能力。三阶段可以被视为“可用�
 - 新增 ReplayClient，根据稳定 request hash 读取 captured fixture。
 - 新增 RecordingClient，仅在 manual lane 调用 live API 并写入脱敏 fixture。
 - 新增 pytest autouse guard，测试环境构造 live client 时直接失败。
-- `LlmSettings` 增加 provider、model、temperature、max_tokens、timeout、
+- `LlmSettings` 增加 provider、model、max_tokens、timeout、
   reasoning_effort、text_verbosity、budget、replay_dir、capture_enabled、
   API key env 名称等字段。
 
@@ -133,7 +133,7 @@ S6/S7/S8 仍然作为四阶段候选能力。三阶段可以被视为“可用�
 - recording 写入 fixture 时不包含 API key。
 - 测试证明 OpenAI / Anthropic SDK 均为 lazy import，fast suite 无 SDK 也能运行。
 - 测试证明 pytest 中构造 live OpenAI 或 Anthropic client 会失败。
-- fixture hash 包含 prompt version、schema version、model、temperature、
+- fixture hash 包含 prompt version、schema version、model、
   max_tokens 和 request body。
 
 ### 2. Token budget 与成本估算

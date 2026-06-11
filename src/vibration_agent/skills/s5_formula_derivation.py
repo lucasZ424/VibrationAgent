@@ -273,7 +273,6 @@ def _call_llm_client(
         "model": model,
         "prompt_version": _PROMPT_VERSION,
         "schema_version": _SCHEMA_VERSION,
-        "temperature": float(provider_settings.temperature),
         "max_tokens": int(provider_settings.max_tokens),
         "reasoning_effort": provider_settings.reasoning_effort,
         "text_verbosity": provider_settings.text_verbosity,
@@ -539,6 +538,7 @@ class FormulaDerivationSkill(Skill):
             "assets": formula_assets,
             "synthesis_mode": "deterministic",
             "token_cost": None,
+            "cost": None,
             "s5_derivation": {
                 "source_claim_count": len(claims),
                 "visible_chunk_ids": [chunk_id],

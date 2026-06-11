@@ -39,6 +39,8 @@ def _s3(claim_text: str = "The cited formula is F = k x for linear stiffness.") 
                 }
             ],
             "synthesis_mode": "deterministic",
+            "token_cost": 99,
+            "cost": {"estimated_usd": 0.99, "source": "upstream"},
         },
         "citations": [{"chunk_id": "c1", "doc_id": "d1", "pages": [4]}],
     }
@@ -176,6 +178,8 @@ def test_s5_llm_disabled_uses_deterministic_path_without_calling_client():
 
     assert output.status == "ok"
     assert output.structured_result["synthesis_mode"] == "deterministic"
+    assert output.structured_result["token_cost"] is None
+    assert output.structured_result["cost"] is None
     assert client.calls == []
 
 

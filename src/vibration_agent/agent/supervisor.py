@@ -183,6 +183,30 @@ def _task_id(output: SkillOutput, fallback: str = "supervisor") -> str:
     return str(value or fallback)
 
 
+def _review_report_from_response(response: ReviewReport | Mapping[str, Any], *, task_id: str) -> ReviewReport:
+    if isinstance(response, ReviewReport):
+        return response
+    data = dict(response)
+    data.setdefault("task_id", task_id)
+    if isinstance(data.get("issues"), list):
+        data["issues"] = [_review_issue_payload(issue) for issue in data["issues"]]
+    return ReviewReport.model_validate(data)
+
+
+def _review_issue_payload(value: Any) -> Any:
+    if not isinstance(value, Mapping):
+        return value
+    issue = dict(value)
+    if not issue.get("description"):
+        issue["description"] = str(
+            issue.get("message")
+            or issue.get("recommendation")
+            or issue.get("code")
+            or "Supervisor returned an issue without a description."
+        )
+    return issue
+
+
 def _prompt(*, query: str, output: SkillOutput, reviewer_notes: list[dict[str, Any]], loop_count: int, purpose: str) -> str:
     payload = {
         "purpose": purpose,
@@ -203,7 +227,6 @@ def _provider_kwargs(settings: Any) -> dict[str, Any]:
     provider = settings.llm.anthropic
     return {
         "model": f"{provider.provider}:{provider.model}",
-        "temperature": provider.temperature,
         "max_tokens": provider.max_tokens,
         "timeout": provider.timeout,
     }
@@ -368,7 +391,7 @@ class SupervisorLoop:
                     supervisor_token_cost += token_cost
                 if cost is not None:
                     supervisor_costs.append(cost)
-                review = review_response if isinstance(review_response, ReviewReport) else ReviewReport.model_validate(review_response)
+                review = _review_report_from_response(review_response, task_id=_task_id(current))
                 if review.status != "ok":
                     raise ValueError(f"Opus supervisor returned {review.status}")
                 invocations += 1

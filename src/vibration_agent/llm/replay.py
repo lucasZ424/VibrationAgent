@@ -3,10 +3,19 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
 from pydantic import BaseModel, Field
+
+
+_WINDOWS_ABS_PATH_RE = re.compile(r"(?i)\b[A-Z]:[\\/][^\s\r\n\"'<>|?*]+")
+_WINDOWS_FULL_ABS_PATH_RE = re.compile(r"(?i)^[A-Z]:[\\/].+")
+_UNC_ABS_PATH_RE = re.compile(r"\\\\[^\\/\s]+[\\/][^\s\r\n\"'<>|?*]+")
+_UNC_FULL_ABS_PATH_RE = re.compile(r"^\\\\[^\\/]+[\\/].+")
+_POSIX_ABS_PATH_RE = re.compile(r"(?<![\w:])/(?:Users|home|tmp|var|mnt|opt|private|Volumes)/[^\s\r\n\"']+")
+_POSIX_FULL_ABS_PATH_RE = re.compile(r"^/(?:Users|home|tmp|var|mnt|opt|private|Volumes)/.+")
 
 
 class ReplayMissError(RuntimeError):
@@ -23,7 +32,6 @@ class LlmRequest(BaseModel):
     prompt_version: str
     schema_version: str
     request_body: dict[str, Any] = Field(default_factory=dict)
-    temperature: float = 0.0
     max_tokens: int = Field(default=1024, ge=1)
     reasoning_effort: str | None = None
     text_verbosity: str | None = None
@@ -44,7 +52,6 @@ def _normalized_request_payload(request: LlmRequest) -> dict[str, Any]:
         "schema_version": request.schema_version,
         "provider": request.provider,
         "model": request.model,
-        "temperature": request.temperature,
         "max_tokens": request.max_tokens,
         "reasoning_effort": request.reasoning_effort,
         "text_verbosity": request.text_verbosity,
@@ -96,10 +103,14 @@ class ReplayClient:
         return self.complete(request_from_kwargs(task="s5_formula_derivation", schema_version="s5.v1", kwargs=kwargs))
 
     def review(self, **kwargs: Any) -> dict[str, Any]:
-        return self.complete(request_from_kwargs(task="supervisor_review", schema_version="supervisor.v1", kwargs=kwargs))
+        return self.complete(
+            request_from_kwargs(task="supervisor_review", schema_version="supervisor.v1", kwargs=kwargs)
+        )
 
     def correct(self, **kwargs: Any) -> dict[str, Any]:
-        return self.complete(request_from_kwargs(task="supervisor_correction", schema_version="correction.v1", kwargs=kwargs))
+        return self.complete(
+            request_from_kwargs(task="supervisor_correction", schema_version="correction.v1", kwargs=kwargs)
+        )
 
 
 class RecordingClient:
@@ -122,6 +133,25 @@ class RecordingClient:
         response = self.client.complete(request)
         write_fixture(self.fixture_dir, request, response)
         return response
+
+    def synthesize(self, **kwargs: Any) -> dict[str, Any]:
+        return self.complete(request_from_kwargs(task="s3_qa_summary", schema_version="s3.v1", kwargs=kwargs))
+
+    def analyze_engineering(self, **kwargs: Any) -> dict[str, Any]:
+        return self.complete(request_from_kwargs(task="s4_engineering_analysis", schema_version="s4.v1", kwargs=kwargs))
+
+    def derive_formula(self, **kwargs: Any) -> dict[str, Any]:
+        return self.complete(request_from_kwargs(task="s5_formula_derivation", schema_version="s5.v1", kwargs=kwargs))
+
+    def review(self, **kwargs: Any) -> dict[str, Any]:
+        return self.complete(
+            request_from_kwargs(task="supervisor_review", schema_version="supervisor.v1", kwargs=kwargs)
+        )
+
+    def correct(self, **kwargs: Any) -> dict[str, Any]:
+        return self.complete(
+            request_from_kwargs(task="supervisor_correction", schema_version="correction.v1", kwargs=kwargs)
+        )
 
 
 def write_fixture(fixture_dir: str | Path, request: LlmRequest, response: Mapping[str, Any]) -> Path:
@@ -146,7 +176,6 @@ def request_from_kwargs(*, task: str, schema_version: str, kwargs: Mapping[str, 
         prompt_version=str(kwargs.get("prompt_version") or f"{task}.v1"),
         schema_version=str(kwargs.get("schema_version") or schema_version),
         request_body={key: value for key, value in kwargs.items() if key != "model"},
-        temperature=float(kwargs.get("temperature") or 0.0),
         max_tokens=int(kwargs.get("max_tokens") or 1024),
         reasoning_effort=kwargs.get("reasoning_effort"),
         text_verbosity=kwargs.get("text_verbosity"),
@@ -181,6 +210,7 @@ def _redact(value: Any) -> Any:
             return f"{value[:4000]}...[TRUNCATED]"
         if "Bearer " in value:
             return "Bearer [REDACTED]"
+        return _scrub_local_paths(value)
     return value
 
 
@@ -188,6 +218,19 @@ def _is_secret_key(lowered: str) -> bool:
     if lowered in {"token", "access_token", "refresh_token", "auth_token", "bearer_token"}:
         return True
     return any(marker in lowered for marker in ("api_key", "authorization", "secret", "password"))
+
+
+def _scrub_local_paths(value: str) -> str:
+    stripped = value.strip()
+    if (
+        _WINDOWS_FULL_ABS_PATH_RE.match(stripped)
+        or _UNC_FULL_ABS_PATH_RE.match(stripped)
+        or _POSIX_FULL_ABS_PATH_RE.match(stripped)
+    ):
+        return value.replace(stripped, "[REDACTED_PATH]")
+    scrubbed = _WINDOWS_ABS_PATH_RE.sub("[REDACTED_PATH]", value)
+    scrubbed = _UNC_ABS_PATH_RE.sub("[REDACTED_PATH]", scrubbed)
+    return _POSIX_ABS_PATH_RE.sub("[REDACTED_PATH]", scrubbed)
 
 
 __all__ = [

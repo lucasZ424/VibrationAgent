@@ -39,14 +39,7 @@ class OpenAIClient:
 
         openai = importlib.import_module("openai")
         client = openai.OpenAI(api_key=api_key, timeout=self.settings.timeout)
-        response = client.responses.create(
-            model=request.model,
-            input=request.request_body.get("prompt", ""),
-            temperature=request.temperature,
-            max_output_tokens=request.max_tokens,
-            reasoning={"effort": request.reasoning_effort} if request.reasoning_effort else None,
-            text={"verbosity": request.text_verbosity} if request.text_verbosity else None,
-        )
+        response = client.responses.create(**_responses_create_kwargs(request))
         mapped = _response_to_mapping(response)
         if self.budget_guard is not None:
             usage = mapped.get("usage") or mapped.get("token_usage")
@@ -79,7 +72,6 @@ class OpenAIClient:
             prompt_version=str(kwargs.get("prompt_version") or f"{task}.v1"),
             schema_version=str(kwargs.get("schema_version") or schema_version),
             request_body={key: value for key, value in kwargs.items() if key != "model"},
-            temperature=float(kwargs.get("temperature") or self.settings.temperature),
             max_tokens=int(kwargs.get("max_tokens") or self.settings.max_tokens),
             reasoning_effort=str(kwargs.get("reasoning_effort") or self.settings.reasoning_effort or ""),
             text_verbosity=str(kwargs.get("text_verbosity") or self.settings.text_verbosity or ""),
@@ -90,12 +82,23 @@ def _model_name(value: str) -> str:
     return value.split(":", 1)[1] if value.startswith("openai:") else value
 
 
+def _responses_create_kwargs(request: LlmRequest) -> dict[str, Any]:
+    kwargs: dict[str, Any] = {
+        "model": request.model,
+        "input": request.request_body.get("prompt", ""),
+        "max_output_tokens": request.max_tokens,
+        "reasoning": {"effort": request.reasoning_effort} if request.reasoning_effort else None,
+        "text": {"verbosity": request.text_verbosity} if request.text_verbosity else None,
+    }
+    return kwargs
+
+
 def _response_to_mapping(response: Any) -> dict[str, Any]:
     if hasattr(response, "model_dump"):
         data = response.model_dump(mode="python")
         if isinstance(data, dict):
-            output_text = data.get("output_text")
-            if isinstance(output_text, str) and output_text.strip().startswith("{"):
+            output_text = _output_text(data)
+            if output_text.strip().startswith("{"):
                 try:
                     parsed = json.loads(output_text)
                 except json.JSONDecodeError:
@@ -114,6 +117,26 @@ def _response_to_mapping(response: Any) -> dict[str, Any]:
             return {"answer": text}
         return parsed if isinstance(parsed, dict) else {"answer": text}
     return {}
+
+
+def _output_text(data: dict[str, Any]) -> str:
+    direct = data.get("output_text")
+    if isinstance(direct, str):
+        return direct
+
+    parts: list[str] = []
+    output = data.get("output")
+    if isinstance(output, list):
+        for item in output:
+            if not isinstance(item, dict):
+                continue
+            content = item.get("content")
+            if not isinstance(content, list):
+                continue
+            for block in content:
+                if isinstance(block, dict) and isinstance(block.get("text"), str):
+                    parts.append(block["text"])
+    return "\n".join(parts)
 
 
 __all__ = ["LiveProviderDisabledError", "OpenAIClient"]

@@ -242,6 +242,43 @@ def test_supervisor_loop_replay_reject_correct_approve_records_token_cost(tmp_pa
     assert replay_output.structured_result["token_cost"] == 60
 
 
+def test_supervisor_loop_fills_missing_review_task_id_from_candidate():
+    client = ProbeSupervisorClient([{"status": "ok", "approved": True}])
+
+    output = _orchestrator(supervisor_loop=SupervisorLoop(client=client, settings=load())).handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert output.structured_result["supervisor_status"] == "approved"
+    assert output.structured_result["supervisor_invocations"] == 1
+    assert client.review_calls[0]["task_id"] == "t1"
+
+
+def test_supervisor_loop_fills_issue_description_from_message():
+    client = ProbeSupervisorClient(
+        [
+            {
+                "status": "ok",
+                "approved": False,
+                "issues": [{"code": "missing_limits", "message": "Limits section is missing."}],
+            },
+            {"status": "ok", "answer": "Corrected answer.", "summary": "Corrected."},
+            {"status": "ok", "approved": True},
+        ]
+    )
+
+    output = _orchestrator(supervisor_loop=SupervisorLoop(client=client, settings=load())).handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert output.structured_result["supervisor_status"] == "approved"
+    assert client.correction_calls[0]["review"]["issues"][0]["description"] == "Limits section is missing."
+
+
 def test_supervisor_loop_replay_miss_falls_back_to_deterministic_answer(tmp_path):
     output = _orchestrator(
         supervisor_loop=SupervisorLoop(client=ReplayClient(tmp_path), settings=load())

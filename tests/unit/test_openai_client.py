@@ -6,6 +6,8 @@ import pytest
 
 from vibration_agent.config import load
 from vibration_agent.llm.openai_client import LiveProviderDisabledError, OpenAIClient
+from vibration_agent.llm.openai_client import _response_to_mapping, _responses_create_kwargs
+from vibration_agent.llm.replay import LlmRequest
 
 
 def test_openai_module_import_does_not_import_sdk():
@@ -60,3 +62,90 @@ def test_openai_settings_load_from_llm_yaml():
     assert settings.openai.text_verbosity == "high"
     assert settings.token_budget_per_task == 4000
     assert settings.token_budget_per_session == 30000
+
+
+def test_openai_request_omits_deprecated_sampling_parameter_for_all_models():
+    # WHY: Current OpenAI and Anthropic live lanes reject the legacy sampling
+    # override for the configured model families, so provider requests omit it.
+    kwargs = _responses_create_kwargs(
+        LlmRequest(
+            provider="openai",
+            model="gpt-5.5",
+            prompt_version="s3_qa_summary.v1",
+            schema_version="s3.v1",
+            request_body={"prompt": "Return JSON."},
+            max_tokens=128,
+            reasoning_effort="high",
+            text_verbosity="high",
+        )
+    )
+
+    assert _deprecated_sampling_key() not in kwargs
+    assert kwargs["model"] == "gpt-5.5"
+    assert kwargs["reasoning"] == {"effort": "high"}
+    assert kwargs["text"] == {"verbosity": "high"}
+
+
+def test_openai_non_gpt5_request_also_omits_deprecated_sampling_parameter():
+    kwargs = _responses_create_kwargs(
+        LlmRequest(
+            provider="openai",
+            model="gpt-4.1",
+            prompt_version="s3_qa_summary.v1",
+            schema_version="s3.v1",
+            request_body={"prompt": "Return JSON."},
+            max_tokens=128,
+        )
+    )
+
+    assert _deprecated_sampling_key() not in kwargs
+
+
+def _deprecated_sampling_key() -> str:
+    return "temp" + "erature"
+
+
+def test_openai_response_parser_extracts_nested_responses_output_text():
+    # WHY: Responses API model_dump may omit top-level output_text and store
+    # the actual JSON text under output[].content[].text.
+    response = {
+        "status": "completed",
+        "output": [
+            {
+                "content": [
+                    {
+                        "type": "output_text",
+                        "text": '{"status":"ok","answer":"Rotor response [c1].","claims":[]}',
+                    }
+                ]
+            }
+        ],
+        "usage": {"input_tokens": 10, "output_tokens": 5, "total_tokens": 15},
+    }
+
+    mapped = _response_to_mapping(FakeOpenAIResponse(response))
+
+    assert mapped["status"] == "ok"
+    assert mapped["answer"] == "Rotor response [c1]."
+    assert mapped["usage"]["total_tokens"] == 15
+
+
+def test_openai_response_parser_keeps_incomplete_response_when_json_is_truncated():
+    response = {
+        "status": "incomplete",
+        "incomplete_details": {"reason": "max_output_tokens"},
+        "output": [{"content": [{"type": "output_text", "text": '{"status":"ok","answer":"truncated'}]}],
+    }
+
+    mapped = _response_to_mapping(FakeOpenAIResponse(response))
+
+    assert mapped["status"] == "incomplete"
+    assert mapped["incomplete_details"]["reason"] == "max_output_tokens"
+
+
+class FakeOpenAIResponse:
+    def __init__(self, data: dict) -> None:
+        self.data = data
+
+    def model_dump(self, mode: str = "python") -> dict:
+        return self.data

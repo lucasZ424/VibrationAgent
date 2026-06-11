@@ -1,6 +1,6 @@
 # Phase 3 Migrations
 
-Updated: 2026-06-10
+Updated: 2026-06-11
 
 ## Purpose
 
@@ -32,7 +32,7 @@ For any Obj that adds or changes live/replay model behavior:
 
 1. Keep the live path default-off.
 2. Add or update replay fixtures before adding CI assertions.
-3. Include prompt version, schema version, provider, model, temperature,
+3. Include prompt version, schema version, provider, model,
    `max_tokens`, reasoning/verbosity settings where applicable, and request hash
    in the fixture metadata.
 4. Redact API keys, local absolute paths, and long raw source text from captured
@@ -66,12 +66,12 @@ Runtime/provider contract additions:
 - Expanded `LlmSettings` with `replay_dir`, `capture_enabled`, `live_enabled`,
   token-budget defaults, and `openai` / `anthropic` provider profiles.
 - Added `LlmProviderSettings` for provider, model, API-key env name,
-  temperature, max tokens, timeout, and provider-specific reasoning/verbosity
+  max tokens, timeout, and provider-specific reasoning/verbosity
   knobs.
 - Added `LlmRequest` and `LlmFixture` replay contracts in
   `src/vibration_agent/llm/replay.py`.
 - Replay fixture metadata now includes request hash, prompt version, schema
-  version, provider, model, temperature, max tokens, reasoning effort,
+  version, provider, model, max tokens, reasoning effort,
   text verbosity, and request body.
 - Added `ReplayClient`, `RecordingClient`, `ReplayMissError`, and
   `RecordingDisabledError`.
@@ -320,3 +320,57 @@ scorecard is a test/artifact contract for Phase-3 regression only.
 Rollback: remove the workflow scorecard step, remove `scripts/llm_eval.py`,
 `tests/eval/test_llm_eval.py`, and the `tests/fixtures/llm/eval_*.json`
 fixtures.
+
+### Obj9 - Manual live validation and capture lane (2026-06-11)
+
+Manual/capture contract additions:
+
+- `RecordingClient` now exposes replay-compatible convenience methods for
+  `synthesize()`, `analyze_engineering()`, `derive_formula()`, `review()`, and
+  `correct()`. Each method builds the same `LlmRequest` shape used by
+  `ReplayClient`, calls the wrapped live client through `complete()`, and writes
+  a redacted fixture through `write_fixture()`.
+- `scripts/llm_capture.py` now supports OpenAI S3/S4/S5 tasks as well as
+  Anthropic supervisor tasks. Task-to-schema mapping is explicit:
+  `s3_qa_summary -> s3.v1`, `s4_engineering_analysis -> s4.v1`,
+  `s5_formula_derivation -> s5.v1`,
+  `supervisor_review -> supervisor.v1`, and
+  `supervisor_correction -> correction.v1`.
+- `scripts/manual_e2e.py` now has explicit `--live-openai` and
+  `--live-supervisor` gates. Without those flags, the script remains a
+  deterministic local probe and does not require API keys.
+- Manual live/capture construction requires `LLM_LIVE_ENABLED=true`,
+  `LLM_CAPTURE_ENABLED=true`, and the relevant provider key environment
+  variable before any live client is constructed.
+- `config.load()` now reads gitignored `.env.local` and `.env` files from the
+  workspace before resolving settings. File values use `os.environ` only when a
+  variable is currently missing, preserving explicit process-environment
+  overrides. `VIBRATION_AGENT_DISABLE_DOTENV=1` disables local env-file loading
+  for hermetic tests.
+- Manual E2E summaries include optional aggregate and per-skill token/cost
+  metadata when provider usage is returned.
+- Post-live correction: removed the legacy sampling parameter from provider
+  settings, environment/YAML loading, replay request metadata, OpenAI/Anthropic
+  provider calls, and S3/S4/S5/supervisor request kwargs because the configured
+  live model lanes reject or deprecate it.
+- Post-live correction: supervisor review parsing now fills missing `task_id`
+  from the candidate request and maps issue `message` / `code` fields into the
+  local `ReviewIssue.description` contract when the live model omits that local
+  field name.
+- Post-review hardening: replay capture redaction now scrubs local absolute
+  Windows, UNC, and common POSIX paths from captured fixture metadata and
+  responses before writing manual fixtures.
+
+No database, API, structured answer schema, or CI execution contract changed.
+The replay request hash contract did change because the deprecated sampling
+parameter was removed from `LlmRequest` metadata. Obj9 otherwise changes manual
+scripts and the recording wrapper used by manual live/capture lanes.
+
+Rollback: remove the new `RecordingClient` convenience methods, restore
+`scripts/llm_capture.py` to Anthropic supervisor capture only, restore
+`scripts/manual_e2e.py` to deterministic/captured-S3 behavior, remove
+the `.env.local` loader from `src/vibration_agent/config.py`, remove
+`tests/unit/test_manual_live_lane.py` and `tests/unit/test_config_env_file.py`,
+restore the legacy sampling parameter only if the provider contract requires
+it again, remove the local-path redaction hardening from replay capture, and
+remove the Obj9 README commands.

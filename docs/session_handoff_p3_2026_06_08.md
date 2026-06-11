@@ -180,7 +180,7 @@ Obj1 required behavior:
 - RecordingClient is manual-only and writes redacted fixtures.
 - pytest guard fails if tests construct a live provider client.
 - fixture hash metadata includes prompt version, schema version, model,
-  temperature, max_tokens, reasoning/verbosity settings where applicable, and
+  max_tokens, reasoning/verbosity settings where applicable, and
   request body.
 
 Do not implement real S3/S4/S5/supervisor behavior in Obj1 beyond provider and

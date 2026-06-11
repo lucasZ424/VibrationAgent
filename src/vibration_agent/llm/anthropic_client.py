@@ -43,7 +43,6 @@ class AnthropicClient:
         message = client.messages.create(
             model=request.model,
             max_tokens=request.max_tokens,
-            temperature=request.temperature,
             messages=[{"role": "user", "content": request.request_body.get("prompt", "")}],
         )
         mapped = _message_to_mapping(message)
@@ -71,7 +70,6 @@ class AnthropicClient:
             prompt_version=str(kwargs.get("prompt_version") or f"{task}.v1"),
             schema_version=str(kwargs.get("schema_version") or schema_version),
             request_body={key: value for key, value in kwargs.items() if key != "model"},
-            temperature=float(kwargs.get("temperature") or self.settings.temperature),
             max_tokens=int(kwargs.get("max_tokens") or self.settings.max_tokens),
             reasoning_effort=kwargs.get("reasoning_effort") or self.settings.reasoning_effort,
             text_verbosity=kwargs.get("text_verbosity") or self.settings.text_verbosity,

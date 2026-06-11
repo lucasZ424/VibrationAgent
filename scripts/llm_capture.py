@@ -21,7 +21,18 @@ for path in (ROOT, SRC):
 from vibration_agent.config import load  # noqa: E402
 from vibration_agent.llm.anthropic_client import AnthropicClient  # noqa: E402
 from vibration_agent.llm.budget import BudgetGuard  # noqa: E402
+from vibration_agent.llm.openai_client import OpenAIClient  # noqa: E402
 from vibration_agent.llm.replay import RecordingClient, request_from_kwargs  # noqa: E402
+
+_OPENAI_TASKS = {
+    "s3_qa_summary": "s3.v1",
+    "s4_engineering_analysis": "s4.v1",
+    "s5_formula_derivation": "s5.v1",
+}
+_ANTHROPIC_TASKS = {
+    "supervisor_review": "supervisor.v1",
+    "supervisor_correction": "correction.v1",
+}
 
 
 def _load_json(path: Path) -> dict[str, Any]:
@@ -31,36 +42,59 @@ def _load_json(path: Path) -> dict[str, Any]:
     return data
 
 
-def _manual_checks(settings: Any) -> None:
+def _manual_checks(settings: Any, *, provider_name: str) -> None:
     if not settings.llm.live_enabled:
         raise RuntimeError("Set LLM_LIVE_ENABLED=true or configs/llm.yaml live_enabled: true for manual capture.")
     if not settings.llm.capture_enabled:
         raise RuntimeError("Set LLM_CAPTURE_ENABLED=true or configs/llm.yaml capture_enabled: true for manual capture.")
-    api_key_env = settings.llm.anthropic.api_key_env
-    if not os.getenv(api_key_env):
-        raise RuntimeError(f"Set {api_key_env} in the environment before running Anthropic capture.")
+    provider = settings.llm.openai if provider_name == "openai" else settings.llm.anthropic
+    if not os.getenv(provider.api_key_env):
+        raise RuntimeError(f"Set {provider.api_key_env} in the environment before running {provider_name} capture.")
+
+
+def _task_provider(task: str) -> str:
+    if task in _OPENAI_TASKS:
+        return "openai"
+    if task in _ANTHROPIC_TASKS:
+        return "anthropic"
+    raise ValueError(f"Unsupported capture task: {task}")
+
+
+def _schema_version(task: str) -> str:
+    return {**_OPENAI_TASKS, **_ANTHROPIC_TASKS}[task]
+
+
+def _default_model(settings: Any, provider_name: str) -> str:
+    provider = settings.llm.openai if provider_name == "openai" else settings.llm.anthropic
+    return f"{provider.provider}:{provider.model}"
+
+
+def _live_client(settings: Any, *, provider_name: str, budget: BudgetGuard) -> Any:
+    if provider_name == "openai":
+        return OpenAIClient(settings.llm.openai, allow_live=True, budget_guard=budget)
+    return AnthropicClient(settings.llm.anthropic, allow_live=True, budget_guard=budget)
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Capture one manual Anthropic supervisor replay fixture.")
-    parser.add_argument("task", choices=["supervisor_review", "supervisor_correction"])
+    parser = argparse.ArgumentParser(description="Capture one manual Phase-3 replay fixture.")
+    parser.add_argument("task", choices=[*_OPENAI_TASKS.keys(), *_ANTHROPIC_TASKS.keys()])
     parser.add_argument("--request-json", type=Path, required=True, help="JSON kwargs for the selected task.")
     parser.add_argument("--fixture-dir", type=Path, default=ROOT / "tests" / "fixtures" / "llm")
     args = parser.parse_args(argv)
 
     settings = load(ROOT)
-    _manual_checks(settings)
+    provider_name = _task_provider(args.task)
+    _manual_checks(settings, provider_name=provider_name)
     kwargs = _load_json(args.request_json)
-    kwargs.setdefault("model", f"{settings.llm.anthropic.provider}:{settings.llm.anthropic.model}")
+    kwargs.setdefault("model", _default_model(settings, provider_name))
 
-    schema_version = "supervisor.v1" if args.task == "supervisor_review" else "correction.v1"
-    request = request_from_kwargs(task=args.task, schema_version=schema_version, kwargs=kwargs)
+    request = request_from_kwargs(task=args.task, schema_version=_schema_version(args.task), kwargs=kwargs)
     budget = BudgetGuard(
         per_task_tokens=settings.llm.token_budget_per_task,
         per_session_tokens=settings.llm.token_budget_per_session,
         usd_budget_per_task=settings.llm.usd_budget_per_task,
     )
-    live = AnthropicClient(settings.llm.anthropic, allow_live=True, budget_guard=budget)
+    live = _live_client(settings, provider_name=provider_name, budget=budget)
     recorder = RecordingClient(
         client=live,
         fixture_dir=args.fixture_dir,
@@ -68,7 +102,19 @@ def main(argv: list[str] | None = None) -> int:
         manual_lane=True,
     )
     response = recorder.complete(request)
-    print(json.dumps({"request_hash": request.request_hash, "response_keys": sorted(response)}, indent=2))
+    print(
+        json.dumps(
+            {
+                "provider": provider_name,
+                "task": args.task,
+                "request_hash": request.request_hash,
+                "response_keys": sorted(response),
+                "token_cost": response.get("token_cost"),
+                "cost": response.get("cost"),
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
