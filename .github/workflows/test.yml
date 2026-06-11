@@ -50,6 +50,7 @@ jobs:
           set -o pipefail
           mkdir -p data/exports/ci data/tmp/ci-large-corpus
           python -m pytest tests -q | tee data/exports/ci/full-regression.txt
+          python scripts/llm_eval.py --output data/exports/ci/phase3_eval_scorecard.json
           python scripts/bench_large_corpus.py tests/fixtures/raw/small_vibration_native.pdf --workspace data/tmp/ci-large-corpus --output data/exports/ci/large_corpus_baseline.json --max-pages 1 --top-k 2 | tee data/exports/ci/large-corpus-baseline-summary.txt
       - name: Upload nightly artifacts
         if: always()

@@ -1,0 +1,54 @@
+{
+  "case_id": "eval_en_visible_llm",
+  "description": "English LLM-shaped answer with visible citation passes V2.",
+  "query": "What happens near critical speed?",
+  "user_mode": "definition",
+  "constraints": {
+    "scope": "in_scope",
+    "difficulty": "medium",
+    "s4_enabled": false
+  },
+  "retrieval_rows": [
+    {
+      "chunk_id": "en_c1",
+      "doc_id": "en_doc",
+      "pages": [1],
+      "text": "Critical speed amplifies rotor response.",
+      "score": 1.0,
+      "language": "en"
+    }
+  ],
+  "s3_output": {
+    "status": "ok",
+    "summary": "S3 LLM ok",
+    "structured_result": {
+      "language": "en",
+      "answer": "Critical speed amplifies rotor response [en_c1].",
+      "claims": [
+        {
+          "text": "Critical speed amplifies rotor response.",
+          "chunk_id": "en_c1",
+          "doc_id": "en_doc",
+          "pages": [1],
+          "evidence_type": "documented"
+        }
+      ],
+      "synthesis_mode": "llm"
+    },
+    "citations": [
+      {
+        "chunk_id": "en_c1",
+        "doc_id": "en_doc",
+        "pages": [1]
+      }
+    ]
+  },
+  "expect": {
+    "status": "ok",
+    "scope": "in_scope",
+    "min_citations": 1,
+    "required_answer_terms": ["Critical speed", "rotor response"],
+    "unsupported_count": 0,
+    "supervisor_status": "not_triggered"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "case_id": "eval_extreme_supervisor",
+  "description": "Extreme path reaches V3 and an injected approving supervisor.",
+  "query": "In an extreme rotor operating case, what risk appears near critical speed?",
+  "user_mode": "definition",
+  "constraints": {
+    "scope": "in_scope",
+    "difficulty": "extreme",
+    "s4_enabled": false
+  },
+  "retrieval_rows": [
+    {
+      "chunk_id": "sup_c1",
+      "doc_id": "sup_doc",
+      "pages": [7],
+      "text": "Critical speed amplifies rotor response and can increase vibration risk.",
+      "score": 1.0,
+      "language": "en"
+    }
+  ],
+  "s3_output": {
+    "status": "ok",
+    "summary": "S3 extreme ok",
+    "structured_result": {
+      "language": "en",
+      "answer": "Critical speed amplifies rotor response and can increase vibration risk.",
+      "claims": [
+        {
+          "text": "Critical speed amplifies rotor response and can increase vibration risk.",
+          "chunk_id": "sup_c1",
+          "doc_id": "sup_doc",
+          "pages": [7],
+          "evidence_type": "documented"
+        }
+      ],
+      "synthesis_mode": "deterministic"
+    },
+    "citations": [
+      {
+        "chunk_id": "sup_c1",
+        "doc_id": "sup_doc",
+        "pages": [7]
+      }
+    ]
+  },
+  "supervisor": {
+    "mode": "approve"
+  },
+  "expect": {
+    "status": "ok",
+    "scope": "in_scope",
+    "min_citations": 1,
+    "required_answer_terms": ["Critical speed", "vibration risk"],
+    "unsupported_count": 0,
+    "reviewer_notes_present": true,
+    "supervisor_status": "approved"
+  }
+}

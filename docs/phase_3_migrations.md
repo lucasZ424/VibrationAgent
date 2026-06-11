@@ -1,6 +1,6 @@
 # Phase 3 Migrations
 
-Updated: 2026-06-09
+Updated: 2026-06-10
 
 ## Purpose
 
@@ -287,3 +287,36 @@ Rollback: remove `SupervisorCorrectionResponse`, remove the correction-client
 branch from `SupervisorLoop`, restore the old repeat-review loop behavior,
 restore the previous supervisor action value if compatibility requires it,
 remove supervisor replay fixtures/tests, and remove `scripts/llm_capture.py`.
+
+### Obj8 - Golden-output eval minimum set and replay regression gate (2026-06-10)
+
+Eval/replay contract additions:
+
+- Added `scripts/llm_eval.py` as the replay-only Phase-3 golden eval runner.
+  It loads `tests/fixtures/llm/eval_*.json`, injects static S2/S3 outputs, and
+  executes real V2/V4/V3 plus an optional fake supervisor.
+- Added five golden eval case fixtures covering Chinese deterministic output,
+  English visible-citation LLM-shaped output, fabricated numeric blocking,
+  invisible citation blocking, and extreme supervisor routing.
+- Eval case fixtures use additive JSON fields: `case_id`, `description`,
+  `query`, `user_mode`, `constraints`, `retrieval_rows`, `s3_output`, optional
+  `supervisor`, and `expect`.
+- The eval report uses schema version `phase3.eval.v1` and includes
+  `case_count`, `passed_count`, `failed_count`, per-case checks, and a
+  scorecard with pass rate, citation faithfulness pass rate, unsupported
+  numeric block rate, scope/status pass rate, and reviewer-notes presence rate.
+- The eval path constructs no live provider client and requires no API key.
+- Post-review correction: the nightly workflow now writes the scorecard to
+  `data/exports/ci/phase3_eval_scorecard.json`, which is covered by the
+  existing artifact upload step.
+- Post-review correction: unsupported numeric detection now keys off V2's
+  significant-item support failure reason instead of literal fabricated values,
+  and reviewer-notes presence scoring is limited to cases that declare the
+  expectation.
+
+No database, API, or frozen query response migration was added. The eval
+scorecard is a test/artifact contract for Phase-3 regression only.
+
+Rollback: remove the workflow scorecard step, remove `scripts/llm_eval.py`,
+`tests/eval/test_llm_eval.py`, and the `tests/fixtures/llm/eval_*.json`
+fixtures.

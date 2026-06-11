@@ -1,0 +1,54 @@
+{
+  "case_id": "eval_zh_engineering",
+  "description": "Chinese deterministic engineering answer keeps citations.",
+  "query": "阻尼比如何影响转子振动？",
+  "user_mode": "definition",
+  "constraints": {
+    "scope": "in_scope",
+    "difficulty": "medium",
+    "s4_enabled": false
+  },
+  "retrieval_rows": [
+    {
+      "chunk_id": "zh_c1",
+      "doc_id": "zh_doc",
+      "pages": [3],
+      "text": "阻尼比控制自由振动衰减速度。阻尼越大，振动衰减越快。",
+      "score": 1.0,
+      "language": "zh"
+    }
+  ],
+  "s3_output": {
+    "status": "ok",
+    "summary": "S3 ok",
+    "structured_result": {
+      "language": "zh",
+      "answer": "阻尼比控制自由振动衰减速度。阻尼越大，振动衰减越快。",
+      "claims": [
+        {
+          "text": "阻尼比控制自由振动衰减速度。阻尼越大，振动衰减越快。",
+          "chunk_id": "zh_c1",
+          "doc_id": "zh_doc",
+          "pages": [3],
+          "evidence_type": "documented"
+        }
+      ],
+      "synthesis_mode": "deterministic"
+    },
+    "citations": [
+      {
+        "chunk_id": "zh_c1",
+        "doc_id": "zh_doc",
+        "pages": [3]
+      }
+    ]
+  },
+  "expect": {
+    "status": "ok",
+    "scope": "in_scope",
+    "min_citations": 1,
+    "required_answer_terms": ["阻尼比", "振动衰减"],
+    "unsupported_count": 0,
+    "supervisor_status": "not_triggered"
+  }
+}

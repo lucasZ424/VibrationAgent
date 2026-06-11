@@ -1,6 +1,6 @@
 # Phase 3 Progress
 
-Updated: 2026-06-09
+Updated: 2026-06-10
 
 ## Execution Model
 
@@ -26,7 +26,7 @@ Every Obj must record:
 5. S4 real engineering analysis: done
 6. S5 real formula derivation and cycle-check hardening: done
 7. Claude latest / Claude Opus 4.8 supervisor trial and correction executor: done
-8. Golden-output eval minimum set and replay regression gate: pending
+8. Golden-output eval minimum set and replay regression gate: done
 9. Manual live validation and capture lane: pending
 10. Phase-3 interface freeze and Phase-4 planning: pending
 
@@ -522,3 +522,77 @@ Every Obj must record:
   compatibility tests passed.
 - Full non-large suite passed.
 - Obj8 may start after user review of Obj7.
+
+## Obj8 Notes
+
+- Added `scripts/llm_eval.py` as the Phase-3 replay-only golden eval runner.
+  The runner loads `tests/fixtures/llm/eval_*.json`, injects static S2/S3
+  outputs, and runs real V2/V4/V3 plus an optional fake approving supervisor.
+- Added five minimum golden cases: Chinese deterministic engineering answer,
+  English LLM-shaped visible citation, fabricated numeric negative case,
+  invisible citation negative case, and extreme supervisor case.
+- The scorecard reports pass rate, citation faithfulness pass rate,
+  unsupported numeric block rate, scope/status pass rate, and reviewer-notes
+  presence rate.
+- Added regression coverage proving a deliberately hallucinated visible claim is
+  caught by the eval gate.
+- The eval path constructs no live OpenAI or Anthropic client and requires no
+  API key. Manual live capture remains Obj9 scope.
+- The nightly workflow writes `data/exports/ci/phase3_eval_scorecard.json`, and
+  the existing artifact upload step publishes it with the other nightly
+  regression artifacts.
+- Obj8 issue log review is recorded in `docs/issue_log_p3/issues_obj8.txt`.
+
+## Obj8 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\eval\test_llm_eval.py -q -p no:cacheprovider`
+- Result: passed, 2 tests.
+- Verified command: `.\.venv\Scripts\python.exe scripts\llm_eval.py --output data\exports\phase3_eval_scorecard.json`
+- Result: passed; generated a replay-only scorecard with 5/5 cases passing.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_s3_llm_synthesis.py tests\unit\test_s4_engineering.py tests\unit\test_s5_derivation.py -q -p no:cacheprovider`
+- Result: passed, 66 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_supervisor_loop.py tests\unit\test_llm_replay.py tests\unit\test_anthropic_client.py tests\unit\test_openai_client.py tests\unit\test_budget.py -q -p no:cacheprovider`
+- Result: passed, 36 tests.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj8-nonlarge -p no:cacheprovider`
+- Result: passed, 366 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\eval\test_llm_eval.py -q -p no:cacheprovider`
+- Result: passed, 2 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe scripts\llm_eval.py --output data\exports\ci\phase3_eval_scorecard.json`
+- Result: passed; generated a replay-only CI artifact scorecard with 5/5 cases
+  passing.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_s3_llm_synthesis.py tests\unit\test_supervisor_loop.py tests\unit\test_llm_replay.py -q -p no:cacheprovider`
+- Result: passed, 52 tests.
+- Post-review verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-obj8-postreview -p no:cacheprovider`
+- Result: passed, 366 tests; 2 skipped, 1 deselected, 1 qdrant
+  compatibility warning.
+
+## Obj8 Residual Risk
+
+- The golden set is intentionally small. It is a regression gate for Phase-3
+  faithfulness surfaces, not a statistically meaningful quality benchmark.
+- Citation faithfulness remains a structural/V2-supported metric. It does not
+  prove semantic entailment.
+- The unsupported numeric block metric currently covers the representative
+  fabricated-number case. It now keys off V2's
+  `number/unit/symbol not found` reason instead of hardcoded numeric values, but
+  broader unit/symbol calibration remains available for future eval expansion.
+- Live provider outputs remain unvalidated by this Obj; Obj9 owns manual live
+  validation and capture.
+
+## Obj8 Post-Review Fixes
+
+- Wired the nightly workflow to run
+  `python scripts/llm_eval.py --output data/exports/ci/phase3_eval_scorecard.json`
+  so the faithfulness scorecard is published by the existing
+  `data/exports/ci/` artifact upload.
+- Hardened `unsupported_numeric_block_rate` so it detects V2's significant-item
+  support failure reason rather than specific literal values such as `50hz`.
+- Simplified `reviewer_notes_presence_rate` to evaluate only cases that declare
+  a `reviewer_notes_present` expectation.
+
+## Obj8 Next Obj Gate
+
+- Obj8 eval tests and nearby replay/provider compatibility tests passed.
+- Full non-large suite passed.
+- Obj9 may start after user review of Obj8.

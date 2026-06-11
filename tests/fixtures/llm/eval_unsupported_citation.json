@@ -1,0 +1,48 @@
+{
+  "case_id": "eval_unsupported_citation",
+  "description": "Claim citing an invisible chunk is blocked.",
+  "query": "What happens near critical speed?",
+  "user_mode": "definition",
+  "constraints": {
+    "scope": "in_scope",
+    "difficulty": "medium",
+    "s4_enabled": false
+  },
+  "retrieval_rows": [
+    {
+      "chunk_id": "vis_c1",
+      "doc_id": "vis_doc",
+      "pages": [1],
+      "text": "Critical speed amplifies rotor response.",
+      "score": 1.0,
+      "language": "en"
+    }
+  ],
+  "s3_output": {
+    "status": "ok",
+    "summary": "S3 unsupported citation",
+    "structured_result": {
+      "language": "en",
+      "answer": "Critical speed amplifies rotor response [ghost_c1].",
+      "claims": [
+        {
+          "text": "Critical speed amplifies rotor response.",
+          "chunk_id": "ghost_c1",
+          "doc_id": "ghost_doc",
+          "pages": [1],
+          "evidence_type": "documented"
+        }
+      ],
+      "synthesis_mode": "llm"
+    },
+    "citations": []
+  },
+  "expect": {
+    "status": "insufficient",
+    "scope": "in_scope",
+    "min_citations": 0,
+    "unsupported_count": 2,
+    "unsupported_reason_contains": ["chunk not visible in retrieval"],
+    "supervisor_status": "not_triggered"
+  }
+}
