@@ -1,6 +1,6 @@
 # Architecture Notes
 
-This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `docs/vibration_agent_design.md`; this file records the decisions that are already binding for code layout, Phase-0 runtime, and approved Phase-2 development.
+This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `docs/vibration_agent_design.md`; this file records the decisions that are already binding for code layout, Phase-0 runtime, and frozen Phase-2/Phase-3 development.
 
 ## Product Positioning
 
@@ -49,23 +49,22 @@ Reserved but inactive skills are:
 Deferred skills may appear in registries or scope declarations, but they must not be implemented inside S3 or called by the Phase-0 orchestrator.
 
 Phase-0 S3 produces cited sentence selections from retrieved chunks by default.
-Obj9 added an optional feature-flagged LLM synthesis branch, but it still
+Phase 3 added an optional default-off LLM synthesis branch, but it still
 requires retrieved evidence and structured citations before V2/V4 consume it.
 
 Phase-2 S4 is a deterministic engineering analysis layer. It runs only for
 `user_mode="engineering"` and enough cited evidence, adds engineering meaning,
 premises, caveats, and next actions from existing S3 claims, and then hands the
 result to V2. S4 must not invent numeric values or operating conditions.
-As of Obj14, S4 provides evidence-bound deterministic framing; deeper semantic
-engineering analysis remains a future model-backed capability.
+Phase 3 added an optional default-off LLM S4 analysis path. V2 remains the gate
+before any S4 prose can reach V4.
 
 Phase-2 S5 is a deterministic formula derivation layer. It runs only for
 `user_mode="derivation"` and enough cited evidence, emits premise -> steps ->
 conclusion, and allows only visible evidence steps plus `axiomatic` math steps.
 S5 must not invent formulas, units, parameters, or measured values.
-As of Obj15, S5 provides evidence-bound deterministic derivation scaffolding and
-formula asset threading. Deep symbolic algebra and LaTeX/MathML generation
-remain future model-backed capabilities.
+Phase 3 added an optional default-off LLM S5 derivation path. Deep symbolic
+algebra and LaTeX/MathML generation remain future capabilities.
 
 Phase-0 V2 is a deterministic quality layer. It checks S3/S4/S5 claims against chunks visible to S2, removes unsupported claims, allows S5 `axiomatic` steps, and lets V4 render only checked content.
 
@@ -81,7 +80,9 @@ the query as `extreme`, checks conclusion/evidence/limits completeness, topic
 relevance, and overclaiming risk, and writes `reviewer_notes`. V3
 `insufficient` does not block the V4 answer.
 
-Phase-2 Obj13 adds a fail-safe supervisor entry point. The supervisor is
+Phase-2 Obj13 added a fail-safe supervisor entry point. Phase 3 wired a
+default-off Anthropic review/correction lane for manual live/replay validation.
+The supervisor is
 triggered only for `extreme` routed queries or when reviewer notes require
 escalation. If no supervisor client is available, or if the supervisor loop
 does not approve within two review passes, the system returns the deterministic
@@ -89,10 +90,10 @@ V4 answer and marks `structured_result.supervisor_status = "fallback"`.
 Non-supervised answers carry `supervisor_status = "not_triggered"` when the full
 answer chain reaches V4.
 
-The supervisor entry point is dependency-injected. Obj13 does not ship a live
-Opus client or a GPT correction executor; without an injected `SupervisorClient`,
-extreme answers are deliberately marked as supervisor `fallback` rather than
-silently pretending that Opus reviewed them.
+The supervisor entry point is dependency-injected. Live Anthropic construction
+is explicit manual/capture behavior and is forbidden under pytest. Without an
+injected `SupervisorClient`, extreme answers are deliberately marked as
+supervisor `fallback` rather than silently pretending that Opus reviewed them.
 
 ## Development Order Rule
 
@@ -159,13 +160,14 @@ User task
   -> GPT: implementation, tests, candidate answer
   -> Claude Opus: senior supervisor review
   -> if no issues: final answer
-  -> if issues and loop_count < 2: GPT correction, then Opus review again
-  -> if issues remain after two review loops: Opus takes ownership
+  -> if issues and loop_count < 2: correction executor, then Opus review again
+  -> if issues remain after two review loops: deterministic fallback with warning
 ```
 
-The loop limit is binding. After two failed GPT correction loops, continuing to
-ask GPT to patch the same issue is considered low-value iteration; ownership
-moves to Opus or the task is paused for human clarification.
+The loop limit is binding. After two failed correction loops, continuing to
+patch the same issue is considered low-value iteration; the runtime returns the
+original deterministic answer with `correction_limit_fallback` metadata and a
+warning.
 
 ### Extreme Triggers
 
@@ -234,6 +236,17 @@ At architecture level, Phase 2 activates three kinds of work: local-corpus usabi
 
 Phase-2 execution is Obj-based. Each Obj must define verification, preserve a fallback path for external dependencies, update progress notes, and pass review before the next Obj starts. The binding fallback and feature-flag rules are recorded under "执行模型与风险控制" in `docs/phase_2_development_order.md`. Schema or API contract changes follow the canonical process in `docs/phase_2_migrations.md`; until a specific Obj completes that process, the Phase-1 runtime chain remains the stable baseline.
 
-As of Obj19, Phase 2 is frozen. Future schema/API/chain changes must follow
-`docs/phase_2_interface_freeze.md`; future capability work starts from the
-Phase-3 candidates in `docs/phase_2_deferred_and_polish_audit.md`.
+As of Obj19, Phase 2 is frozen. The Phase-2 compatibility baseline remains
+recorded in `docs/phase_2_interface_freeze.md`.
+
+## Phase-3 Interface Freeze
+
+As of Obj10, Phase 3 is frozen as the default-off model-backed
+engineering-assistant upgrade on top of the Phase-2 runtime. The frozen
+contract list, replay/capture layout, manual live lane, accepted residual risks,
+and Phase-4 candidate backlog are recorded in
+`docs/phase_3_interface_freeze.md` and
+`docs/phase_3_deferred_and_polish_audit.md`.
+
+Future schema/API/chain/replay/provider-contract changes must follow
+`docs/phase_3_interface_freeze.md` and `docs/phase_3_migrations.md`.

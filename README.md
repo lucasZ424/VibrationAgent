@@ -8,11 +8,13 @@ This product is designed for local, personal deployment by one engineering user.
 
 Development should prioritize corpus quality, retrieval reliability, citation traceability, Chinese/English engineering usability, and local reproducibility before production API hardening. Shared, remote, or public deployment changes the security model and must be treated as explicit hardening work.
 
-## Phase-2 Runtime Scope
+## Phase-3 Runtime Scope
 
-Phase 2 is the current local personal knowledge-base runtime. Phase 1 remains
-documented as the compatibility baseline in `docs/phase_1_interface_freeze.md`;
-the Phase-2 freeze is recorded in `docs/phase_2_interface_freeze.md`.
+Phase 3 is the current frozen local personal knowledge-base runtime with
+default-off model-backed engineering-assistant lanes. Phase 1 and Phase 2 remain
+documented compatibility baselines in `docs/phase_1_interface_freeze.md` and
+`docs/phase_2_interface_freeze.md`; the Phase-3 freeze is recorded in
+`docs/phase_3_interface_freeze.md`.
 
 Current active and available skills:
 
@@ -29,16 +31,19 @@ Current active and available skills:
 | V4 | Output-style shaping | active |
 | S6-S8 | literature search, model selection, experiment advice | deferred |
 
-## Phase-2 Runtime Rules
+## Phase-3 Runtime Rules
 
 - Default answer mode is engineering.
-- Phase-2 query chain is `S2 -> S3 -> optional S4/S5 -> V2 -> V4`, with V3
-  advisory review only for extreme tasks.
+- Default query chain is `S2 -> S3 -> optional S4/S5 -> V2 -> V4`, with V3
+  advisory review only for extreme tasks and optional supervisor annotation for
+  extreme/reviewer-flagged answers.
 - V1 is active but not a chain step; it normalizes in-memory input/output when
   configured.
 - S1 prepares the knowledge base and is invoked explicitly through ingestion
   entry points.
-- S6-S8 remain deferred and must not be called by the Phase-2 runtime.
+- S3/S4/S5 LLM branches and the Anthropic supervisor lane are default-off,
+  budget-governed, replayable, and manual-live-only.
+- S6-S8 remain deferred and must not be called by the Phase-3 runtime.
 - `src/vibration_agent/schemas.py` is the single source of truth for I/O contracts.
 - `src/vibration_agent/config.py` is the single source of truth for config loading.
 - Markdown is not a required Agent intermediate format; structured JSON/JSONL and asset references are preferred.
@@ -244,8 +249,7 @@ provider call:
 
 Phase-3 model-backed work keeps the same rule: CI is replay-only and must not
 make live OpenAI or Anthropic calls. Live provider calls are allowed only through
-explicit local manual/capture commands after the relevant Phase-3 objective adds
-provider clients, replay fixtures, budget guards, and live-call guards. Provider
+explicit local manual/capture commands with live/capture gates enabled. Provider
 keys must stay in local environment variables or `.env.local`, never in chat,
 fixtures, logs, or commits.
 
@@ -311,16 +315,25 @@ Post-freeze changes to schemas, chain order, structured result keys, API shapes,
 or ingestion output shapes must follow `docs/phase_2_interface_freeze.md` and
 `docs/phase_2_migrations.md`.
 
-## Phase-3 Planning
+## Phase-3 Freeze
 
-Phase 3 is planned as the first usable engineering-assistant intelligence
-upgrade on top of the Phase-2 freeze. The approved development order is recorded
-in `docs/phase_3_development_order.md`; progress and contract changes are
-tracked in `docs/phase_3_progress.md` and `docs/phase_3_migrations.md`.
+Phase 3 is frozen as the first usable engineering-assistant intelligence upgrade
+on top of the Phase-2 freeze. The approved development order is recorded in
+`docs/phase_3_development_order.md`; the frozen Phase-3 interface is recorded in
+`docs/phase_3_interface_freeze.md`; accepted residual risks and Phase-4
+candidates are recorded in `docs/phase_3_deferred_and_polish_audit.md`.
+Progress and contract changes are tracked in `docs/phase_3_progress.md` and
+`docs/phase_3_migrations.md`.
 
 Phase 3 keeps deterministic Phase-2 behavior as the default. OpenAI S3/S4/S5 and
 Claude supervisor paths are default-off, budget-governed, replayable, and
-manual-live-only until their dedicated objectives clear review.
+manual-live-only. Obj9 recorded successful manual live validation for the OpenAI
+S3/S4/S5 lanes and the Anthropic supervisor lane.
+
+Post-freeze changes to schemas, chain order, structured result keys, replay
+fixture layout, provider request shapes, API shapes, or ingestion output shapes
+must follow `docs/phase_3_interface_freeze.md` and
+`docs/phase_3_migrations.md`.
 
 ## Development Start Points
 

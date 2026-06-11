@@ -374,3 +374,25 @@ the `.env.local` loader from `src/vibration_agent/config.py`, remove
 restore the legacy sampling parameter only if the provider contract requires
 it again, remove the local-path redaction hardening from replay capture, and
 remove the Obj9 README commands.
+
+### Obj10 - Phase-3 interface freeze and Phase-4 planning (2026-06-11)
+
+Documentation/contract additions:
+
+- Added `docs/phase_3_interface_freeze.md` as the canonical frozen Phase-3
+  interface document.
+- Added `docs/phase_3_deferred_and_polish_audit.md` as the accepted residual
+  risk and Phase-4 candidate backlog.
+- Updated README and architecture notes to point to the Phase-3 freeze and to
+  describe OpenAI S3/S4/S5 and Anthropic supervisor lanes as default-off,
+  replayable, manual-live-only branches.
+- Post-review freeze polish: the freeze now explicitly records the supported
+  supervisor client method conventions and the frozen values for
+  `synthesis_mode` and `supervisor_action`.
+
+No runtime schema, database, API, replay fixture, provider request, or answer
+contract changed in Obj10. The freeze records the contracts already introduced
+and verified by Obj1-Obj9.
+
+Rollback: remove the two Phase-3 freeze/audit docs and restore README /
+architecture references to Phase-3 planning status.

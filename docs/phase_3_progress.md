@@ -27,8 +27,8 @@ Every Obj must record:
 6. S5 real formula derivation and cycle-check hardening: done
 7. Claude latest / Claude Opus 4.8 supervisor trial and correction executor: done
 8. Golden-output eval minimum set and replay regression gate: done
-9. Manual live validation and capture lane: implemented; live run pending API key
-10. Phase-3 interface freeze and Phase-4 planning: pending
+9. Manual live validation and capture lane: done
+10. Phase-3 interface freeze and Phase-4 planning: done
 
 ## Obj0 Notes
 
@@ -768,3 +768,50 @@ Every Obj must record:
 - Obj9 offline tests, deterministic manual probe, OpenAI S3/S4/S5 manual live
   runs, and Anthropic supervisor manual live run passed.
 - Obj9 live validation gate is cleared for Obj10 freeze preparation.
+
+## Obj10 Notes
+
+- Added `docs/phase_3_interface_freeze.md` as the frozen Phase-3 contract
+  document. It records the default deterministic chain, default-off LLM lanes,
+  replay/capture layout, manual live entry points, structured result additions,
+  verification gates, and post-freeze change rules.
+- Added `docs/phase_3_deferred_and_polish_audit.md` to distinguish accepted
+  Phase-3 residual risks from Phase-4 candidate work.
+- Updated README so Phase 3 is described as frozen rather than merely planned,
+  while preserving Phase-1/Phase-2 as compatibility baselines.
+- Updated architecture notes so the supervisor loop and S3/S4/S5 LLM lanes
+  match the Phase-3 default-off, dependency-injected, deterministic-fallback
+  runtime.
+- No runtime schema or code contract changed in Obj10.
+
+## Obj10 Verification
+
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests\eval\test_llm_eval.py -q -p no:cacheprovider`
+- Result: passed, 2 tests.
+- Verified command: `.\.venv\Scripts\python.exe scripts\llm_eval.py --output data\exports\ci\phase3_eval_scorecard.json`
+- Result: passed; generated a replay-only Phase-3 scorecard with 5/5 cases
+  passing and pass-rate metrics all at 1.0.
+- Verified command: `.\.venv\Scripts\python.exe scripts\manual_e2e.py --difficulty low`
+- Result: passed; deterministic manual probe returned `status="ok"`,
+  `supervisor_status="not_triggered"`, and no token/cost metadata.
+- Verified command: `.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p3-freeze -p no:cacheprovider`
+- Result: passed, 381 tests; 2 skipped, 1 deselected, 1 qdrant compatibility
+  warning.
+- Post-review freeze polish: `docs/phase_3_interface_freeze.md` now explicitly
+  freezes both supervisor client calling conventions, enumerates
+  `synthesis_mode` and `supervisor_action` values, and clarifies that S3 LLM
+  enablement is request/client-injection based rather than a global YAML flag.
+
+## Obj10 Residual Risk
+
+- Obj10 is documentation-only and does not rerun live provider calls. It relies
+  on the successful Obj9 operator live records for OpenAI S3/S4/S5 and
+  Anthropic supervisor acceptance.
+- Captured live fixtures still require human inspection before promotion into
+  committed replay fixtures.
+
+## Obj10 Next Obj Gate
+
+- Phase 3 is frozen.
+- Phase-4 planning may proceed from
+  `docs/phase_3_deferred_and_polish_audit.md`.
