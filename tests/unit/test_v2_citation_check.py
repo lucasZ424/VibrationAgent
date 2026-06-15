@@ -194,10 +194,46 @@ def test_v2_blocks_llm_claim_with_direction_reversed_from_evidence():
     assert "direction is positive" in output.structured_result["unsupported_claims"][0]["reasons"][-1]
 
 
+def test_v2_direction_check_scopes_to_matching_evidence_clause():
+    # WHY: Engineering evidence can mention opposite directions for different
+    # quantities; V2 should only flag reversal against a matching clause.
+    row = _row(text="Damping reduces vibration, but damping increases settling time.")
+    s3 = _s3(
+        answer="Damping increases settling time [c1].",
+        claims=[{"text": "Damping increases settling time.", "chunk_id": "c1", "doc_id": "doc1"}],
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2([row])))
+
+    assert output.status == "ok"
+    assert output.structured_result["unsupported_claims"] == []
+
+
 def test_v2_allows_calibrated_low_overlap_engineering_paraphrase():
     # WHY: Deterministic V2 should accept calibrated vibration paraphrases such
     # as damping/zeta and runup/passage instead of requiring exact words.
     row = _row(text="A larger zeta makes runup smoother.")
+    s3 = _s3(
+        answer="Higher damping improves passage through critical speed [c1].",
+        claims=[
+            {
+                "text": "Higher damping improves passage through critical speed.",
+                "chunk_id": "c1",
+                "doc_id": "doc1",
+            }
+        ],
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2([row])))
+
+    assert output.status == "ok"
+    assert output.structured_result["unsupported_claims"] == []
+
+
+def test_v2_allows_chinese_damping_symbol_paraphrase_without_mojibake_entries():
+    # WHY: The deterministic support table should use real damping vocabulary,
+    # not corrupted characters, for common vibration-symbol calibration.
+    row = _row(text="较大的阻尼比 ζ 使 runup smoother.")
     s3 = _s3(
         answer="Higher damping improves passage through critical speed [c1].",
         claims=[

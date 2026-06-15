@@ -297,3 +297,22 @@ Rollback: remove the new deterministic support/conflict helpers, restore
 `scripts/v2_calibration_eval.py` to report schema v2 and baseline-relative
 pass/fail, restore the pre-Obj5 calibration fixture labels, and remove the Obj5
 V2 tests/progress entry.
+
+### Obj5 review polish - V2 support-table cleanup and direction scoping (2026-06-15)
+
+V2 deterministic rule polish after senior review.
+
+- Removed corrupted damping-symbol entries from `_SUPPORT_GROUPS`.
+- Replaced them with explicit damping vocabulary and symbols: `damping`,
+  `damping ratio`, `zeta`, `ζ`, `阻尼`, and `阻尼比`.
+- Scoped direction-conflict checks to evidence clauses sharing at least two
+  non-direction anchors with the claim, avoiding false blocks when the same
+  chunk discusses opposite trends for different quantities.
+- Added focused tests for scoped direction checking and Chinese/Greek damping
+  symbol paraphrase support.
+
+No V2 structured result fields, API envelope, chain order, provider path, or
+model-backed entailment checker changed.
+
+Rollback: restore the previous support-group entries and whole-evidence
+direction check, and remove the two review-polish tests.

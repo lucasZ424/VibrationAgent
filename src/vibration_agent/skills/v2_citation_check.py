@@ -46,7 +46,7 @@ _STOPWORDS = {
     "with",
 }
 _SUPPORT_GROUPS = {
-    "damping_ratio": {"damping", "zeta", "味", "蠅", "ζ"},
+    "damping_ratio": {"damping", "damping ratio", "zeta", "ζ", "阻尼", "阻尼比"},
     "higher": {"higher", "larger", "greater", "increased", "increase"},
     "improve": {"improves", "improve", "smooth", "smoother", "smoothly"},
     "runup": {"runup", "run-up", "passage", "passing", "traverse", "through"},
@@ -211,16 +211,49 @@ def _support_groups(text: str) -> set[str]:
 
 def _direction_conflicts(claim_text: str, evidence_text: str) -> list[str]:
     claim_tokens = set(tokenize(claim_text))
-    evidence_tokens = set(tokenize(evidence_text))
     claim_positive = bool(claim_tokens & _POSITIVE_DIRECTIONS)
     claim_negative = bool(claim_tokens & _NEGATIVE_DIRECTIONS)
-    evidence_positive = bool(evidence_tokens & _POSITIVE_DIRECTIONS)
-    evidence_negative = bool(evidence_tokens & _NEGATIVE_DIRECTIONS)
+    if not claim_positive and not claim_negative:
+        return []
+    claim_anchors = _direction_anchor_tokens(claim_text)
+    matching_evidence_directions = _matching_evidence_directions(evidence_text, claim_anchors)
+    evidence_positive = "positive" in matching_evidence_directions
+    evidence_negative = "negative" in matching_evidence_directions
+    if claim_positive and evidence_positive:
+        return []
+    if claim_negative and evidence_negative:
+        return []
     if claim_positive and evidence_negative:
         return ["claim direction is positive but cited evidence direction is negative"]
     if claim_negative and evidence_positive:
         return ["claim direction is negative but cited evidence direction is positive"]
     return []
+
+
+def _direction_anchor_tokens(text: str) -> set[str]:
+    direction_terms = _POSITIVE_DIRECTIONS | _NEGATIVE_DIRECTIONS
+    return {
+        token
+        for token in _claim_tokens(text)
+        if token not in direction_terms
+    }
+
+
+def _matching_evidence_directions(evidence_text: str, claim_anchors: set[str]) -> set[str]:
+    directions: set[str] = set()
+    for clause in _direction_clauses(evidence_text):
+        clause_tokens = set(tokenize(clause))
+        if len(claim_anchors & clause_tokens) < 2:
+            continue
+        if clause_tokens & _POSITIVE_DIRECTIONS:
+            directions.add("positive")
+        if clause_tokens & _NEGATIVE_DIRECTIONS:
+            directions.add("negative")
+    return directions
+
+
+def _direction_clauses(text: str) -> list[str]:
+    return [part.strip() for part in re.split(r"[.;,，。；]|(?:\bbut\b)", text, flags=re.IGNORECASE) if part.strip()]
 
 
 def _quantity_context_conflicts(claim_text: str, evidence_text: str) -> list[str]:

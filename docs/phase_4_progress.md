@@ -397,6 +397,14 @@ warning.
 
 Result: passed, 24 tests.
 
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\eval\test_phase4_obj1_eval_assets.py -q -p no:cacheprovider
+```
+
+Result: passed, 26 tests.
+
 ```powershell
 .\.venv\Scripts\python.exe scripts\v2_calibration_eval.py --output data\exports\ci\phase4_obj5_v2_calibration.json
 ```
@@ -406,17 +414,44 @@ Result: passed. Calibration report has `passed_count = 11`, `failed_count = 0`,
 `supported_recall = 1.0`, `unsupported_block_rate = 1.0`, and
 `over_block_count = 0`.
 
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\v2_calibration_eval.py --output data\exports\ci\phase4_obj5_review_polish_v2_calibration.json
+```
+
+Result: passed with the same scorecard: `false_allow = 0`, `false_block = 0`,
+`supported_precision = 1.0`, `supported_recall = 1.0`,
+`unsupported_block_rate = 1.0`, and `over_block_count = 0`.
+
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_tutor_orchestrator.py tests\eval\test_phase4_obj1_eval_assets.py tests\eval\test_llm_eval.py -q -p no:cacheprovider
 ```
 
 Result: passed, 40 tests.
 
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_tutor_orchestrator.py tests\eval\test_phase4_obj1_eval_assets.py tests\eval\test_llm_eval.py -q -p no:cacheprovider
+```
+
+Result: passed, 42 tests.
+
 ```powershell
 .\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj5 -p no:cacheprovider
 ```
 
 Result: passed, 399 tests; 2 skipped; 1 deselected; 1 qdrant compatibility
+warning.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj5-review-polish -p no:cacheprovider
+```
+
+Result: passed, 401 tests; 2 skipped; 1 deselected; 1 qdrant compatibility
 warning.
 
 ## Obj5 Residual Risk
@@ -426,6 +461,13 @@ warning.
 - Synonym and quantity-term coverage is intentionally narrow to avoid hidden
   over-allowing. Future calibration cases should expand the tables only when
   labeled evidence supports the expansion.
+- Post-review polish removed corrupted damping-symbol entries from the support
+  table and replaced them with real damping vocabulary/symbols (`damping`,
+  `damping ratio`, `zeta`, `ζ`, `阻尼`, `阻尼比`).
+- The direction-conflict heuristic is now scoped to matching evidence clauses
+  that share at least two non-direction anchors with the claim, reducing
+  over-block risk when a chunk contains opposite directions for different
+  quantities.
 
 ## Obj5 Next Obj Gate
 
