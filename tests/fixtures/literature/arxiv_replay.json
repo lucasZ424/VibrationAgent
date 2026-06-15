@@ -1,0 +1,17 @@
+{
+  "schema_version": "phase4.s6_literature_fixture.v1",
+  "query": "bearing fault vibration envelope analysis",
+  "retrieval_source": "arxiv",
+  "candidates": [
+    {
+      "arxiv_id": "2401.01234",
+      "title": "Envelope Analysis for Bearing Fault Vibration Signals",
+      "authors": ["D. Signal"],
+      "year": 2024,
+      "venue": "arXiv",
+      "url": "https://arxiv.org/abs/2401.01234",
+      "abstract": "A replay fixture abstract about envelope analysis for bearing fault vibration signals.",
+      "snippet": "Envelope analysis for bearing fault vibration signals."
+    }
+  ]
+}

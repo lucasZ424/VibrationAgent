@@ -316,3 +316,32 @@ model-backed entailment checker changed.
 
 Rollback: restore the previous support-group entries and whole-evidence
 direction check, and remove the two review-polish tests.
+
+### Obj6 - S6 literature search prototype (2026-06-15)
+
+Default-off literature-search skill and replay fixture update.
+
+- Added `src/vibration_agent/skills/s6_literature_search.py` with
+  `LiteratureSearchSkill`.
+- Exported `LiteratureSearchSkill` lazily from `vibration_agent.skills` so
+  default imports do not load the deferred S6 module.
+- Added `agent_skills/s6_literature_search/SKILL.md`.
+- Added `prompts/skills/s6_literature_search.md`.
+- Added replay fixtures:
+  - `tests/fixtures/literature/semantic_scholar_replay.json`
+  - `tests/fixtures/literature/arxiv_replay.json`
+- S6 skill output schema version is `s6.literature_search.v1`.
+- S6 replay fixture schema version is `phase4.s6_literature_fixture.v1`.
+- Added redaction coverage for API keys, bearer tokens, local paths, and long
+  raw text.
+- Manual live sources are named as Semantic Scholar Graph API
+  (`semantic_scholar`) and arXiv API (`arxiv`), but live search requires an
+  explicit gate and injected client.
+
+S6 remains outside the default TutorOrchestrator chain and remains listed in
+`PHASE0_DEFERRED_SKILLS` until the later routing activation gate. No API
+envelope, default chain order, V2/V4 contract, or live-provider CI dependency
+changed.
+
+Rollback: remove the S6 skill module/export, prompt, agent skill package,
+literature fixtures, tests, and this progress entry.

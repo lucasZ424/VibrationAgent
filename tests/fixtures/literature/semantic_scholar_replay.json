@@ -1,0 +1,29 @@
+{
+  "schema_version": "phase4.s6_literature_fixture.v1",
+  "query": "rotor critical speed damping",
+  "retrieval_source": "semantic_scholar",
+  "candidates": [
+    {
+      "paper_id": "S2-ROTORDYN-001",
+      "title": "Damping Effects on Rotor Critical Speed Passage",
+      "authors": ["A. Engineer", "B. Researcher"],
+      "year": 2022,
+      "venue": "Journal of Rotordynamics",
+      "doi": "10.1234/rotor.2022.001",
+      "url": "https://example.org/papers/rotor-critical-speed",
+      "abstract": "This paper discusses how damping changes rotor response during passage through critical speed.",
+      "snippet": "Damping changes rotor response during passage through critical speed."
+    },
+    {
+      "paper_id": "S2-UNBALANCE-002",
+      "title": "Synchronous Response of Unbalanced Rotors",
+      "authors": ["C. Analyst"],
+      "year": 2020,
+      "venue": "Mechanical Systems Review",
+      "doi": "",
+      "url": "https://example.org/papers/unbalanced-rotors",
+      "abstract": "The study reviews synchronous vibration response produced by rotor unbalance.",
+      "snippet": "Rotor unbalance produces synchronous vibration response."
+    }
+  ]
+}

@@ -6,8 +6,11 @@ URGENT (phase-0):
 Optional:
   V1 term_symbol_unit_normalizer, S4 engineering_analysis, S5 formula_derivation, V3 reviewer
 
+Default-off Phase-4 prototype:
+  S6 literature_search
+
 Deferred:
-  S6 literature, S7 model_selection, S8 experiment_advice
+  S7 model_selection, S8 experiment_advice
 """
 from .base import Skill
 from .s4_engineering_analysis import EngineeringAnalysisSkill
@@ -25,6 +28,7 @@ __all__ = [
     "EngineeringAnalysisSkill",
     "FormulaDerivationSkill",
     "IngestionSkill",
+    "LiteratureSearchSkill",
     "OutputStyleSkill",
     "QASummarySkill",
     "ReviewerSkill",
@@ -32,3 +36,11 @@ __all__ = [
     "Skill",
     "TermSymbolUnitNormalizerSkill",
 ]
+
+
+def __getattr__(name: str):
+    if name == "LiteratureSearchSkill":
+        from .s6_literature_search import LiteratureSearchSkill
+
+        return LiteratureSearchSkill
+    raise AttributeError(name)

@@ -473,3 +473,68 @@ warning.
 
 - Cleared for Obj6 after user review of Obj5 artifacts. Obj6 must remain
   default-off, replay-first, and manual-live-only for external literature search.
+
+## Obj6 Notes
+
+- Added `LiteratureSearchSkill` as a default-off S6 prototype in
+  `src/vibration_agent/skills/s6_literature_search.py`.
+- S6 replay fixtures are the CI/default path. Manual live search is allowed only
+  when an explicit live gate is set and an operator injects a live client.
+- Named manual live sources are Semantic Scholar Graph API
+  (`semantic_scholar`) and arXiv API (`arxiv`).
+- Added replay fixtures under `tests/fixtures/literature/` for Semantic Scholar
+  and arXiv-shaped candidates.
+- S6 output schema is `s6.literature_search.v1`; replay fixture schema is
+  `phase4.s6_literature_fixture.v1`.
+- Added capture redaction for API keys, bearer tokens, local paths, and long raw
+  text before captured data is promoted.
+- Added `agent_skills/s6_literature_search/SKILL.md` and
+  `prompts/skills/s6_literature_search.md`.
+- `LiteratureSearchSkill` is exported lazily from `vibration_agent.skills` so
+  importing the active skill package does not load deferred S6 modules.
+- S6 remains outside `TutorOrchestrator` default routing. It stays listed in
+  `PHASE0_DEFERRED_SKILLS` until the separate routing activation gate.
+- S6 candidates are research context only; they are not final answers and must
+  still pass through later V2/V4-bound synthesis if used.
+
+## Obj6 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s6_literature_search.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider
+```
+
+Result: passed, 23 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s6_literature_search.py tests\unit\test_tutor_orchestrator.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider
+```
+
+Result: passed, 37 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj6 -p no:cacheprovider
+```
+
+Result: passed, 408 tests; 2 skipped; 1 deselected; 1 qdrant compatibility
+warning.
+
+## Obj6 Residual Risk
+
+- No real Semantic Scholar or arXiv request was run. Live use still requires an
+  explicit manual operator command and injected client.
+- S6 is not automatically routed from normal user queries; routing activation is
+  still owned by Obj9.
+- Candidate quality depends on replay/live source quality. Obj6 only captures
+  structured literature candidates and does not synthesize claims into answers.
+- There is no dedicated S6 capture script yet. `redact_capture()` is covered and
+  exported for manual use; a small capture command should be added before
+  routinely promoting live captures.
+- S6 `evidence_anchors` refer to external literature records, not internal
+  `chunk_id` evidence. Obj9 must decide whether routed S6 use requires
+  ingestion into the local corpus or a V2-compatible external-evidence contract.
+
+## Obj6 Next Obj Gate
+
+- Cleared for Obj7 after user review of Obj6 artifacts. Obj7 must remain
+  default-off and cannot enter ordinary routing before the routing activation
+  gate.
