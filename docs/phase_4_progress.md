@@ -24,7 +24,7 @@ or edit them unless explicitly asked.
 
 0. Phase-4 execution baseline: complete
 1. Broader replay eval, V2 calibration, and large-corpus baseline: complete
-2. Retrieval recall audit and dataset: pending
+2. Retrieval recall audit and dataset: complete
 3. Optional embedding provider upgrade: pending
 4. Qdrant reindex and retrieval replacement gate: pending
 5. Deterministic V2 evidence support hardening: pending
@@ -135,3 +135,73 @@ qdrant compatibility warning.
 ## Obj1 Next Obj Gate
 
 - Cleared for Obj2 after user review of Obj1 artifacts.
+
+## Obj2 Notes
+
+- Added `scripts/retrieval_eval.py`, an offline retrieval recall audit runner
+  that consumes `tests/fixtures/retrieval/targets.json` and the fixture chunk
+  corpus under `tests/fixtures/chunks/*.jsonl`.
+- Added `tests/eval/test_retrieval_eval.py` to verify the report shape,
+  `top_k_recall@5`, `top_k_recall@10`, expected-miss accounting, and per-case
+  diagnostics.
+- The runner uses the real `vibration_agent.retrieval.hybrid.search()` path.
+  It does not call S3/S4/S5/V2/V4, live providers, Qdrant, or external network
+  services.
+- The report separates evidence-bearing recall cases from expected-miss cases.
+  Expected-miss cases are excluded from recall denominators.
+- The default fixture audit currently has 3 evidence cases and 1 expected-miss
+  case. Evidence cases reached `top_k_recall@5 = 1.0` and
+  `top_k_recall@10 = 1.0`.
+- The expected-miss case returns weak non-target hits and is therefore reported
+  in `unexpected_expected_miss_hits`, not as a recall failure.
+- Obj2 review polish added an explicit Obj4 replacement gate to the report:
+  replacement is justified only if baseline `top_k_recall@10 < 0.80` or
+  `missing_evidence_cases >= 1`, and a candidate must fix at least one miss
+  without lowering recall on other evidence targets.
+- The current fixture baseline has `top_k_recall@10 = 1.0` and 0 missing
+  evidence cases, so replacement is not justified yet.
+- Obj2 review polish also added a synthetic retrieval-miss test to prove
+  `missing_evidence_cases` is populated when an expected chunk exists but is
+  not retrieved.
+- No retrieval replacement, embedding provider change, runtime schema change,
+  API change, or chain-order change was introduced.
+
+## Obj2 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\eval\test_retrieval_eval.py tests\eval\test_phase4_obj1_eval_assets.py tests\eval\test_llm_eval.py -q -p no:cacheprovider
+```
+
+Result after Obj2 review polish: passed, 8 tests.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\retrieval_eval.py --output data\exports\ci\phase4_obj2_retrieval_eval.json
+```
+
+Result after Obj2 review polish: passed. Report wrote 4 cases, 3 evidence
+cases, 1 expected-miss case, `top_k_recall@5 = 1.0`,
+`top_k_recall@10 = 1.0`, no missing evidence cases, and
+`replacement_justified_by_baseline = false`.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj2 -p no:cacheprovider
+```
+
+Result after Obj2 review polish: passed, 387 tests; 2 skipped; 1 deselected; 1
+qdrant compatibility warning.
+
+## Obj2 Residual Risk
+
+- The default audit set is intentionally small and fixture-based. It proves the
+  evaluation path and catches regressions on labeled fixture targets, but it is
+  not a large-corpus recall benchmark.
+- The expected-miss target currently returns weak non-target hits. That is a
+  precision/threshold diagnostic for later retrieval work, not evidence that
+  the expected chunk is missing.
+- Obj2 explicitly does not justify replacement on the current fixture baseline.
+  Obj3/Obj4 still need a candidate that satisfies the written replacement gate
+  before changing defaults.
+
+## Obj2 Next Obj Gate
+
+- Cleared for Obj3 after user review of Obj2 artifacts.

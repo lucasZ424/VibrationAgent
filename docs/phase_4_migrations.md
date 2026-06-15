@@ -141,3 +141,45 @@ UI, or chain-order contract changed.
 Rollback: remove the hard calibration cases, restore the V2 calibration fixture
 and report schema versions to v1, restore the previous retrieval target ids if
 needed, and relax the replay eval case-count assertion.
+
+### Obj2 - Retrieval recall audit runner (2026-06-15)
+
+Eval-runner and report-contract update.
+
+- Added `scripts/retrieval_eval.py`, an offline retrieval recall audit runner
+  over labeled retrieval targets and fixture chunks.
+- Added retrieval eval report schema
+  `phase4.retrieval_eval.report.v1`.
+- Added `tests/eval/test_retrieval_eval.py` to validate top-k recall metrics,
+  expected-miss handling, per-case diagnostics, and no-synthesis attribution.
+- The runner uses the existing `vibration_agent.retrieval.hybrid.search()` path
+  and does not alter runtime retrieval behavior.
+
+No runtime schema, API response, provider request, retrieval implementation,
+embedding provider, UI, or chain-order contract changed. CI remains
+replay/deterministic and does not require API keys, external search, Qdrant, or
+a large corpus.
+
+Rollback: remove `scripts/retrieval_eval.py`,
+`tests/eval/test_retrieval_eval.py`, and the Obj2 progress entry.
+
+### Obj2 review polish - Replacement gate and miss detection (2026-06-15)
+
+Eval-report polish after senior review.
+
+- Added `replacement_gate` to the retrieval eval report with a written Obj4
+  decision rule:
+  `top_k_recall@10 < 0.80` or `missing_evidence_cases >= 1` is required before
+  replacement is justified, and a candidate must fix at least one miss without
+  lowering recall on other evidence targets.
+- Added synthetic test coverage for a real `retrieval_miss` case where the
+  expected chunk exists in the corpus but is not retrieved.
+- Kept the default fixture audit unchanged: current baseline recall remains
+  `top_k_recall@5 = 1.0`, `top_k_recall@10 = 1.0`, with no missing evidence
+  cases and replacement not justified.
+
+No runtime schema, API response, provider request, retrieval implementation,
+embedding provider, UI, or chain-order contract changed.
+
+Rollback: remove `replacement_gate` from the eval report and remove the
+synthetic retrieval-miss test.
