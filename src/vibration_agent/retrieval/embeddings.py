@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
+import os
 from collections import OrderedDict
 from collections.abc import Callable, Sequence
 from functools import lru_cache
@@ -9,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from vibration_agent.config import EmbeddingSettings, Settings, load
+from vibration_agent.llm._guards import LiveProviderDisabledError, pytest_guard_active
 from vibration_agent.schemas import EmbeddingRecord
 
 ModelLoader = Callable[[EmbeddingSettings], Any]
@@ -68,20 +71,55 @@ def _load_sentence_transformer(model_name: str, local_files_only: bool) -> Any:
 
 
 def _load_model(settings: EmbeddingSettings) -> Any:
+    if settings.provider == "openai":
+        return _load_openai_client(settings)
     if settings.provider != "sentence_transformers":
         raise RuntimeError(f"Unsupported embedding provider: {settings.provider}")
     if settings.local_files_only and not Path(settings.model_name).expanduser().exists():
         raise EmbeddingModelNotConfigured(f"Local embedding model path not found: {settings.model_name}")
+    if pytest_guard_active():
+        raise LiveProviderDisabledError("Live sentence-transformer embedding model loads are forbidden during pytest.")
     return _load_sentence_transformer(settings.model_name, settings.local_files_only)
 
 
-def _encode_batch(model: Any, batch: Sequence[str]) -> list[list[float]]:
+def _load_openai_client(settings: EmbeddingSettings) -> Any:
+    if pytest_guard_active():
+        raise LiveProviderDisabledError("Live OpenAI embedding clients are forbidden during pytest.")
+    api_key = os.getenv(settings.api_key_env)
+    if not api_key:
+        raise RuntimeError(f"Missing OpenAI API key env var: {settings.api_key_env}")
+    openai = importlib.import_module("openai")
+    return openai.OpenAI(api_key=api_key, timeout=settings.timeout)
+
+
+def _encode_batch(model: Any, batch: Sequence[str], settings: EmbeddingSettings) -> list[list[float]]:
+    if settings.provider == "openai":
+        return _encode_openai_batch(model, batch, settings)
     encoded = model.encode(list(batch), convert_to_numpy=False, normalize_embeddings=True)
     vectors: list[list[float]] = []
     for item in encoded:
         if hasattr(item, "tolist"):
             item = item.tolist()
         vectors.append([float(value) for value in item])
+    return vectors
+
+
+def _encode_openai_batch(model: Any, batch: Sequence[str], settings: EmbeddingSettings) -> list[list[float]]:
+    response = model.embeddings.create(model=settings.model_name, input=list(batch))
+    data = response.get("data") if isinstance(response, dict) else getattr(response, "data", None)
+    if data is None and hasattr(response, "model_dump"):
+        dumped = response.model_dump(mode="python")
+        data = dumped.get("data") if isinstance(dumped, dict) else None
+    if not isinstance(data, list):
+        raise RuntimeError("OpenAI embeddings response missing data list.")
+    vectors: list[list[float]] = []
+    for item in data:
+        embedding = item.get("embedding") if isinstance(item, dict) else getattr(item, "embedding", None)
+        if embedding is None:
+            raise RuntimeError("OpenAI embeddings response item missing embedding.")
+        vectors.append([float(value) for value in embedding])
+    if len(vectors) != len(batch):
+        raise RuntimeError("OpenAI embeddings response length did not match request batch.")
     return vectors
 
 
@@ -125,8 +163,7 @@ def embed_texts(
         return []
 
     if not embedding_settings.enabled:
-        warning = "Embedding model is disabled; using token-feature fallback."
-        by_text = {text: _fallback_record(text, embedding_settings, warning) for text in unique_texts}
+        by_text = {text: _fallback_record(text, embedding_settings, None) for text in unique_texts}
         return [by_text[str(text)] for text in texts]
 
     try:
@@ -143,7 +180,7 @@ def embed_texts(
         model = (model_loader or _load_model)(embedding_settings)
         for start in range(0, len(missing_texts), final_batch_size):
             batch = missing_texts[start : start + final_batch_size]
-            vectors = _encode_batch(model, batch)
+            vectors = _encode_batch(model, batch, embedding_settings)
             for text, vector in zip(batch, vectors, strict=True):
                 record = EmbeddingRecord(
                     text_hash=text_hash(text),

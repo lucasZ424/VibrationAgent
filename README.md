@@ -83,7 +83,6 @@ Agent/
 
 ```bash
 pip install -e .
-cp .env.example .env
 python -m apps.cli.main scope
 python -m apps.cli.main config
 ```
@@ -161,9 +160,10 @@ Legacy compatibility:
 - `scripts/ingest_folder.py` is deprecated as a primary interface. It remains as a thin wrapper around `python -m apps.cli.main` for older commands.
 API keys should not be pasted into chat or committed. When model-backed API work
 is activated, put provider keys in local environment variables or a local
-`.env.local` file. `config.load()` reads `.env.local` and `.env` from the
-workspace, only fills missing process environment variables, and never
-overrides values already set in PowerShell.
+`.env` file. `config.load()` reads `.env` from the workspace, only fills
+missing process environment variables, and never overrides values already set in
+PowerShell. `.env.example` is a historical sanitized config snapshot, not the
+active runtime source.
 
 
 ## Testing
@@ -250,7 +250,7 @@ provider call:
 Phase-3 model-backed work keeps the same rule: CI is replay-only and must not
 make live OpenAI or Anthropic calls. Live provider calls are allowed only through
 explicit local manual/capture commands with live/capture gates enabled. Provider
-keys must stay in local environment variables or `.env.local`, never in chat,
+keys must stay in local environment variables or `.env`, never in chat,
 fixtures, logs, or commits.
 
 Run the Phase-3 manual E2E probe without live provider calls:
@@ -259,7 +259,7 @@ Run the Phase-3 manual E2E probe without live provider calls:
 .\.venv\Scripts\python.exe scripts\manual_e2e.py --difficulty low
 ```
 
-For repeated manual live validation, create ignored local `.env.local` content
+For repeated manual live validation, create ignored local `.env` content
 like this:
 
 ```dotenv

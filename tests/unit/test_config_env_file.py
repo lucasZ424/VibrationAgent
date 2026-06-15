@@ -14,11 +14,11 @@ def _workspace(tmp_path: Path) -> Path:
     return root
 
 
-def test_load_reads_gitignored_env_local_without_overriding_process_env(tmp_path, monkeypatch):
+def test_load_reads_gitignored_env_without_overriding_process_env(tmp_path, monkeypatch):
     # WHY: Manual live validation should not require retyping API keys every
     # shell session, while explicit process env still wins for operator control.
     root = _workspace(tmp_path)
-    (root / ".env.local").write_text(
+    (root / ".env").write_text(
         "\n".join(
             [
                 "OPENAI_API_KEY=local-openai-key",
@@ -52,8 +52,19 @@ def test_load_reads_gitignored_env_local_without_overriding_process_env(tmp_path
 
 def test_local_env_loading_can_be_disabled(tmp_path, monkeypatch):
     root = _workspace(tmp_path)
-    (root / ".env.local").write_text("LLM_LIVE_ENABLED=true\n", encoding="utf-8")
+    (root / ".env").write_text("LLM_LIVE_ENABLED=true\n", encoding="utf-8")
     monkeypatch.delenv("LLM_LIVE_ENABLED", raising=False)
     monkeypatch.setenv("VIBRATION_AGENT_DISABLE_DOTENV", "1")
+
+    assert load(root).llm.live_enabled is False
+
+
+def test_env_local_is_not_loaded(tmp_path, monkeypatch):
+    # WHY: The project now has one dotenv source of truth, so stale local
+    # overlay files must not silently change runtime behavior.
+    root = _workspace(tmp_path)
+    (root / ".env.local").write_text("LLM_LIVE_ENABLED=true\n", encoding="utf-8")
+    monkeypatch.delenv("LLM_LIVE_ENABLED", raising=False)
+    monkeypatch.delenv("VIBRATION_AGENT_DISABLE_DOTENV", raising=False)
 
     assert load(root).llm.live_enabled is False

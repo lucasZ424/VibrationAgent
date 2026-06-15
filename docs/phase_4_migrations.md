@@ -183,3 +183,51 @@ embedding provider, UI, or chain-order contract changed.
 
 Rollback: remove `replacement_gate` from the eval report and remove the
 synthetic retrieval-miss test.
+
+### Obj3 - Optional OpenAI embedding provider (2026-06-15)
+
+Embedding provider and configuration update.
+
+- Added optional OpenAI embedding provider support in
+  `src/vibration_agent/retrieval/embeddings.py`.
+- Added `EmbeddingSettings.api_key_env` and `EmbeddingSettings.timeout`.
+- Added embedding environment overrides:
+  - `EMBEDDING_MODEL_VERSION`
+  - `EMBEDDING_ENABLED`
+  - `EMBEDDING_LOCAL_FILES_ONLY`
+  - `EMBEDDING_FALLBACK_TO_TOKEN_FEATURES`
+  - `EMBEDDING_API_KEY_ENV`
+  - `EMBEDDING_TIMEOUT`
+- Updated `configs/embeddings.yaml` and `.env.example` with the new embedding
+  configuration fields.
+- Added `openai>=1.30.0,<2.0.0` to the `embeddings` optional dependency extra
+  in `pyproject.toml`.
+- Added tests for injected OpenAI embedding clients, pytest fallback behavior,
+  lazy SDK import, provider metadata, cache-safe provenance, and environment
+  overrides.
+
+Default behavior remains `provider: sentence_transformers` with local-files-only
+token-feature fallback. No runtime retrieval implementation, Qdrant schema,
+reindex behavior, API response, UI, or chain-order contract changed.
+
+Rollback: remove the OpenAI branch in `embeddings.py`, remove the new
+`EmbeddingSettings` fields and env overrides, restore `configs/embeddings.yaml`,
+`.env.example`, and `pyproject.toml`, and remove the Obj3 embedding tests.
+
+### Obj3 review polish - Embedding default-off hardening (2026-06-15)
+
+Embedding provider safety polish after senior review.
+
+- Changed `EmbeddingSettings.enabled` and `configs/embeddings.yaml` default from
+  true to false, so real embedding providers require explicit enablement.
+- Kept default dense retrieval warning-free by making the disabled embedding path
+  return token-feature fallback records without warnings.
+- Added a pytest guard before real `sentence_transformers` model loading.
+- Added OpenAI embedding response tests for object and `model_dump` shapes.
+
+No Qdrant schema, reindex behavior, API response, UI, or chain-order contract
+changed.
+
+Rollback: restore the previous embedding enabled default and disabled-warning
+behavior, remove the sentence-transformers pytest guard, and remove the added
+OpenAI response-shape tests.

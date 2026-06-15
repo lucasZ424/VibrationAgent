@@ -88,9 +88,11 @@ class EmbeddingSettings(BaseModel):
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     model_version: str | None = None
     batch_size: int = Field(default=32, ge=1)
-    enabled: bool = True
+    enabled: bool = False
     local_files_only: bool = True
     fallback_to_token_features: bool = True
+    api_key_env: str = "OPENAI_API_KEY"
+    timeout: float = Field(default=30.0, gt=0.0)
 
 
 class LlmProviderSettings(BaseModel):
@@ -236,8 +238,7 @@ def _env(name: str, default: Any) -> Any:
 def _load_local_env_files(root: Path) -> None:
     if os.getenv("VIBRATION_AGENT_DISABLE_DOTENV"):
         return
-    for filename in (".env.local", ".env"):
-        _load_local_env_file(root / filename)
+    _load_local_env_file(root / ".env")
 
 
 def _load_local_env_file(path: Path) -> None:
@@ -382,11 +383,16 @@ def load(workspace: Path | None = None) -> Settings:
         embeddings=EmbeddingSettings(
             provider=str(_env("EMBEDDING_PROVIDER", embeddings_section.get("provider", "sentence_transformers"))),
             model_name=str(_env("EMBEDDING_MODEL", embeddings_section.get("model_name", "sentence-transformers/all-MiniLM-L6-v2"))),
-            model_version=embeddings_section.get("model_version"),
+            model_version=_env("EMBEDDING_MODEL_VERSION", embeddings_section.get("model_version")),
             batch_size=int(_env("EMBEDDING_BATCH_SIZE", embeddings_section.get("batch_size", 32))),
-            enabled=bool(embeddings_section.get("enabled", True)),
-            local_files_only=bool(embeddings_section.get("local_files_only", True)),
-            fallback_to_token_features=bool(embeddings_section.get("fallback_to_token_features", True)),
+            enabled=_env_bool("EMBEDDING_ENABLED", bool(embeddings_section.get("enabled", True))),
+            local_files_only=_env_bool("EMBEDDING_LOCAL_FILES_ONLY", bool(embeddings_section.get("local_files_only", True))),
+            fallback_to_token_features=_env_bool(
+                "EMBEDDING_FALLBACK_TO_TOKEN_FEATURES",
+                bool(embeddings_section.get("fallback_to_token_features", True)),
+            ),
+            api_key_env=str(_env("EMBEDDING_API_KEY_ENV", embeddings_section.get("api_key_env", "OPENAI_API_KEY"))),
+            timeout=float(_env("EMBEDDING_TIMEOUT", embeddings_section.get("timeout", 30.0))),
         ),
         routing=RoutingSettings(
             default_owner=str(_env("ROUTING_DEFAULT_OWNER", routing_section.get("default_owner", "gpt"))),

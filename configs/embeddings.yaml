@@ -1,8 +1,10 @@
 embeddings:
-  enabled: true
+  enabled: false
   provider: sentence_transformers
   model_name: sentence-transformers/all-MiniLM-L6-v2
   model_version:
   batch_size: 32
   local_files_only: true
   fallback_to_token_features: true
+  api_key_env: OPENAI_API_KEY
+  timeout: 30.0

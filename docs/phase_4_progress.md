@@ -25,7 +25,7 @@ or edit them unless explicitly asked.
 0. Phase-4 execution baseline: complete
 1. Broader replay eval, V2 calibration, and large-corpus baseline: complete
 2. Retrieval recall audit and dataset: complete
-3. Optional embedding provider upgrade: pending
+3. Optional embedding provider upgrade: complete
 4. Qdrant reindex and retrieval replacement gate: pending
 5. Deterministic V2 evidence support hardening: pending
 6. S6 literature search prototype: pending
@@ -205,3 +205,105 @@ qdrant compatibility warning.
 ## Obj2 Next Obj Gate
 
 - Cleared for Obj3 after user review of Obj2 artifacts.
+
+## Obj3 Notes
+
+- Added an explicit optional OpenAI embedding provider path in
+  `src/vibration_agent/retrieval/embeddings.py`.
+- Default embedding behavior remains deterministic:
+  `configs/embeddings.yaml` still uses `provider: sentence_transformers`,
+  `local_files_only: true`, and token-feature fallback.
+- OpenAI embeddings are used only when `EMBEDDING_PROVIDER=openai` or the YAML
+  provider is explicitly changed to `openai`.
+- Real OpenAI embedding client construction is lazy and forbidden under pytest;
+  without an injected client during tests, it falls back to token-feature
+  retrieval with a warning.
+- Added embedding config fields: `api_key_env` and `timeout`, with environment
+  overrides `EMBEDDING_API_KEY_ENV` and `EMBEDDING_TIMEOUT`.
+- Added environment overrides for existing embedding fields:
+  `EMBEDDING_MODEL_VERSION`, `EMBEDDING_ENABLED`,
+  `EMBEDDING_LOCAL_FILES_ONLY`, and
+  `EMBEDDING_FALLBACK_TO_TOKEN_FEATURES`.
+- Added OpenAI to the `embeddings` optional dependency extra in
+  `pyproject.toml` so explicit OpenAI embedding users can install the needed
+  SDK through the embedding feature set.
+- No Qdrant reindex, retrieval replacement, API change, chain-order change, or
+  live provider validation was performed.
+
+## Obj3 Review Polish
+
+- Resolved the Obj3 default-off review issue by changing embedding defaults to
+  `enabled: false` in code and YAML. Explicit `EMBEDDING_ENABLED=true` still
+  enables a real provider path.
+- Disabled embeddings now fall back to token-feature retrieval without adding a
+  warning, preserving warning-free default QA behavior.
+- Added a pytest guard before real `sentence_transformers` model loading, so CI
+  cannot accidentally trigger a heavy model load or network-backed model
+  resolution through embedding config drift.
+- Added OpenAI embedding parser coverage for object-response and `model_dump`
+  response shapes.
+
+## Obj3 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_embeddings.py tests\unit\test_config_env_file.py tests\unit\test_s2_retrieval_skill.py tests\eval\test_retrieval_eval.py -q -p no:cacheprovider
+```
+
+Result: passed, 33 tests.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_embeddings.py tests\unit\test_config_env_file.py tests\unit\test_s2_retrieval_skill.py tests\eval\test_retrieval_eval.py -q -p no:cacheprovider
+```
+
+Result: passed, 38 tests.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\retrieval_eval.py --output data\exports\ci\phase4_obj3_retrieval_eval.json
+```
+
+Result: passed. Default fixture baseline remains `top_k_recall@5 = 1.0`,
+`top_k_recall@10 = 1.0`, no missing evidence cases, and
+`replacement_justified_by_baseline = false`.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\retrieval_eval.py --output data\exports\ci\phase4_obj3_review_polish_retrieval_eval.json
+```
+
+Result: passed. Default fixture baseline remains `top_k_recall@5 = 1.0`,
+`top_k_recall@10 = 1.0`, no missing evidence cases, and
+`replacement_justified_by_baseline = false`.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj3 -p no:cacheprovider
+```
+
+Result: passed, 390 tests; 2 skipped; 1 deselected; 1 qdrant compatibility
+warning.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj3-review-polish -p no:cacheprovider
+```
+
+Result: passed, 395 tests; 2 skipped; 1 deselected; 1 qdrant compatibility
+warning.
+
+## Obj3 Residual Risk
+
+- OpenAI embedding live behavior was not validated in this objective. The
+  implementation is covered with an injected fake client and pytest fallback
+  guard only.
+- Embedding dimension changes are not applied to Qdrant in Obj3. Obj4 still
+  owns dimension migration, reindex, and replacement decisions.
+- Provider aliases, pricing, latency, and API behavior remain operational risks
+  for manual/live use.
+
+## Obj3 Next Obj Gate
+
+- Cleared for Obj4 after user review of Obj3 artifacts. Obj4 must still use the
+  written replacement gate from Obj2 before changing retrieval defaults.

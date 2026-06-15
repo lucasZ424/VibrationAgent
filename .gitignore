@@ -3,6 +3,7 @@ __pycache__/
 *.egg-info/
 .venv/
 .env
+.env.example
 .env.local
 API_key.txt
 data/
