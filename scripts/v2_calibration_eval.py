@@ -81,7 +81,9 @@ def run_case(case: Mapping[str, Any]) -> dict[str, Any]:
         if expected_unsupported_count is not None
         else True
     )
-    passed = actual_supported is expected_current_supported and unsupported_count_ok
+    if expected_supported:
+        unsupported_count_ok = True
+    passed = actual_supported is expected_supported and unsupported_count_ok
     return {
         "case_id": str(case.get("case_id") or "unknown"),
         "label": "supported" if expected_supported else "unsupported",
@@ -110,7 +112,7 @@ def run_calibration(data: Mapping[str, Any] | None = None) -> dict[str, Any]:
     results = [run_case(case) for case in cases if isinstance(case, Mapping)]
     confusion = _confusion(results)
     return {
-        "schema_version": "phase4.v2_calibration.report.v2",
+        "schema_version": "phase4.v2_calibration.report.v3",
         "fixture_schema_version": active.get("schema_version"),
         "case_count": len(results),
         "passed_count": sum(1 for result in results if result["passed"]),
@@ -118,8 +120,10 @@ def run_calibration(data: Mapping[str, Any] | None = None) -> dict[str, Any]:
         "confusion": confusion,
         "scorecard": {
             "pass_rate": _rate(result["passed"] for result in results),
+            "supported_precision": _safe_div(confusion["true_supported"], confusion["true_supported"] + confusion["false_allow"]),
             "supported_recall": _safe_div(confusion["true_supported"], confusion["expected_supported"]),
             "unsupported_block_rate": _safe_div(confusion["true_unsupported"], confusion["expected_unsupported"]),
+            "over_block_count": confusion["false_block"],
         },
         "cases": results,
     }

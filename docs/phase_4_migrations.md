@@ -274,3 +274,26 @@ envelope shape are unchanged.
 Rollback: remove `scripts/qdrant_reindex_gate.py`, remove
 `top_hit_contributions` from retrieval eval diagnostics, remove the added
 hybrid retrieval attribution fields, and remove the Obj4 tests/progress entry.
+
+### Obj5 - Deterministic V2 evidence-support hardening (2026-06-15)
+
+V2 deterministic support-check and calibration contract update.
+
+- Added narrow deterministic support groups for calibrated vibration
+  paraphrases, including damping/zeta and runup/passage wording.
+- Added deterministic conflict checks for direction reversals and numeric/unit
+  values bound to unsupported quantity terms.
+- Updated `scripts/v2_calibration_eval.py` to report true-label pass/fail under
+  `phase4.v2_calibration.report.v3`; `expected_current_supported` remains in
+  the fixture/report as historical baseline context, not the Obj5 pass gate.
+- Updated Obj1 V2 calibration fixture labels for the three pre-Obj5 known gaps.
+- Added focused V2 tests for wrong-quantity numeric binding, direction reversal,
+  and calibrated low-overlap paraphrase support.
+
+No V2 structured result fields, API envelope, chain order, provider path, or
+model-backed entailment checker changed.
+
+Rollback: remove the new deterministic support/conflict helpers, restore
+`scripts/v2_calibration_eval.py` to report schema v2 and baseline-relative
+pass/fail, restore the pre-Obj5 calibration fixture labels, and remove the Obj5
+V2 tests/progress entry.

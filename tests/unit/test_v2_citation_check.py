@@ -158,6 +158,63 @@ def test_v2_allows_llm_number_unit_and_symbol_when_visible_in_cited_evidence():
     assert output.structured_result["unsupported_claims"] == []
 
 
+def test_v2_blocks_llm_claim_binding_visible_value_to_wrong_quantity():
+    # WHY: Visible numeric values are not sufficient evidence when the model
+    # attaches them to a different engineering quantity.
+    row = _row(text="The shaft speed is 3000 rpm during the test.")
+    s3 = _s3(
+        answer="The critical speed is 3000 rpm during the test [c1].",
+        claims=[{"text": "The critical speed is 3000 rpm during the test.", "chunk_id": "c1", "doc_id": "doc1"}],
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2([row])))
+
+    assert output.status == "insufficient"
+    assert "unsupported quantity term" in output.structured_result["unsupported_claims"][0]["reasons"][-1]
+
+
+def test_v2_blocks_llm_claim_with_direction_reversed_from_evidence():
+    # WHY: High lexical overlap should not allow a claim that flips the
+    # evidence direction from reducing to increasing.
+    row = _row(text="Damping reduces resonance response in the cited rotor example.")
+    s3 = _s3(
+        answer="Damping increases resonance response in the cited rotor example [c1].",
+        claims=[
+            {
+                "text": "Damping increases resonance response in the cited rotor example.",
+                "chunk_id": "c1",
+                "doc_id": "doc1",
+            }
+        ],
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2([row])))
+
+    assert output.status == "insufficient"
+    assert "direction is positive" in output.structured_result["unsupported_claims"][0]["reasons"][-1]
+
+
+def test_v2_allows_calibrated_low_overlap_engineering_paraphrase():
+    # WHY: Deterministic V2 should accept calibrated vibration paraphrases such
+    # as damping/zeta and runup/passage instead of requiring exact words.
+    row = _row(text="A larger zeta makes runup smoother.")
+    s3 = _s3(
+        answer="Higher damping improves passage through critical speed [c1].",
+        claims=[
+            {
+                "text": "Higher damping improves passage through critical speed.",
+                "chunk_id": "c1",
+                "doc_id": "doc1",
+            }
+        ],
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2([row])))
+
+    assert output.status == "ok"
+    assert output.structured_result["unsupported_claims"] == []
+
+
 def test_v2_does_not_expand_numeric_blocking_for_deterministic_mode():
     # WHY: Obj3 strict number/unit/symbol checks are scoped to synthesis_mode=llm
     # so Phase-2 deterministic behavior does not regress.

@@ -274,8 +274,8 @@
       "case_id": "v2_hard_neg_wrong_quantity_same_value",
       "query": "Which quantity is 3000 rpm?",
       "expected_supported": false,
-      "expected_current_supported": true,
-      "known_current_gap": "Current V2 sees lexical overlap and visible 3000 rpm, but does not distinguish shaft speed from critical speed.",
+      "expected_current_supported": false,
+      "known_current_gap": "Pre-Obj5 V2 saw lexical overlap and visible 3000 rpm, but did not distinguish shaft speed from critical speed.",
       "retrieval_rows": [
         {
           "chunk_id": "v2h_wrong_quantity",
@@ -309,8 +309,8 @@
       "case_id": "v2_hard_neg_meaning_flip_with_overlap",
       "query": "How does damping affect resonance?",
       "expected_supported": false,
-      "expected_current_supported": true,
-      "known_current_gap": "Current V2 accepts the claim because damping/resonance/response overlap, but the meaning is reversed.",
+      "expected_current_supported": false,
+      "known_current_gap": "Pre-Obj5 V2 accepted the claim because damping/resonance/response overlapped, but the meaning was reversed.",
       "retrieval_rows": [
         {
           "chunk_id": "v2h_flip",
@@ -344,9 +344,9 @@
       "case_id": "v2_hard_pos_low_lexical_overlap",
       "query": "How does higher damping affect passage through critical speed?",
       "expected_supported": true,
-      "expected_current_supported": false,
+      "expected_current_supported": true,
       "expected_unsupported_count": 1,
-      "known_current_gap": "Current V2 has no synonym table for zeta/damping or runup/passage, so a legitimate engineering paraphrase is blocked.",
+      "known_current_gap": "Pre-Obj5 V2 had no synonym table for zeta/damping or runup/passage, so a legitimate engineering paraphrase was blocked.",
       "retrieval_rows": [
         {
           "chunk_id": "v2h_low_overlap",

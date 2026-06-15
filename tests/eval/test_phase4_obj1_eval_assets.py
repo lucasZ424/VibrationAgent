@@ -8,20 +8,22 @@ from scripts.v2_calibration_eval import load_calibration, run_calibration
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def test_phase4_v2_calibration_set_passes_current_baseline():
+def test_phase4_v2_calibration_set_passes_obj5_true_label_gate():
     report = run_calibration(load_calibration())
 
-    assert report["schema_version"] == "phase4.v2_calibration.report.v2"
+    assert report["schema_version"] == "phase4.v2_calibration.report.v3"
     assert report["fixture_schema_version"] == "phase4.v2_calibration.v2"
     assert report["case_count"] >= 11
     assert report["failed_count"] == 0
     assert report["scorecard"]["pass_rate"] == 1.0
     assert report["confusion"]["expected_supported"] >= 5
     assert report["confusion"]["expected_unsupported"] >= 6
-    assert report["confusion"]["false_allow"] >= 2
-    assert report["confusion"]["false_block"] >= 1
-    assert report["scorecard"]["supported_recall"] < 1.0
-    assert report["scorecard"]["unsupported_block_rate"] < 1.0
+    assert report["confusion"]["false_allow"] == 0
+    assert report["confusion"]["false_block"] == 0
+    assert report["scorecard"]["supported_precision"] == 1.0
+    assert report["scorecard"]["supported_recall"] == 1.0
+    assert report["scorecard"]["unsupported_block_rate"] == 1.0
+    assert report["scorecard"]["over_block_count"] == 0
 
 
 def test_phase4_retrieval_targets_are_labeled_for_obj2_consumption():

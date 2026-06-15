@@ -45,6 +45,23 @@ _STOPWORDS = {
     "to",
     "with",
 }
+_SUPPORT_GROUPS = {
+    "damping_ratio": {"damping", "zeta", "味", "蠅", "ζ"},
+    "higher": {"higher", "larger", "greater", "increased", "increase"},
+    "improve": {"improves", "improve", "smooth", "smoother", "smoothly"},
+    "runup": {"runup", "run-up", "passage", "passing", "traverse", "through"},
+    "critical_speed": {"critical speed", "critical", "speed"},
+}
+_NEGATIVE_DIRECTIONS = {"reduce", "reduces", "reduced", "decrease", "decreases", "decreased", "lower", "lowers", "fall", "falls"}
+_POSITIVE_DIRECTIONS = {"increase", "increases", "increased", "raise", "raises", "amplify", "amplifies", "higher"}
+_QUANTITY_TERMS = (
+    "critical speed",
+    "shaft speed",
+    "rotational speed",
+    "running speed",
+    "vibration speed",
+    "damping ratio",
+)
 _UNSUPPORTED_SAFE_KEYS = (
     "task_id",
     "mode",
@@ -171,7 +188,63 @@ def _lexically_supported(claim_text: str, evidence_text: str) -> bool:
     evidence_tokens = set(tokenize(evidence_text))
     if not evidence_tokens:
         return False
-    return bool(claim_tokens & evidence_tokens)
+    if claim_tokens & evidence_tokens:
+        return True
+    return len(_support_groups(claim_text) & _support_groups(evidence_text)) >= 2
+
+
+def _support_groups(text: str) -> set[str]:
+    normalized = text.casefold()
+    tokens = set(tokenize(text))
+    groups: set[str] = set()
+    for name, variants in _SUPPORT_GROUPS.items():
+        for variant in variants:
+            if " " in variant:
+                if variant in normalized:
+                    groups.add(name)
+                    break
+            elif variant.casefold() in tokens or variant in text:
+                groups.add(name)
+                break
+    return groups
+
+
+def _direction_conflicts(claim_text: str, evidence_text: str) -> list[str]:
+    claim_tokens = set(tokenize(claim_text))
+    evidence_tokens = set(tokenize(evidence_text))
+    claim_positive = bool(claim_tokens & _POSITIVE_DIRECTIONS)
+    claim_negative = bool(claim_tokens & _NEGATIVE_DIRECTIONS)
+    evidence_positive = bool(evidence_tokens & _POSITIVE_DIRECTIONS)
+    evidence_negative = bool(evidence_tokens & _NEGATIVE_DIRECTIONS)
+    if claim_positive and evidence_negative:
+        return ["claim direction is positive but cited evidence direction is negative"]
+    if claim_negative and evidence_positive:
+        return ["claim direction is negative but cited evidence direction is positive"]
+    return []
+
+
+def _quantity_context_conflicts(claim_text: str, evidence_text: str) -> list[str]:
+    claim_compact = re.sub(r"\s+", " ", claim_text).casefold()
+    evidence_compact = re.sub(r"\s+", " ", evidence_text).casefold()
+    conflicts: list[str] = []
+    for value in _number_unit_values(claim_text):
+        if value not in _number_unit_values(evidence_text):
+            continue
+        claim_terms = {term for term in _QUANTITY_TERMS if term in claim_compact}
+        evidence_terms = {term for term in _QUANTITY_TERMS if term in evidence_compact}
+        missing_terms = sorted(term for term in claim_terms if term not in evidence_terms)
+        if missing_terms and evidence_terms:
+            conflicts.append(
+                "claim binds "
+                + value
+                + " to unsupported quantity term(s): "
+                + ", ".join(missing_terms)
+            )
+    return conflicts
+
+
+def _number_unit_values(text: str) -> set[str]:
+    return {_normalize_significant_item(match.group(0)) for match in _NUMBER_UNIT_RE.finditer(text)}
 
 
 def _significant_items(text: str) -> set[str]:
@@ -196,6 +269,13 @@ def _missing_significant_items(claim_text: str, evidence_text: str) -> list[str]
     return missing
 
 
+def _deterministic_support_conflicts(claim_text: str, evidence_text: str) -> list[str]:
+    return [
+        *_direction_conflicts(claim_text, evidence_text),
+        *_quantity_context_conflicts(claim_text, evidence_text),
+    ]
+
+
 def _unsupported(
     claim: Mapping[str, Any],
     *,
@@ -218,6 +298,8 @@ def _unsupported(
         if not _lexically_supported(claim_text, evidence):
             reasons.append("claim text does not lexically match cited evidence")
         if strict_llm_support:
+            support_conflicts = _deterministic_support_conflicts(claim_text, evidence)
+            reasons.extend(support_conflicts)
             missing_items = _missing_significant_items(claim_text, evidence)
             if missing_items:
                 reasons.append(

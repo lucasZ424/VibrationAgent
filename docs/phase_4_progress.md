@@ -368,3 +368,66 @@ warning.
 
 - Cleared for Obj5 after user review of Obj4 artifacts. Obj5 remains scoped to
   deterministic V2 evidence-support hardening.
+
+## Obj5 Notes
+
+- Hardened deterministic V2 support checks without adding model-backed
+  entailment or live provider calls.
+- Added calibrated paraphrase support groups for vibration wording such as
+  `zeta`/damping and runup/passage wording, so legitimate low-overlap
+  engineering paraphrases can pass when multiple deterministic support groups
+  align.
+- Added deterministic conflict checks for:
+  - direction reversal, such as evidence saying damping reduces resonance
+    response while the claim says damping increases it;
+  - numeric/unit values bound to a different quantity term, such as citing a
+    visible `3000 rpm` shaft speed as a critical speed.
+- Updated V2 calibration reporting from baseline-relative pass/fail to true
+  label pass/fail: report schema is now `phase4.v2_calibration.report.v3`.
+- Updated the Obj1 calibration fixture's `expected_current_supported` labels for
+  the three pre-Obj5 known gaps so the current baseline reflects Obj5 behavior.
+- No structured V2 result fields, API shape, chain order, or model provider path
+  changed.
+
+## Obj5 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\eval\test_phase4_obj1_eval_assets.py -q -p no:cacheprovider
+```
+
+Result: passed, 24 tests.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\v2_calibration_eval.py --output data\exports\ci\phase4_obj5_v2_calibration.json
+```
+
+Result: passed. Calibration report has `passed_count = 11`, `failed_count = 0`,
+`false_allow = 0`, `false_block = 0`, `supported_precision = 1.0`,
+`supported_recall = 1.0`, `unsupported_block_rate = 1.0`, and
+`over_block_count = 0`.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_v2_citation_check.py tests\unit\test_tutor_orchestrator.py tests\eval\test_phase4_obj1_eval_assets.py tests\eval\test_llm_eval.py -q -p no:cacheprovider
+```
+
+Result: passed, 40 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj5 -p no:cacheprovider
+```
+
+Result: passed, 399 tests; 2 skipped; 1 deselected; 1 qdrant compatibility
+warning.
+
+## Obj5 Residual Risk
+
+- The hardening is still deterministic and table/rule based. It catches the
+  Obj1 calibration gaps but is not a general semantic entailment checker.
+- Synonym and quantity-term coverage is intentionally narrow to avoid hidden
+  over-allowing. Future calibration cases should expand the tables only when
+  labeled evidence supports the expansion.
+
+## Obj5 Next Obj Gate
+
+- Cleared for Obj6 after user review of Obj5 artifacts. Obj6 must remain
+  default-off, replay-first, and manual-live-only for external literature search.
