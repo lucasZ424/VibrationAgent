@@ -22,8 +22,8 @@ or edit them unless explicitly asked.
 
 ## Objective Status
 
-0. Phase-4 execution baseline: pending
-1. Broader replay eval, V2 calibration, and large-corpus baseline: pending
+0. Phase-4 execution baseline: complete
+1. Broader replay eval, V2 calibration, and large-corpus baseline: complete
 2. Retrieval recall audit and dataset: pending
 3. Optional embedding provider upgrade: pending
 4. Qdrant reindex and retrieval replacement gate: pending
@@ -59,7 +59,7 @@ or edit them unless explicitly asked.
 
 ## Obj0 Verification
 
-- Pending.
+- Phase-4 development order was reviewed by the user before Obj1 started.
 
 ## Obj0 Residual Risk
 
@@ -70,4 +70,68 @@ or edit them unless explicitly asked.
 
 ## Obj0 Next Obj Gate
 
-- Pending user review of the Phase-4 development order.
+- Cleared by user review; Obj1 started afterward.
+
+## Obj1 Notes
+
+- Added two replay eval cases under `tests/fixtures/llm/`:
+  `eval_fabricated_unit.json` and `eval_unstructured_answer.json`.
+- Added `scripts/v2_calibration_eval.py`, a replay-only runner that executes
+  the real deterministic V2 citation checker against labeled cases.
+- Added `tests/fixtures/eval/v2_calibration/cases.json` with 11 calibration
+  cases: 5 supported truth-label positives and 6 unsupported truth-label
+  negatives. Three cases intentionally record known current-V2 gaps so Obj5 has
+  measurable headroom.
+- Added `tests/fixtures/retrieval/targets.json` with Obj2-ready recall target
+  labels and required `top_k` values.
+- Added focused tests in `tests/eval/test_phase4_obj1_eval_assets.py`.
+- Obj1 review polish fixed the Chinese retrieval target chunk/doc id, added
+  exact fixture chunk resolution coverage, converted V2 calibration to
+  baseline-relative assertions, and tightened replay eval case-count coverage.
+- Kept `scripts/bench_large_corpus.py` as the explicit operator-run baseline
+  path. No large-corpus run was performed in this objective.
+- No live provider, external network service, retrieval replacement, V2 rule
+  change, schema change, API change, or chain-order change was introduced.
+
+## Obj1 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\eval\test_llm_eval.py tests\eval\test_phase4_obj1_eval_assets.py -q -p no:cacheprovider
+```
+
+Result after Obj1 review polish: passed, 5 tests.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\v2_calibration_eval.py
+```
+
+Result after Obj1 review polish: passed with 11/11 baseline cases. Truth-label
+confusion records supported recall 0.8, unsupported block rate 0.6666666667,
+false allow 2, and false block 1.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\llm_eval.py --output data\exports\ci\phase4_obj1_eval_scorecard.json
+```
+
+Result: passed and wrote the replay eval scorecard.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj1-polish -p no:cacheprovider
+```
+
+Result after Obj1 review polish: passed, 384 tests; 2 skipped; 1 deselected; 1
+qdrant compatibility warning.
+
+## Obj1 Residual Risk
+
+- V2 calibration is a baseline set, not a new hardening implementation. It now
+  exposes current deterministic V2 gaps for Obj5, but Obj5 still owns rule
+  improvements and threshold decisions.
+- Retrieval targets are labels for Obj2. Obj1 does not compute recall or decide
+  whether retrieval replacement is justified.
+- Large-corpus baseline remains operator-run only; this objective did not run
+  against the user's real corpus.
+
+## Obj1 Next Obj Gate
+
+- Cleared for Obj2 after user review of Obj1 artifacts.

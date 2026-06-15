@@ -1,0 +1,56 @@
+{
+  "case_id": "eval_fabricated_unit",
+  "description": "Fabricated unit in an LLM claim is blocked by V2.",
+  "query": "What does the evidence say about critical speed?",
+  "user_mode": "definition",
+  "constraints": {
+    "scope": "in_scope",
+    "difficulty": "medium",
+    "s4_enabled": false
+  },
+  "retrieval_rows": [
+    {
+      "chunk_id": "unit_c1",
+      "doc_id": "unit_doc",
+      "pages": [1],
+      "text": "Critical speed amplifies rotor response.",
+      "score": 1.0,
+      "language": "en"
+    }
+  ],
+  "s3_output": {
+    "status": "ok",
+    "summary": "S3 fabricated unit",
+    "structured_result": {
+      "language": "en",
+      "answer": "Critical speed is measured in mm/s for this evidence [unit_c1].",
+      "claims": [
+        {
+          "text": "Critical speed is measured in mm/s for this evidence.",
+          "chunk_id": "unit_c1",
+          "doc_id": "unit_doc",
+          "pages": [1],
+          "evidence_type": "documented"
+        }
+      ],
+      "synthesis_mode": "llm"
+    },
+    "citations": [
+      {
+        "chunk_id": "unit_c1",
+        "doc_id": "unit_doc",
+        "pages": [1]
+      }
+    ]
+  },
+  "expect": {
+    "status": "insufficient",
+    "scope": "in_scope",
+    "min_citations": 0,
+    "forbidden_answer_terms": ["mm/s"],
+    "unsupported_count": 1,
+    "unsupported_reason_contains": ["mm/s"],
+    "blocks_unsupported_numeric": true,
+    "supervisor_status": "not_triggered"
+  }
+}

@@ -1,0 +1,380 @@
+{
+  "schema_version": "phase4.v2_calibration.v2",
+  "description": "Obj1 calibration set for deterministic V2 support, blocking behavior, and known current-baseline gaps.",
+  "cases": [
+    {
+      "case_id": "v2_pos_exact_visible_claim",
+      "query": "What happens near critical speed?",
+      "expected_supported": true,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2p_exact",
+          "doc_id": "v2_doc",
+          "pages": [1],
+          "text": "Critical speed amplifies rotor response.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 supported exact",
+        "structured_result": {
+          "language": "en",
+          "answer": "Critical speed amplifies rotor response [v2p_exact].",
+          "claims": [
+            {
+              "text": "Critical speed amplifies rotor response.",
+              "chunk_id": "v2p_exact",
+              "doc_id": "v2_doc",
+              "pages": [1],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2p_exact", "doc_id": "v2_doc", "pages": [1]}]
+      }
+    },
+    {
+      "case_id": "v2_pos_unit_spacing_variant",
+      "query": "What is the critical speed?",
+      "expected_supported": true,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2p_unit",
+          "doc_id": "v2_doc",
+          "pages": [2],
+          "text": "Critical speed is 50Hz for the example rotor.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 supported unit spacing",
+        "structured_result": {
+          "language": "en",
+          "answer": "Critical speed is 50 Hz for the example rotor [v2p_unit].",
+          "claims": [
+            {
+              "text": "Critical speed is 50 Hz for the example rotor.",
+              "chunk_id": "v2p_unit",
+              "doc_id": "v2_doc",
+              "pages": [2],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2p_unit", "doc_id": "v2_doc", "pages": [2]}]
+      }
+    },
+    {
+      "case_id": "v2_pos_range_and_sign_visible",
+      "query": "What range is acceptable?",
+      "expected_supported": true,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2p_range",
+          "doc_id": "v2_doc",
+          "pages": [3],
+          "text": "The acceptable vibration speed range is 1-2 mm/s and the response falls by -3 dB.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 supported range",
+        "structured_result": {
+          "language": "en",
+          "answer": "The acceptable vibration speed range is 1-2 mm/s and the response falls by -3 dB [v2p_range].",
+          "claims": [
+            {
+              "text": "The acceptable vibration speed range is 1-2 mm/s and the response falls by -3 dB.",
+              "chunk_id": "v2p_range",
+              "doc_id": "v2_doc",
+              "pages": [3],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2p_range", "doc_id": "v2_doc", "pages": [3]}]
+      }
+    },
+    {
+      "case_id": "v2_pos_paraphrase_overlap",
+      "query": "How does damping affect resonance?",
+      "expected_supported": true,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2p_para",
+          "doc_id": "v2_doc",
+          "pages": [4],
+          "text": "Damping limits resonant amplitude in the cited rotor example.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 supported paraphrase",
+        "structured_result": {
+          "language": "en",
+          "answer": "Damping reduces resonant amplitude in the cited rotor example [v2p_para].",
+          "claims": [
+            {
+              "text": "Damping reduces resonant amplitude in the cited rotor example.",
+              "chunk_id": "v2p_para",
+              "doc_id": "v2_doc",
+              "pages": [4],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2p_para", "doc_id": "v2_doc", "pages": [4]}]
+      }
+    },
+    {
+      "case_id": "v2_neg_fabricated_number",
+      "query": "What happens near critical speed?",
+      "expected_supported": false,
+      "expected_unsupported_count": 1,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2n_num",
+          "doc_id": "v2_doc",
+          "pages": [5],
+          "text": "Critical speed amplifies rotor response.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 fabricated number",
+        "structured_result": {
+          "language": "en",
+          "answer": "Critical speed is 50 Hz and amplifies rotor response [v2n_num].",
+          "claims": [
+            {
+              "text": "Critical speed is 50 Hz and amplifies rotor response.",
+              "chunk_id": "v2n_num",
+              "doc_id": "v2_doc",
+              "pages": [5],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2n_num", "doc_id": "v2_doc", "pages": [5]}]
+      }
+    },
+    {
+      "case_id": "v2_neg_fabricated_unit",
+      "query": "What does the evidence say about critical speed?",
+      "expected_supported": false,
+      "expected_unsupported_count": 1,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2n_unit",
+          "doc_id": "v2_doc",
+          "pages": [6],
+          "text": "Critical speed amplifies rotor response.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 fabricated unit",
+        "structured_result": {
+          "language": "en",
+          "answer": "Critical speed is measured in mm/s for this evidence [v2n_unit].",
+          "claims": [
+            {
+              "text": "Critical speed is measured in mm/s for this evidence.",
+              "chunk_id": "v2n_unit",
+              "doc_id": "v2_doc",
+              "pages": [6],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2n_unit", "doc_id": "v2_doc", "pages": [6]}]
+      }
+    },
+    {
+      "case_id": "v2_neg_invisible_chunk",
+      "query": "What happens near critical speed?",
+      "expected_supported": false,
+      "expected_unsupported_count": 2,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2_visible",
+          "doc_id": "v2_doc",
+          "pages": [7],
+          "text": "Critical speed amplifies rotor response.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 invisible chunk",
+        "structured_result": {
+          "language": "en",
+          "answer": "Critical speed amplifies rotor response [v2_missing].",
+          "claims": [
+            {
+              "text": "Critical speed amplifies rotor response.",
+              "chunk_id": "v2_missing",
+              "doc_id": "v2_doc",
+              "pages": [7],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2_missing", "doc_id": "v2_doc", "pages": [7]}]
+      }
+    },
+    {
+      "case_id": "v2_neg_lexical_mismatch",
+      "query": "What failure is proven?",
+      "expected_supported": false,
+      "expected_unsupported_count": 1,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2n_lex",
+          "doc_id": "v2_doc",
+          "pages": [8],
+          "text": "Critical speed amplifies rotor response.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 lexical mismatch",
+        "structured_result": {
+          "language": "en",
+          "answer": "Bearing temperature proves lubrication failure [v2n_lex].",
+          "claims": [
+            {
+              "text": "Bearing temperature proves lubrication failure.",
+              "chunk_id": "v2n_lex",
+              "doc_id": "v2_doc",
+              "pages": [8],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2n_lex", "doc_id": "v2_doc", "pages": [8]}]
+      }
+    },
+    {
+      "case_id": "v2_hard_neg_wrong_quantity_same_value",
+      "query": "Which quantity is 3000 rpm?",
+      "expected_supported": false,
+      "expected_current_supported": true,
+      "known_current_gap": "Current V2 sees lexical overlap and visible 3000 rpm, but does not distinguish shaft speed from critical speed.",
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2h_wrong_quantity",
+          "doc_id": "v2_doc",
+          "pages": [9],
+          "text": "The shaft speed is 3000 rpm during the test.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 wrong quantity with visible value",
+        "structured_result": {
+          "language": "en",
+          "answer": "The critical speed is 3000 rpm during the test [v2h_wrong_quantity].",
+          "claims": [
+            {
+              "text": "The critical speed is 3000 rpm during the test.",
+              "chunk_id": "v2h_wrong_quantity",
+              "doc_id": "v2_doc",
+              "pages": [9],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2h_wrong_quantity", "doc_id": "v2_doc", "pages": [9]}]
+      }
+    },
+    {
+      "case_id": "v2_hard_neg_meaning_flip_with_overlap",
+      "query": "How does damping affect resonance?",
+      "expected_supported": false,
+      "expected_current_supported": true,
+      "known_current_gap": "Current V2 accepts the claim because damping/resonance/response overlap, but the meaning is reversed.",
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2h_flip",
+          "doc_id": "v2_doc",
+          "pages": [10],
+          "text": "Damping reduces resonance response in the cited rotor example.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 meaning flip",
+        "structured_result": {
+          "language": "en",
+          "answer": "Damping increases resonance response in the cited rotor example [v2h_flip].",
+          "claims": [
+            {
+              "text": "Damping increases resonance response in the cited rotor example.",
+              "chunk_id": "v2h_flip",
+              "doc_id": "v2_doc",
+              "pages": [10],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2h_flip", "doc_id": "v2_doc", "pages": [10]}]
+      }
+    },
+    {
+      "case_id": "v2_hard_pos_low_lexical_overlap",
+      "query": "How does higher damping affect passage through critical speed?",
+      "expected_supported": true,
+      "expected_current_supported": false,
+      "expected_unsupported_count": 1,
+      "known_current_gap": "Current V2 has no synonym table for zeta/damping or runup/passage, so a legitimate engineering paraphrase is blocked.",
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2h_low_overlap",
+          "doc_id": "v2_doc",
+          "pages": [11],
+          "text": "A larger zeta makes runup smoother.",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 low-overlap supported paraphrase",
+        "structured_result": {
+          "language": "en",
+          "answer": "Higher damping improves passage through critical speed [v2h_low_overlap].",
+          "claims": [
+            {
+              "text": "Higher damping improves passage through critical speed.",
+              "chunk_id": "v2h_low_overlap",
+              "doc_id": "v2_doc",
+              "pages": [11],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2h_low_overlap", "doc_id": "v2_doc", "pages": [11]}]
+      }
+    }
+  ]
+}

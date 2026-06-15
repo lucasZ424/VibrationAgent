@@ -1,0 +1,40 @@
+{
+  "case_id": "eval_unstructured_answer",
+  "description": "Answer prose without structured claims is blocked by V2.",
+  "query": "What happens near critical speed?",
+  "user_mode": "definition",
+  "constraints": {
+    "scope": "in_scope",
+    "difficulty": "medium",
+    "s4_enabled": false
+  },
+  "retrieval_rows": [
+    {
+      "chunk_id": "unstructured_c1",
+      "doc_id": "unstructured_doc",
+      "pages": [1],
+      "text": "Critical speed amplifies rotor response.",
+      "score": 1.0,
+      "language": "en"
+    }
+  ],
+  "s3_output": {
+    "status": "ok",
+    "summary": "S3 unstructured answer",
+    "structured_result": {
+      "language": "en",
+      "answer": "Critical speed amplifies rotor response [unstructured_c1].",
+      "claims": [],
+      "synthesis_mode": "llm"
+    },
+    "citations": []
+  },
+  "expect": {
+    "status": "insufficient",
+    "scope": "in_scope",
+    "min_citations": 0,
+    "unsupported_count": 1,
+    "unsupported_reason_contains": ["unstructured claim"],
+    "supervisor_status": "not_triggered"
+  }
+}

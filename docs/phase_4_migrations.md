@@ -89,3 +89,55 @@ No runtime schema, API, replay fixture, retrieval, provider request, UI, or
 chain-order contract changed.
 
 Rollback: revert the Phase-4 planning docs to the 2026-06-12 objective list.
+
+### Obj1 - Replay eval, V2 calibration, and retrieval targets (2026-06-15)
+
+Eval-asset and fixture-contract update.
+
+- Added replay eval fixtures:
+  - `tests/fixtures/llm/eval_fabricated_unit.json`
+  - `tests/fixtures/llm/eval_unstructured_answer.json`
+- Added V2 calibration fixture schema
+  `phase4.v2_calibration.v2` at
+  `tests/fixtures/eval/v2_calibration/cases.json`.
+- Added V2 calibration report schema
+  `phase4.v2_calibration.report.v2` through
+  `scripts/v2_calibration_eval.py`.
+- Added retrieval target fixture schema
+  `phase4.retrieval_targets.v1` at
+  `tests/fixtures/retrieval/targets.json`.
+- Updated eval tests to require the broader replay set and validate Obj1
+  calibration/target fixtures.
+
+No runtime schema, API response, provider request, retrieval implementation,
+UI, or chain-order contract changed. CI remains replay/deterministic and does
+not require API keys, external search, Qdrant, or a large corpus.
+
+Rollback: remove the Obj1 fixture files and runner, restore the previous
+`tests/eval/test_llm_eval.py` case-count assertion, and delete the Obj1
+progress entry.
+
+### Obj1 review polish - Calibration headroom and target resolution (2026-06-15)
+
+Eval-asset polish after senior review.
+
+- Converted V2 calibration from exact truth-label pass/fail to
+  baseline-relative assertions with separate `expected_supported` and
+  `expected_current_supported` fields.
+- Added hard calibration cases that current deterministic V2 intentionally does
+  not handle perfectly:
+  - wrong quantity with the same visible value
+  - meaning-flipping paraphrase with lexical overlap
+  - legitimate low-lexical-overlap engineering paraphrase
+- Fixed the Chinese retrieval target to reference the real fixture chunk
+  `fixture_rotor_zh_doc_p0001_00001` / `fixture_rotor_zh_doc`.
+- Added test coverage that retrieval target chunk ids resolve against
+  `tests/fixtures/chunks/*.jsonl`.
+- Tightened the replay eval case-count guard to the current exact count of 7.
+
+No runtime schema, API response, provider request, retrieval implementation,
+UI, or chain-order contract changed.
+
+Rollback: remove the hard calibration cases, restore the V2 calibration fixture
+and report schema versions to v1, restore the previous retrieval target ids if
+needed, and relax the replay eval case-count assertion.

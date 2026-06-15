@@ -1,0 +1,58 @@
+{
+  "schema_version": "phase4.retrieval_targets.v1",
+  "description": "Obj1 labeled retrieval targets for Obj2 recall audit.",
+  "default_required_top_k": [5, 10],
+  "targets": [
+    {
+      "case_id": "rt_critical_speed_response",
+      "query": "What happens near critical speed in rotor vibration?",
+      "intent": "definition",
+      "required_top_k": [5, 10],
+      "expected_evidence": [
+        {
+          "chunk_id": "fixture_rotor_doc_p0001_00001",
+          "doc_id": "fixture_rotor_doc",
+          "pages": [1],
+          "rationale": "The chunk states that critical speed amplifies rotor response."
+        }
+      ]
+    },
+    {
+      "case_id": "rt_damping_ratio_definition",
+      "query": "What does damping ratio mean in vibration analysis?",
+      "intent": "definition",
+      "required_top_k": [5, 10],
+      "expected_evidence": [
+        {
+          "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+          "doc_id": "fixture_rotor_zh_doc",
+          "pages": [1, 2],
+          "rationale": "The bilingual fixture covers damping ratio and damping response behavior."
+        }
+      ]
+    },
+    {
+      "case_id": "rt_unbalance_synchronous_response",
+      "query": "How is rotor unbalance related to synchronous vibration response?",
+      "intent": "engineering",
+      "required_top_k": [5, 10],
+      "expected_evidence": [
+        {
+          "chunk_id": "fixture_rotor_doc_p0001_00001",
+          "doc_id": "fixture_rotor_doc",
+          "pages": [1],
+          "rationale": "The small rotor fixture is the expected evidence source for unbalance-related retrieval smoke checks."
+        }
+      ]
+    },
+    {
+      "case_id": "rt_bearing_fault_out_of_fixture_scope",
+      "query": "Which bearing fault frequency proves an outer race defect?",
+      "intent": "engineering",
+      "required_top_k": [5, 10],
+      "expected_evidence": [],
+      "expected_status": "insufficient",
+      "rationale": "The fast fixtures do not contain bearing fault frequency evidence; Obj2 should count this as an expected miss, not a recall failure."
+    }
+  ]
+}

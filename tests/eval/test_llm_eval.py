@@ -9,7 +9,7 @@ def test_phase3_golden_eval_replay_set_passes():
     report = run_eval(load_cases())
 
     assert report["schema_version"] == "phase3.eval.v1"
-    assert report["case_count"] == 5
+    assert report["case_count"] == 7
     assert report["failed_count"] == 0
     assert report["scorecard"]["pass_rate"] == 1.0
     assert report["scorecard"]["citation_faithfulness_pass_rate"] == 1.0
