@@ -250,3 +250,16 @@ and Phase-4 candidate backlog are recorded in
 
 Future schema/API/chain/replay/provider-contract changes must follow
 `docs/phase_3_interface_freeze.md` and `docs/phase_3_migrations.md`.
+
+## Phase-4 Development Boundary
+
+Phase 4 planning starts from `docs/phase_4_development_order.md`. The initial
+boundary is post-freeze expansion, not a replacement of the Phase-3 runtime:
+broader eval, retrieval recall attribution, optional embedding/retrieval
+upgrades, stronger evidence support, S6/S7/S8 prototypes, richer rendering, and
+late UI/deployment hardening.
+
+Phase-4 changes that affect schemas, provider requests, replay hashes,
+structured-result keys, chain order, retrieval contracts, API shapes, or
+ingestion outputs must be recorded in `docs/phase_4_migrations.md` before
+callers are updated.

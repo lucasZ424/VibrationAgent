@@ -335,6 +335,19 @@ fixture layout, provider request shapes, API shapes, or ingestion output shapes
 must follow `docs/phase_3_interface_freeze.md` and
 `docs/phase_3_migrations.md`.
 
+## Phase-4 Planning
+
+Phase 4 is planned as the first post-freeze expansion cycle. The proposed
+development order is recorded in `docs/phase_4_development_order.md`; progress
+and contract changes are tracked in `docs/phase_4_progress.md` and
+`docs/phase_4_migrations.md`.
+
+Phase 4 starts from the Phase-3 frozen contract. It prioritizes broader replay
+eval, retrieval recall attribution, optional embedding/retrieval upgrades,
+stronger entailment checks, S6/S7/S8 prototypes, richer formula/document
+rendering, and late-stage UI/deployment hardening. Live provider work remains
+manual/replay gated unless a Phase-4 migration explicitly changes that boundary.
+
 ## Development Start Points
 
 1. `src/vibration_agent/schemas.py`: Pydantic contracts.
