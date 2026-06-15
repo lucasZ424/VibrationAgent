@@ -193,6 +193,7 @@ def _hit_from_candidate(candidate: Mapping[str, Any]) -> RetrievalHit:
 
 def _context_from_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
     chunk = candidate.get("chunk", {}) if isinstance(candidate.get("chunk"), Mapping) else {}
+    lanes = [str(lane) for lane in candidate.get("lanes", []) or []]
     return {
         "chunk_id": chunk.get("chunk_id"),
         "doc_id": chunk.get("doc_id"),
@@ -201,6 +202,10 @@ def _context_from_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "topic": chunk.get("topic"),
         "score": round(float(candidate.get("score") or 0.0), 6),
         "reason": _reason(candidate),
+        "retrieval_lanes": lanes,
+        "retrieval_contribution": "hybrid" if len(set(lanes)) > 1 else (lanes[0] if lanes else "unknown"),
+        "lane_scores": dict(candidate.get("lane_scores", {}) or {}),
+        "source_priority": candidate.get("source_priority", 0),
         "text": chunk.get("api_context") or chunk.get("text") or "",
         "assets": chunk.get("assets", []),
     }

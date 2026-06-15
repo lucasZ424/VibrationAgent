@@ -33,6 +33,7 @@ def test_phase4_retrieval_eval_diagnostics_explain_each_case():
         assert case["query"]
         assert case["diagnostics"]["normalized_query"] is not None
         assert case["diagnostics"]["synthesis_evaluated"] is False
+        assert case["diagnostics"]["top_hit_contributions"]
         assert isinstance(case["hit_chunk_ids"], list)
         if case["expected_evidence_count"]:
             assert case["failure_type"] == "retrieval_hit"

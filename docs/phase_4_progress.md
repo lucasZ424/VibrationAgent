@@ -307,3 +307,64 @@ warning.
 
 - Cleared for Obj4 after user review of Obj3 artifacts. Obj4 must still use the
   written replacement gate from Obj2 before changing retrieval defaults.
+
+## Obj4 Notes
+
+- Added retrieval lane attribution to `retrieval_context`: each context row now
+  exposes `retrieval_lanes`, `retrieval_contribution`, `lane_scores`, and
+  `source_priority`.
+- Extended `scripts/retrieval_eval.py` diagnostics with
+  `top_hit_contributions`, so Obj4 reports can distinguish BM25/token, dense,
+  and hybrid contribution without evaluating synthesis.
+- Added `scripts/qdrant_reindex_gate.py`, an offline Obj4 gate runner that
+  evaluates the Obj2 replacement gate before allowing any Qdrant reindex
+  attempt.
+- Current Obj4 decision is explicit non-replacement: baseline recall remains
+  above the Obj2 threshold and no missing evidence cases exist, so no Qdrant
+  reindex or default retrieval replacement was performed.
+- Qdrant remains opt-in through existing settings; unavailable Qdrant still
+  falls back through the existing dense/token path.
+
+## Obj4 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s2_retrieval_skill.py tests\unit\test_qdrant.py tests\integration\test_qdrant_roundtrip.py tests\eval\test_retrieval_eval.py tests\eval\test_qdrant_reindex_gate.py -q -p no:cacheprovider
+```
+
+Result: passed, 29 tests; 1 skipped when live Qdrant is unavailable.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\retrieval_eval.py --output data\exports\ci\phase4_obj4_retrieval_eval.json
+```
+
+Result: passed. Default fixture baseline remains `top_k_recall@5 = 1.0`,
+`top_k_recall@10 = 1.0`, and
+`replacement_justified_by_baseline = false`. Diagnostics now include
+`top_hit_contributions`.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\qdrant_reindex_gate.py --output data\exports\ci\phase4_obj4_qdrant_reindex_gate.json
+```
+
+Result: passed. Gate report decision is `non_replacement`; `replacement.allowed`
+is false; `reindex.allowed` is false; `reindex.executed` is false.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj4 -p no:cacheprovider
+```
+
+Result: passed, 396 tests; 2 skipped; 1 deselected; 1 qdrant compatibility
+warning.
+
+## Obj4 Residual Risk
+
+- No live Qdrant reindex was run because the Obj2 replacement gate did not
+  justify retrieval replacement.
+- No real embedding candidate was benchmarked against a recall gap in Obj4.
+  Future reindex work must first satisfy the Obj2 gate and explicitly enable a
+  provider/Qdrant path.
+
+## Obj4 Next Obj Gate
+
+- Cleared for Obj5 after user review of Obj4 artifacts. Obj5 remains scoped to
+  deterministic V2 evidence-support hardening.

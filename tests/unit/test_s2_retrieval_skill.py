@@ -93,6 +93,9 @@ def test_hybrid_search_returns_retrieval_output_with_reasons():
     assert result["hits"][0]["pages"] == [10]
     assert result["hits"][0]["reason"]
     assert result["retrieval_context"][0]["text"].startswith("[chunk_id=c1")
+    assert result["retrieval_context"][0]["retrieval_contribution"] == "hybrid"
+    assert set(result["retrieval_context"][0]["retrieval_lanes"]) == {"bm25", "dense"}
+    assert set(result["retrieval_context"][0]["lane_scores"]) == {"bm25", "dense"}
 
 
 def test_hybrid_search_returns_insufficient_when_recall_is_weak():

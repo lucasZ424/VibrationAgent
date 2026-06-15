@@ -159,6 +159,7 @@ def _run_case(
     expected = _expected_evidence(target)
     result = search(str(target.get("query") or ""), chunks=corpus, top_k=max_top_k)
     hits = result.get("hits") if isinstance(result.get("hits"), list) else []
+    contexts = result.get("retrieval_context") if isinstance(result.get("retrieval_context"), list) else []
     hit_ids = [str(hit.get("chunk_id")) for hit in hits if isinstance(hit, Mapping)]
     expected_ids = [item["chunk_id"] for item in expected]
     matched_by_k = {
@@ -194,6 +195,16 @@ def _run_case(
                 str(hit.get("reason") or "")
                 for hit in hits[: min(len(hits), 3)]
                 if isinstance(hit, Mapping)
+            ],
+            "top_hit_contributions": [
+                {
+                    "chunk_id": context.get("chunk_id"),
+                    "contribution": context.get("retrieval_contribution"),
+                    "lanes": context.get("retrieval_lanes", []),
+                    "lane_scores": context.get("lane_scores", {}),
+                }
+                for context in contexts[: min(len(contexts), 3)]
+                if isinstance(context, Mapping)
             ],
             "synthesis_evaluated": False,
         },

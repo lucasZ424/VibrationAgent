@@ -231,3 +231,46 @@ changed.
 Rollback: restore the previous embedding enabled default and disabled-warning
 behavior, remove the sentence-transformers pytest guard, and remove the added
 OpenAI response-shape tests.
+
+### Obj3 follow-up - Dotenv single-source consolidation (2026-06-15)
+
+Local configuration contract update.
+
+- Consolidated local dotenv loading to `.env` only; `config.load()` no longer
+  reads `.env.local`.
+- Demoted `.env.example` to a sanitized historical configuration snapshot and
+  added it to `.gitignore`.
+- Updated README guidance so operator-owned provider keys and manual live flags
+  live in `.env` or process environment variables, not `.env.local`.
+- Added config tests proving `.env` is loaded, process environment values still
+  win, dotenv loading can be disabled, and stale `.env.local` files no longer
+  affect runtime behavior.
+- Non-sensitive local check on 2026-06-15: `.env.local` is absent, and the
+  OpenAI/Anthropic key entries are present in `.env`.
+
+Rollback: restore `.env.local` loading in `config.py`, remove `.env.example`
+from `.gitignore`, restore README `.env.local` guidance, and remove the
+`.env.local` non-loading test.
+
+### Obj4 - Qdrant reindex and retrieval replacement gate (2026-06-15)
+
+Retrieval attribution and gate-runner update.
+
+- Added retrieval attribution fields to hybrid `retrieval_context` rows:
+  `retrieval_lanes`, `retrieval_contribution`, `lane_scores`, and
+  `source_priority`.
+- Extended retrieval eval diagnostics with `top_hit_contributions`.
+- Added `scripts/qdrant_reindex_gate.py`, an offline gate runner that records
+  whether Obj2/Obj3 evidence permits Qdrant reindex/retrieval replacement.
+- Current gate output records `decision: non_replacement`, with
+  `replacement.allowed: false`, `reindex.allowed: false`, and
+  `reindex.executed: false`.
+
+No Qdrant schema, live Qdrant write, default retrieval replacement, UI, or
+chain-order contract changed. `retrieval_context` dict rows gained additive
+attribution fields; `RetrievalHit`/`RetrievalOutput` Pydantic schemas and API
+envelope shape are unchanged.
+
+Rollback: remove `scripts/qdrant_reindex_gate.py`, remove
+`top_hit_contributions` from retrieval eval diagnostics, remove the added
+hybrid retrieval attribution fields, and remove the Obj4 tests/progress entry.
