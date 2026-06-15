@@ -7,10 +7,10 @@ Optional:
   V1 term_symbol_unit_normalizer, S4 engineering_analysis, S5 formula_derivation, V3 reviewer
 
 Default-off Phase-4 prototype:
-  S6 literature_search
+  S6 literature_search, S7 model_selection
 
 Deferred:
-  S7 model_selection, S8 experiment_advice
+  S8 experiment_advice
 """
 from .base import Skill
 from .s4_engineering_analysis import EngineeringAnalysisSkill
@@ -29,6 +29,7 @@ __all__ = [
     "FormulaDerivationSkill",
     "IngestionSkill",
     "LiteratureSearchSkill",
+    "ModelSelectionSkill",
     "OutputStyleSkill",
     "QASummarySkill",
     "ReviewerSkill",
@@ -43,4 +44,8 @@ def __getattr__(name: str):
         from .s6_literature_search import LiteratureSearchSkill
 
         return LiteratureSearchSkill
+    if name == "ModelSelectionSkill":
+        from .s7_model_selection import ModelSelectionSkill
+
+        return ModelSelectionSkill
     raise AttributeError(name)

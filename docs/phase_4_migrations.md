@@ -345,3 +345,26 @@ changed.
 
 Rollback: remove the S6 skill module/export, prompt, agent skill package,
 literature fixtures, tests, and this progress entry.
+
+### Obj7 - S7 model selection prototype (2026-06-15)
+
+Default-off model-selection advisory skill update.
+
+- Added `src/vibration_agent/skills/s7_model_selection.py` with
+  `ModelSelectionSkill`.
+- Exported `ModelSelectionSkill` lazily from `vibration_agent.skills` so default
+  imports do not load the deferred S7 module.
+- Added `agent_skills/s7_model_selection/SKILL.md`.
+- Added `prompts/skills/s7_model_selection.md`.
+- S7 output schema version is `s7.model_selection.v1`.
+- Added deterministic model-family recommendations for critical-speed/runup
+  response, rotor-unbalance synchronous response, and bearing-fault envelope
+  analysis.
+
+S7 remains outside the default TutorOrchestrator chain and remains listed in
+`PHASE0_DEFERRED_SKILLS` until the later routing activation gate. No API
+envelope, default chain order, V2/V4 contract, live-provider path, or modeling
+execution pipeline changed.
+
+Rollback: remove the S7 skill module/export, prompt, agent skill package, tests,
+and this progress entry.

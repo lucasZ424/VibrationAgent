@@ -512,6 +512,13 @@ Result: passed, 23 tests.
 Result: passed, 37 tests.
 
 ```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj7 -p no:cacheprovider
+```
+
+Result: passed, 415 tests; 2 skipped; 1 deselected; 1 qdrant compatibility
+warning.
+
+```powershell
 .\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj6 -p no:cacheprovider
 ```
 
@@ -538,3 +545,48 @@ warning.
 - Cleared for Obj7 after user review of Obj6 artifacts. Obj7 must remain
   default-off and cannot enter ordinary routing before the routing activation
   gate.
+
+## Obj7 Notes
+
+- Added `ModelSelectionSkill` as a default-off S7 advisory prototype in
+  `src/vibration_agent/skills/s7_model_selection.py`.
+- S7 recommends model families only from visible S2 evidence and explicit
+  deterministic assumptions. It does not execute modeling, estimate parameters,
+  or invent numeric thresholds.
+- Model recommendations require visible evidence refs; query wording alone does
+  not trigger a recommendation.
+- Each recommendation separates `evidence_refs`, `assumptions`, `limitations`,
+  `confidence`, and `next_steps`.
+- Current calibrated model families are:
+  `critical_speed_runup_response`,
+  `rotor_unbalance_synchronous_response`, and
+  `bearing_fault_envelope_analysis`.
+- Added `agent_skills/s7_model_selection/SKILL.md` and
+  `prompts/skills/s7_model_selection.md`.
+- `ModelSelectionSkill` is exported lazily from `vibration_agent.skills` so
+  importing active skills does not load deferred S7 modules.
+- S7 remains outside `TutorOrchestrator` default routing and remains listed in
+  `PHASE0_DEFERRED_SKILLS` until the routing activation gate.
+
+## Obj7 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s7_model_selection.py tests\unit\test_tutor_orchestrator.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider
+```
+
+Result: passed, 37 tests.
+
+## Obj7 Residual Risk
+
+- S7 uses narrow deterministic keyword rules. It is useful for explicit advisory
+  routing but is not a general model-selection expert system.
+- No live provider or model-backed reasoning path exists in Obj7.
+- S7 outputs are advisory context only. Future routed use must still preserve
+  V2/V4-bound synthesis or return explicit handoff/limitation.
+- Obj9 must decide how advisory assumptions/limitations pass through routing
+  while still V2-gating factual claims.
+
+## Obj7 Next Obj Gate
+
+- Cleared for Obj8 after user review of Obj7 artifacts. Obj8 must remain
+  default-off and out of ordinary routing until Obj9 activation.
