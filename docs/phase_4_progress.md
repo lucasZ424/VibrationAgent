@@ -34,7 +34,7 @@ or edit them unless explicitly asked.
 9. S6/S7/S8 routing activation gate: complete
 10. Rendered DOCX pagination and rich asset anchoring: complete
 11. LaTeX/MathML rendering contract: complete
-12. Symbolic proof / CAS feasibility spike: pending
+12. Symbolic proof / CAS feasibility spike: complete
 13. Backend interface freeze: pending
 14. Web UI read-only operator surface: pending
 15. Local-first observability essentials: pending
@@ -898,3 +898,89 @@ warning.
 - Cleared for Obj12 after focused and non-large regression verification. Obj12
   remains a feasibility spike and must not add a mandatory CAS dependency
   without a separate production objective.
+
+## Obj12 Notes
+
+- Added `docs/phase_4_symbolic_proof_spike.md`.
+- Decision: do not add a mandatory CAS or symbolic proof dependency in Phase 4.
+- Recommended future production shape, if needed, is a narrow optional
+  default-off algebra checker for S5, not a replacement for S5, V2, or Obj11
+  rendering validation.
+- The spike separates three contracts:
+  - V2 evidence support checks visible-evidence faithfulness.
+  - Obj11 formula rendering checks markup representation and plain-text
+    fallback.
+  - Symbolic checking would only verify algebraic equivalence under declared
+    assumptions.
+- Candidate approaches were evaluated:
+  - keep current S5 with no CAS as the Phase-4 default;
+  - consider future optional SymPy narrow algebra checking only after eval
+    labels exist;
+  - avoid model-backed proof review as a CAS substitute;
+  - reject external CAS services for the local-first backend freeze baseline.
+- The document defines supported future formula classes, unsupported cases,
+  dependency costs, fallback behavior, and the eval gate required before any
+  production symbolic checker.
+- Review polish added the domain-fit rationale, current S5 replay-fixture step
+  count, SymPy inconclusive/version-risk note, timeout/complexity requirement,
+  and event-driven revisit triggers.
+- No code, dependency, schema, chain-order, provider, replay, retrieval, or
+  citation contract changed in Obj12.
+
+## Obj12 Verification
+
+```powershell
+git diff --check
+```
+
+Result: no whitespace errors.
+
+```powershell
+rg -i "\b(sympy|antlr|wolfram|symbolic_check)\b|\bCAS\b" pyproject.toml src tests
+```
+
+Result: no matches, so no mandatory CAS/symbolic dependency or runtime path was
+added.
+
+Post-review polish command:
+
+```powershell
+git diff --check
+```
+
+Result: no whitespace errors.
+
+Post-review polish command:
+
+```powershell
+rg -i "\b(sympy|antlr|wolfram|symbolic_check)\b|\bCAS\b" pyproject.toml src tests
+```
+
+Result: no matches, so no mandatory CAS/symbolic dependency or runtime path was
+added.
+
+Post-review polish command:
+
+```powershell
+$files = Get-ChildItem tests\fixtures\llm -Filter 's5*.json'; foreach ($file in $files) { $json = Get-Content $file.FullName -Raw | ConvertFrom-Json; $steps = @($json.derivation_steps); $axiomatic = @($steps | Where-Object { $_.source_type -eq 'axiomatic' }); $evidence = @($steps | Where-Object { $_.source_type -eq 'evidence' }); Write-Output ("{0}: steps={1}; evidence={2}; axiomatic={3}" -f $file.Name, $steps.Count, $evidence.Count, $axiomatic.Count) }
+```
+
+Result: `s5_visible_multistep_response.json` has 3 steps / 2 axiomatic;
+`s5_fabricated_step_number_response.json` has 2 steps / 1 axiomatic;
+`s5_cycle_response.json` has 2 steps / 1 axiomatic.
+
+## Obj12 Residual Risk
+
+- The spike recommends a future optional checker but does not implement it.
+- The future eval gate is specified, not populated with fixture cases.
+- S5 remains structurally validated and evidence-bound, but not a formal
+  symbolic proof engine.
+- Current S5 fixture counts are small and not a large-corpus measurement. They
+  support the defer decision only as local grounding, not as a statistical
+  corpus claim.
+
+## Obj12 Next Obj Gate
+
+- Cleared for Obj13 backend interface freeze. Obj13 should freeze the Obj1-Obj12
+  backend contracts and record that symbolic proof/CAS remains deferred unless a
+  separate production objective adds an optional checker behind an eval gate.

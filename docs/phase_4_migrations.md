@@ -542,3 +542,46 @@ provider path, chain order, or citation contract changed.
 Rollback: remove the extra LaTeX structure checks and the added malformed
 LaTeX assertions; the original brace-balance-only Obj11 contract remains
 backward compatible.
+
+### Obj12 - Symbolic proof / CAS feasibility spike (2026-06-17)
+
+Documentation-only feasibility decision.
+
+- Added `docs/phase_4_symbolic_proof_spike.md`.
+- Decided not to add a mandatory CAS or symbolic proof dependency in Phase 4.
+- Recorded that a future production checker, if justified, should be a narrow,
+  optional, default-off S5 algebra-equivalence checker with a labeled eval gate.
+- Clarified that symbolic checking is separate from V2 evidence support and
+  Obj11 formula rendering.
+- Rejected external CAS services for the local-first backend freeze baseline.
+
+No runtime schema, API response, dependency, replay fixture, retrieval behavior,
+provider path, chain order, UI, citation contract, or S5 implementation changed.
+
+Rollback: remove `docs/phase_4_symbolic_proof_spike.md` and the Obj12 progress
+entry. No code rollback is required.
+
+### Obj12 review polish - CAS decision grounding (2026-06-17)
+
+Documentation-only reasoning polish after senior review.
+
+- Added a domain-fit conclusion: a narrow scalar algebra checker would cover
+  only a minority of high-value vibration derivations because transfer
+  functions, differential equations, modal/eigenvalue forms, damping
+  assumptions, approximations, and unit-bearing physical models dominate the
+  hard cases.
+- Added the current S5 replay fixture count: three S5 fixture files, seven total
+  derivation steps, and four `axiomatic` steps. The count is explicitly treated
+  as a small fixture signal, not a corpus-wide demand measurement.
+- Clarified that SymPy can be local/offline while still producing cross-version
+  canonical-form differences or inconclusive equivalence results.
+- Added a future production requirement for timeout or complexity bounds.
+- Replaced the vague demand trigger with event-driven revisit signals:
+  repeated reviewer burden, user-reported algebra errors, or a labeled eval set
+  with enough scalar rearrangement cases.
+
+No runtime schema, dependency, code path, chain order, provider path, citation
+contract, or tests changed.
+
+Rollback: remove the Obj12 review-polish additions from the spike and progress
+entry. No code rollback is required.
