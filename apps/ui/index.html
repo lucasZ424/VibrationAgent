@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Vibration Agent Operator</title>
+    <link rel="stylesheet" href="/operator/assets/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="query-pane" aria-labelledby="query-title">
+        <div class="bar">
+          <div>
+            <p class="eyebrow">Local Operator</p>
+            <h1 id="query-title">Vibration Agent</h1>
+          </div>
+          <div class="status-pill" id="apiStatus">Idle</div>
+        </div>
+
+        <form id="queryForm" class="query-form">
+          <label>
+            Query
+            <textarea id="query" name="query" rows="5" required>What happens near critical speed in rotor vibration?</textarea>
+          </label>
+
+          <div class="grid">
+            <label>
+              Chunks JSONL
+              <input id="chunksJsonl" name="chunksJsonl" type="text" placeholder="data/chunks/book/doc/chunks.jsonl" />
+            </label>
+            <label>
+              Chunks Dir
+              <input id="chunksDir" name="chunksDir" type="text" placeholder="data/chunks" />
+            </label>
+            <label>
+              Top K
+              <input id="topK" name="topK" type="number" min="1" value="4" />
+            </label>
+            <label>
+              User Mode
+              <select id="userMode" name="userMode">
+                <option value="engineering">engineering</option>
+                <option value="definition">definition</option>
+                <option value="derivation">derivation</option>
+                <option value="research">research</option>
+              </select>
+            </label>
+            <label>
+              Difficulty
+              <select id="difficulty" name="difficulty">
+                <option value="">default</option>
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+                <option value="extreme">extreme</option>
+              </select>
+            </label>
+            <label>
+              API Token
+              <input id="apiToken" name="apiToken" type="password" autocomplete="off" />
+            </label>
+          </div>
+
+          <div class="actions">
+            <button type="submit">Run Query</button>
+            <button type="button" id="clearButton" class="secondary">Clear</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="answer-pane" aria-live="polite">
+        <div class="answer-header">
+          <div>
+            <p class="eyebrow">Answer</p>
+            <h2 id="answerStatus">No run yet</h2>
+          </div>
+          <span id="taskId"></span>
+        </div>
+        <article id="answer" class="answer empty">Results appear here after a local query.</article>
+      </section>
+
+      <section class="inspect-grid">
+        <section>
+          <h2>Chain</h2>
+          <div id="chain" class="list empty">No chain steps.</div>
+        </section>
+        <section>
+          <h2>Citations</h2>
+          <div id="citations" class="list empty">No citations.</div>
+        </section>
+        <section>
+          <h2>Warnings</h2>
+          <div id="warnings" class="list empty">No warnings.</div>
+        </section>
+        <section>
+          <h2>Supervisor</h2>
+          <dl id="supervisor" class="facts empty"></dl>
+        </section>
+        <section>
+          <h2>Cost</h2>
+          <dl id="cost" class="facts empty"></dl>
+        </section>
+        <section>
+          <h2>Raw Output</h2>
+          <pre id="rawOutput" class="raw empty">{}</pre>
+        </section>
+      </section>
+    </main>
+    <script src="/operator/assets/operator.js"></script>
+  </body>
+</html>

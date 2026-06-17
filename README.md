@@ -129,6 +129,17 @@ Check runtime status:
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
+Open the local read-only operator UI:
+
+```text
+http://127.0.0.1:8000/operator
+```
+
+The operator UI uses the existing `/query` API and shows answer text,
+citations, chain steps, warnings, supervisor metadata, cost metadata, and raw
+JSON. It does not expose ingestion, delete, admin, live-provider, or provider-key
+controls.
+
 Build ingestion exports through the API:
 
 ```powershell
@@ -162,8 +173,7 @@ API keys should not be pasted into chat or committed. When model-backed API work
 is activated, put provider keys in local environment variables or a local
 `.env` file. `config.load()` reads `.env` from the workspace, only fills
 missing process environment variables, and never overrides values already set in
-PowerShell. `.env.example` is a historical sanitized config snapshot, not the
-active runtime source.
+PowerShell. `.env` is the only local dotenv source.
 
 
 ## Testing

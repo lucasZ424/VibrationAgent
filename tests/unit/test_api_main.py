@@ -74,6 +74,29 @@ def test_api_scope_returns_phase0_registry():
     assert "v3_reviewer" not in payload["deferred_skills"]
 
 
+def test_api_serves_read_only_operator_ui():
+    response = client.get("/operator")
+
+    assert response.status_code == 200
+    assert "Vibration Agent" in response.text
+    assert "Run Query" in response.text
+    assert "/operator/assets/operator.js" in response.text
+    assert "/operator/assets/styles.css" in response.text
+    assert "/ingest" not in response.text
+
+
+def test_operator_ui_assets_reference_frozen_query_contract():
+    response = client.get("/operator/assets/operator.js")
+
+    assert response.status_code == 200
+    assert 'fetch("/query"' in response.text
+    assert "output.citations" in response.text
+    assert "structured.chain" in response.text
+    assert "output.warnings" in response.text
+    assert "structured.supervisor_status" in response.text
+    assert "structured.supervisor_cost" in response.text
+
+
 def test_api_ingest_plan_only_empty_dir_returns_insufficient(tmp_path):
     response = client.post("/ingest", json={"workspace": str(tmp_path), "path": str(tmp_path), "plan_only": True})
     payload = response.json()

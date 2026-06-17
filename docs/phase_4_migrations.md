@@ -624,3 +624,50 @@ No runtime schema, dependency, code path, chain order, API shape, provider path,
 retrieval behavior, replay fixture, or citation contract changed.
 
 Rollback: remove the Phase-3 inheritance sentence from the Obj13 freeze doc.
+
+### Obj14 - Read-only operator UI surface (2026-06-17)
+
+Local UI/API surface update.
+
+- Added a static read-only operator UI under `apps/ui/`.
+- Added FastAPI static routes:
+  - `GET /operator`
+  - `GET /operator/assets/{path}`
+- The UI calls the existing `POST /query` contract and displays existing
+  `ApiQueryResponse.output` fields:
+  - `structured_result.answer`
+  - `structured_result.chain`
+  - `citations`
+  - `warnings`
+  - supervisor metadata
+  - token/cost metadata when present
+  - raw response JSON for inspection
+- The UI includes no ingestion, delete, admin, authz, rate-limit, provider-key,
+  or live-provider control surface.
+- Optional API auth remains the existing API token mechanism; no live provider
+  key is required by the UI.
+
+No runtime schema, `/query` response shape, provider path, retrieval behavior,
+chain order, final-answer authority, or write/admin API contract changed.
+
+Rollback: remove the `/operator` static routes, remove `apps/ui/` assets, and
+remove Obj14 API smoke tests and docs.
+
+### Obj14 review polish - dotenv and Claude artifact cleanup (2026-06-17)
+
+Repository hygiene polish after senior review.
+
+- Removed the tracked `.env.example` file. This supersedes the earlier Obj3
+  follow-up that kept it as a historical sanitized snapshot.
+- Removed the tracked `.claude/worktrees/serene-satoshi-01115b` artifact and
+  added `.claude/` to `.gitignore`.
+- Updated README guidance to state the current runtime rule: `.env` is the only
+  local dotenv source; `.env.local` and `.env.example` are not read.
+- Kept `.env` ignored and local-only.
+
+No runtime schema, API shape, UI route, provider path, chain order, retrieval
+behavior, or citation contract changed.
+
+Rollback: restore `.env.example` from history only if a future objective decides
+to reintroduce a tracked sanitized template; remove `.claude/` from `.gitignore`
+only if Claude artifacts intentionally become repo-owned files.

@@ -7,6 +7,7 @@ __pycache__/
 .env.local
 API_key.txt
 data/
+.claude/
 
 # Data artifacts 鈥?keep directory, ignore contents
 data/raw/*

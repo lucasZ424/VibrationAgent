@@ -36,7 +36,7 @@ or edit them unless explicitly asked.
 11. LaTeX/MathML rendering contract: complete
 12. Symbolic proof / CAS feasibility spike: complete
 13. Backend interface freeze: complete
-14. Web UI read-only operator surface: pending
+14. Web UI read-only operator surface: complete
 15. Local-first observability essentials: pending
 16. Remote/shared hardening decision: pending
 17. Phase-4 final interface freeze: pending
@@ -1069,3 +1069,80 @@ and `docs/architecture.md`.
   as the source of truth for API/structured-result assumptions and record any
   UI-facing API contract change in `docs/phase_4_migrations.md` before callers
   are updated.
+
+## Obj14 Notes
+
+- Added a zero-build local operator UI under `apps/ui/`.
+- Added FastAPI static routes:
+  - `GET /operator`
+  - `GET /operator/assets/{path}`
+- The UI calls the existing `POST /query` contract and displays:
+  - final answer text;
+  - citations;
+  - chain steps;
+  - warnings;
+  - supervisor status/action/invocation metadata;
+  - token/cost metadata when present;
+  - raw response JSON for inspection.
+- The UI is read-only: no ingestion, delete, admin, remote/shared management,
+  live-provider, or provider-key control was added.
+- Optional API authentication remains the existing API token mechanism. The UI
+  does not require live OpenAI/Anthropic keys.
+- Updated `README.md` with the local `/operator` URL.
+- Recorded the UI-facing API contract in `docs/phase_4_migrations.md` before
+  treating it as an operator surface.
+- Review polish documented and reconciled the bundled repository hygiene
+  cleanup: tracked `.env.example` and `.claude/worktrees/serene-satoshi-01115b`
+  were removed, `.claude/` is ignored, and README now states that `.env` is the
+  only local dotenv source.
+- No runtime schema, `/query` response shape, provider path, retrieval behavior,
+  chain order, final-answer authority, or write/admin API contract changed.
+
+## Obj14 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_api_main.py -q -p no:cacheprovider
+```
+
+Result: passed, 14 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj14 -p no:cacheprovider
+```
+
+Result: passed, 446 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+Post-review polish command:
+
+```powershell
+git ls-files .env .env.example .env.local .claude
+```
+
+Result: no tracked files returned.
+
+Post-review polish command:
+
+```powershell
+rg "\.env\.example|\.env\.local|\.claude" README.md docs .gitignore
+```
+
+Result: README no longer points to `.env.example`; remaining matches are
+historical migration/progress records, `.env.local` non-loading notes, and
+ignore/progress rules.
+
+## Obj14 Residual Risk
+
+- The UI is intentionally static and minimal. It does not include a frontend
+  build pipeline, persisted history, file upload, or management workflows.
+- The UI depends on the existing `/query` response envelope. Future UI fields
+  still require a Phase-4 migration before backend callers are changed.
+- No browser automation screenshot was run yet; API smoke tests verify route
+  availability and contract references. Manual visual verification remains
+  operator-run by starting uvicorn and opening `/operator`.
+
+## Obj14 Next Obj Gate
+
+- Cleared for Obj15 local-first observability essentials after focused API
+  verification and full non-large regression. Obj15 must preserve the local UI
+  defaults and keep diagnostics redacted.

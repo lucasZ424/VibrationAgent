@@ -9,12 +9,13 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
 from apps._bootstrap import ensure_local_imports
 
-ensure_local_imports(__file__)
+APP_ROOT = ensure_local_imports(__file__)
 
 from apps.api.auth import is_authorized  # noqa: E402
 from apps.api.middleware.rate_limit import InMemoryRateLimiter  # noqa: E402
@@ -39,6 +40,9 @@ from vibration_agent.schemas import (  # noqa: E402
 app = FastAPI(title="Vibration Agent API")
 logger = logging.getLogger(__name__)
 rate_limiter = InMemoryRateLimiter()
+UI_DIR = APP_ROOT / "apps" / "ui"
+if UI_DIR.exists():
+    app.mount("/operator/assets", StaticFiles(directory=UI_DIR), name="operator-assets")
 
 
 class ApiHandledError(Exception):
@@ -256,6 +260,11 @@ def _health_status(dependencies: dict[str, dict[str, Any]]) -> str:
     if statuses and all(status == "fail" for status in statuses):
         return "fail"
     return "degraded"
+
+
+@app.get("/operator", response_class=FileResponse)
+def operator_ui() -> FileResponse:
+    return FileResponse(UI_DIR / "index.html")
 
 
 @app.get("/health", response_model=ApiHealthResponse)
