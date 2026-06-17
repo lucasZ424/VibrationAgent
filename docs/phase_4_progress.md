@@ -35,7 +35,7 @@ or edit them unless explicitly asked.
 10. Rendered DOCX pagination and rich asset anchoring: complete
 11. LaTeX/MathML rendering contract: complete
 12. Symbolic proof / CAS feasibility spike: complete
-13. Backend interface freeze: pending
+13. Backend interface freeze: complete
 14. Web UI read-only operator surface: pending
 15. Local-first observability essentials: pending
 16. Remote/shared hardening decision: pending
@@ -984,3 +984,88 @@ Result: `s5_visible_multistep_response.json` has 3 steps / 2 axiomatic;
 - Cleared for Obj13 backend interface freeze. Obj13 should freeze the Obj1-Obj12
   backend contracts and record that symbolic proof/CAS remains deferred unless a
   separate production objective adds an optional checker behind an eval gate.
+
+## Obj13 Notes
+
+- Added `docs/phase_4_backend_interface_freeze.md`.
+- Added `docs/phase_4_deferred_and_polish_audit.md`.
+- Updated `README.md` and `docs/architecture.md` so backend consumers and later
+  UI/observability work point to the Phase-4 backend freeze rather than only the
+  planning document.
+- Froze Obj1-Obj12 backend contracts, including:
+  - eval fixtures and runners;
+  - retrieval recall and Qdrant replacement gates;
+  - optional/default-off embedding provider boundary;
+  - deterministic V2 evidence-support hardening boundary;
+  - S6/S7/S8 advisory skill and routing status;
+  - rendered DOCX pagination and rich asset anchor metadata;
+  - Obj11 `FormulaRender` contract;
+  - Obj12 CAS/symbolic-proof defer decision.
+- Recorded that the default final-answer path remains V2/V4-bound.
+- Recorded that S6/S7/S8 are default-off advisory handoff skills and do not
+  render into final answers.
+- Recorded that formula rendering metadata is not symbolic proof metadata and
+  CAS remains deferred unless a future optional checker objective satisfies the
+  documented eval gate.
+- Review polish added an explicit Phase-3 freeze inheritance pointer to
+  `docs/phase_4_backend_interface_freeze.md`, clarifying that Phase 4 is
+  additive over `docs/phase_3_interface_freeze.md`.
+- No runtime schema, dependency, code path, provider path, replay fixture,
+  retrieval behavior, chain order, citation contract, or API response shape
+  changed.
+
+## Obj13 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\eval\test_llm_eval.py tests\eval\test_retrieval_eval.py tests\unit\test_tutor_orchestrator.py tests\unit\test_v2_citation_check.py tests\unit\test_v4_style_skill.py tests\unit\test_s5_derivation.py -q -p no:cacheprovider
+```
+
+Result: passed, 77 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj13 -p no:cacheprovider
+```
+
+Result: passed, 444 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\llm_eval.py --output data\exports\ci\phase4_obj13_llm_eval.json
+```
+
+Result: passed. Report has 7 cases, 7 passed, 0 failed, pass rate 1.0, citation
+faithfulness pass rate 1.0, and unsupported numeric block rate 1.0.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\retrieval_eval.py --output data\exports\ci\phase4_obj13_retrieval_eval.json
+```
+
+Result: passed. Report has 4 cases, 3 evidence cases, 1 expected-miss case,
+`top_k_recall@5 = 1.0`, `top_k_recall@10 = 1.0`, no missing evidence cases, and
+`replacement_justified_by_baseline = false`.
+
+Post-review polish command:
+
+```powershell
+git diff --check
+```
+
+Result: no whitespace errors; existing CRLF/LF warnings remain for `README.md`
+and `docs/architecture.md`.
+
+## Obj13 Residual Risk
+
+- Obj13 is a documentation freeze. It does not implement UI, local
+  observability, remote/shared hardening, retrieval replacement, external
+  evidence contracts, or symbolic checking.
+- The freeze records fixture-sized eval gates. Large-corpus and live-provider
+  validation remain operator-run only.
+- UI/observability work can still accidentally depend on internal fields unless
+  it explicitly cites the freeze and records any API contract migration first.
+
+## Obj13 Next Obj Gate
+
+- Cleared for Obj14 read-only operator UI. Obj14 must treat the backend freeze
+  as the source of truth for API/structured-result assumptions and record any
+  UI-facing API contract change in `docs/phase_4_migrations.md` before callers
+  are updated.

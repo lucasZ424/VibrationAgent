@@ -263,3 +263,12 @@ Phase-4 changes that affect schemas, provider requests, replay hashes,
 structured-result keys, chain order, retrieval contracts, API shapes, or
 ingestion outputs must be recorded in `docs/phase_4_migrations.md` before
 callers are updated.
+
+As of Obj13, the Phase-4 backend is frozen before UI and observability work.
+The frozen backend contract is recorded in
+`docs/phase_4_backend_interface_freeze.md`; accepted residual risks and
+deferred work are recorded in `docs/phase_4_deferred_and_polish_audit.md`.
+The default answer path remains V2/V4-bound. S6/S7/S8 are default-off advisory
+handoff skills, Obj11 formula rendering is metadata only, and Obj12 keeps
+symbolic proof/CAS deferred unless a later optional checker objective satisfies
+the documented eval gate.

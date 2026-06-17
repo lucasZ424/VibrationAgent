@@ -585,3 +585,42 @@ contract, or tests changed.
 
 Rollback: remove the Obj12 review-polish additions from the spike and progress
 entry. No code rollback is required.
+
+### Obj13 - Backend interface freeze (2026-06-17)
+
+Documentation-only backend freeze.
+
+- Added `docs/phase_4_backend_interface_freeze.md`.
+- Added `docs/phase_4_deferred_and_polish_audit.md`.
+- Updated `README.md` and `docs/architecture.md` to point to the Phase-4
+  backend freeze.
+- Froze Obj1-Obj12 backend contracts, eval gates, retrieval gates, advisory
+  routing boundary, V2 hardening boundary, rendered DOCX metadata, formula
+  rendering contract, and CAS spike conclusion before UI/observability work.
+- Recorded that S6/S7/S8 are default-off advisory handoff skills, not default
+  final-answer renderers.
+- Recorded that Obj11 formula rendering is metadata only and Obj12 keeps
+  symbolic proof/CAS deferred unless a future optional checker objective
+  satisfies the documented eval gate.
+
+No runtime schema, dependency, code path, provider path, replay fixture,
+retrieval behavior, chain order, citation contract, or API response shape
+changed.
+
+Rollback: remove the Obj13 freeze/audit docs and Obj13 references from README,
+architecture, and progress. No code rollback is required.
+
+### Obj13 review polish - Phase-3 freeze inheritance pointer (2026-06-17)
+
+Documentation-only freeze clarity polish after senior review.
+
+- Added an explicit pointer from `docs/phase_4_backend_interface_freeze.md` to
+  the inherited Phase-3 freeze in `docs/phase_3_interface_freeze.md`.
+- Clarified that the Phase-4 backend freeze is additive and does not restate or
+  replace Phase-3 LLM, replay, supervisor, provider, and deterministic-default
+  contracts except where Phase 4 explicitly migrated them.
+
+No runtime schema, dependency, code path, chain order, API shape, provider path,
+retrieval behavior, replay fixture, or citation contract changed.
+
+Rollback: remove the Phase-3 inheritance sentence from the Obj13 freeze doc.
