@@ -368,3 +368,44 @@ execution pipeline changed.
 
 Rollback: remove the S7 skill module/export, prompt, agent skill package, tests,
 and this progress entry.
+
+### Obj8 - S8 experiment advice prototype (2026-06-17)
+
+Default-off experiment-advice skill update.
+
+- Added `src/vibration_agent/skills/s8_experiment_advice.py` with
+  `ExperimentAdviceSkill`.
+- Exported `ExperimentAdviceSkill` lazily from `vibration_agent.skills` so
+  default imports do not load the deferred S8 module.
+- Added `agent_skills/s8_experiment_advice/SKILL.md`.
+- Added `prompts/skills/s8_experiment_advice.md`.
+- S8 output schema version is `s8.experiment_advice.v1`.
+- Added deterministic measurement-plan advice for runup/resonance validation,
+  bearing-fault measurement planning, and synchronous-unbalance validation.
+- Unsupported numeric query terms that are not visible in evidence are omitted
+  from plan text and recorded in `omitted_unsupported_thresholds`.
+
+S8 remains outside the default TutorOrchestrator chain and remains listed in
+`PHASE0_DEFERRED_SKILLS` until the later routing activation gate. No API
+envelope, default chain order, V2/V4 contract, live-provider path, sensor
+integration, or data-acquisition pipeline changed.
+
+Rollback: remove the S8 skill module/export, prompt, agent skill package, tests,
+and this progress entry.
+
+### Obj8 review polish - bilingual S8 evidence keywords (2026-06-17)
+
+S8 deterministic rule coverage polish after senior review.
+
+- Added Chinese evidence keywords for the runup/resonance, bearing-fault, and
+  synchronous-unbalance advice rules.
+- Added focused coverage proving Chinese evidence rows can trigger all three S8
+  experiment-plan families while S8 remains default-off and explicit-call-only.
+- Recorded the Obj9 carry-forward that `omitted_unsupported_thresholds` is an
+  audit field and must not be rendered as measurement advice by future routing.
+
+No API envelope, default chain order, V2/V4 contract, routing activation, live
+provider path, sensor integration, or data-acquisition pipeline changed.
+
+Rollback: remove the added Chinese keyword entries and the Chinese evidence
+coverage test.

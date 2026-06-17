@@ -1,6 +1,6 @@
 # Phase 4 Progress
 
-Updated: 2026-06-15
+Updated: 2026-06-17
 
 ## Execution Model
 
@@ -26,11 +26,11 @@ or edit them unless explicitly asked.
 1. Broader replay eval, V2 calibration, and large-corpus baseline: complete
 2. Retrieval recall audit and dataset: complete
 3. Optional embedding provider upgrade: complete
-4. Qdrant reindex and retrieval replacement gate: pending
-5. Deterministic V2 evidence support hardening: pending
-6. S6 literature search prototype: pending
-7. S7 model selection prototype: pending
-8. S8 experiment advice prototype: pending
+4. Qdrant reindex and retrieval replacement gate: complete
+5. Deterministic V2 evidence support hardening: complete
+6. S6 literature search prototype: complete
+7. S7 model selection prototype: complete
+8. S8 experiment advice prototype: complete
 9. S6/S7/S8 routing activation gate: pending
 10. Rendered DOCX pagination and rich asset anchoring: pending
 11. LaTeX/MathML rendering contract: pending
@@ -590,3 +590,76 @@ Result: passed, 37 tests.
 
 - Cleared for Obj8 after user review of Obj7 artifacts. Obj8 must remain
   default-off and out of ordinary routing until Obj9 activation.
+
+## Obj8 Notes
+
+- Added `ExperimentAdviceSkill` as a default-off S8 advisory prototype in
+  `src/vibration_agent/skills/s8_experiment_advice.py`.
+- S8 produces structured measurement and validation advice only from visible S2
+  evidence rows. Query wording alone does not trigger an experiment plan.
+- Each plan separates `confirmed_facts`, `assumptions`,
+  `required_measurements`, `sensor_layout`, `validation_steps`,
+  `safety_limits`, and `evidence_refs`.
+- S8 actively omits numeric query terms that are not visible in evidence and
+  records them in `omitted_unsupported_thresholds` instead of inserting them
+  into the plan text.
+- Current calibrated advice focuses are:
+  `runup_or_resonance_validation`, `bearing_fault_measurement_plan`, and
+  `synchronous_unbalance_validation`.
+- Post-review polish added Chinese evidence keywords for all three calibrated
+  advice focuses so S8 coverage matches the bilingual corpus expectation before
+  Obj9 routing activation.
+- Added `agent_skills/s8_experiment_advice/SKILL.md` and
+  `prompts/skills/s8_experiment_advice.md`.
+- `ExperimentAdviceSkill` is exported lazily from `vibration_agent.skills` so
+  importing active skills does not load deferred S8 modules.
+- S8 remains outside `TutorOrchestrator` default routing and remains listed in
+  `PHASE0_DEFERRED_SKILLS` until the routing activation gate.
+
+## Obj8 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s8_experiment_advice.py tests\unit\test_tutor_orchestrator.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider
+```
+
+Result: passed, 38 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj8-final -p no:cacheprovider
+```
+
+Result: passed, 423 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s8_experiment_advice.py tests\unit\test_tutor_orchestrator.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider
+```
+
+Result: passed, 39 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj8-polish -p no:cacheprovider
+```
+
+Result: passed, 424 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+## Obj8 Residual Risk
+
+- S8 uses narrow deterministic keyword rules. It is useful for explicit
+  measurement-planning advice but is not a general experiment-design expert
+  system.
+- No live sensor, device, or data-acquisition integration exists in Obj8.
+- S8 only omits unsupported numeric terms from query text. Future routed use
+  must ensure `omitted_unsupported_thresholds` remains an audit field, not
+  rendered as measurement advice.
+- Obj9 must decide whether and how S8 advisory assumptions and safety limits can
+  enter normal routing without expanding unsupported answer authority.
+
+## Obj8 Next Obj Gate
+
+- Cleared for Obj9 after focused and non-large regression verification. Obj9
+  owns any S6/S7/S8 routing activation; without that gate, S8 remains
+  explicit-call-only.
