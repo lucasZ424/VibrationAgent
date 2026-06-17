@@ -4,6 +4,7 @@ from pathlib import Path
 
 from vibration_agent.orchestrator import TutorOrchestrator, handle_query, is_in_scope
 from vibration_agent.orchestrator.tutor import _token_cost
+from vibration_agent.config import RoutingSettings, load
 from vibration_agent.schemas import SkillInput, SkillOutput
 from vibration_agent.skills import (
     CitationCheckSkill,
@@ -390,3 +391,255 @@ def test_tutor_token_cost_reads_s3_skill_result_for_qa_logs():
     )
 
     assert _token_cost(output) == 17
+
+
+def test_tutor_orchestrator_leaves_advisory_lane_absent_without_activation():
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_chunk("c1", "Critical speed affects rotor response.")]},
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={"answer": "## Conclusion\nCritical speed affects rotor response."},
+        )
+    )
+    s7 = RecordingSkill(SkillOutput(status="ok", summary="should not run"))
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        citation_check_skill=v2,
+        style_skill=v4,
+        model_selection_skill=s7,
+    )
+
+    output = orchestrator.handle_query(
+        "select a model for critical speed",
+        constraints={"scope": "in_scope", "s4_enabled": False},
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert [step["skill"] for step in output.structured_result["chain"]] == [
+        "s2_retrieval",
+        "s3_qa_summary",
+        "v2_citation_check",
+        "v4_style",
+    ]
+    assert "advisory_routing" not in output.structured_result
+    assert "s7" not in output.structured_result["skill_results"]
+    assert s7.calls == []
+
+
+def test_tutor_orchestrator_routes_explicit_advisory_skills_as_structured_handoff():
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_chunk("c1", "Critical speed affects rotor response.")]},
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={"answer": "## Conclusion\nCritical speed affects rotor response."},
+        )
+    )
+    s6 = RecordingSkill(SkillOutput(status="ok", summary="S6 ok", structured_result={"candidates": [{"title": "A"}]}))
+    s7 = RecordingSkill(
+        SkillOutput(status="ok", summary="S7 ok", structured_result={"recommendations": [{"model_family": "m"}]})
+    )
+    s8 = RecordingSkill(
+        SkillOutput(status="ok", summary="S8 ok", structured_result={"experiment_plans": [{"experiment_focus": "e"}]})
+    )
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        citation_check_skill=v2,
+        style_skill=v4,
+        literature_search_skill=s6,
+        model_selection_skill=s7,
+        experiment_advice_skill=s8,
+    )
+
+    output = orchestrator.handle_query(
+        "find literature, select a model, and plan measurements",
+        constraints={
+            "scope": "in_scope",
+            "s4_enabled": False,
+            "advisory_routing_enabled": True,
+            "advisory_skills": ["s6", "s7", "s8"],
+        },
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert output.structured_result["answer"] == "## Conclusion\nCritical speed affects rotor response."
+    assert [step["skill"] for step in output.structured_result["chain"]][-3:] == [
+        "s6_literature_search",
+        "s7_model_selection",
+        "s8_experiment_advice",
+    ]
+    advisory = output.structured_result["advisory_routing"]
+    assert advisory["selected_skills"] == ["s6_literature_search", "s7_model_selection", "s8_experiment_advice"]
+    assert advisory["rendering"] == "structured_handoff_only"
+    assert advisory["v2_v4_policy"] == "do_not_render_as_final_answer"
+    assert set(advisory["outputs"]) == {"s6", "s7", "s8"}
+    assert set(output.structured_result["skill_results"]) >= {"s6", "s7", "s8"}
+    assert s6.calls[0].constraints["s6_enabled"] is True
+    assert s7.calls[0].constraints["s7_enabled"] is True
+    assert s8.calls[0].constraints["s8_enabled"] is True
+    assert "s2_result" in s7.calls[0].context
+
+
+def test_tutor_orchestrator_records_enabled_gate_without_selected_advisory_skill():
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_chunk("c1", "Critical speed affects rotor response.")]},
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={"answer": "## Conclusion\nCritical speed affects rotor response."},
+        )
+    )
+    orchestrator = TutorOrchestrator(retrieval_skill=s2, qa_summary_skill=s3, citation_check_skill=v2, style_skill=v4)
+
+    output = orchestrator.handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "s4_enabled": False, "advisory_routing_enabled": True},
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert output.structured_result["advisory_routing"]["selected_skills"] == []
+    assert output.structured_result["advisory_routing"]["reason"] == "advisory routing gate enabled without explicit skills"
+    assert [step["skill"] for step in output.structured_result["chain"]][-1] == "v4_style"
+
+
+def test_tutor_orchestrator_routes_intent_when_policy_allows_it():
+    settings = load(Path.cwd()).model_copy(
+        update={
+            "routing": RoutingSettings(
+                advisory_routing_enabled=True,
+                advisory_intent_routing_enabled=True,
+                advisory_allowed_skills=["s7"],
+            )
+        }
+    )
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_chunk("c1", "Critical speed affects rotor response.")]},
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={"answer": "## Conclusion\nCritical speed affects rotor response."},
+        )
+    )
+    s7 = RecordingSkill(
+        SkillOutput(status="ok", summary="S7 ok", structured_result={"recommendations": [{"model_family": "m"}]})
+    )
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        citation_check_skill=v2,
+        style_skill=v4,
+        model_selection_skill=s7,
+        settings=settings,
+    )
+
+    output = orchestrator.handle_query(
+        "Which model should I use for critical speed?",
+        constraints={"scope": "in_scope", "s4_enabled": False},
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert output.structured_result["advisory_routing"]["reason"] == "restricted by configured advisory_allowed_skills"
+    assert output.structured_result["advisory_routing"]["selected_skills"] == ["s7_model_selection"]
+    assert len(s7.calls) == 1
+
+
+def test_tutor_orchestrator_runs_advisory_lane_before_extreme_reviewer():
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={"retrieval_context": [_chunk("c1", "Critical speed affects rotor response.")]},
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={"answer": "## Conclusion\nCritical speed affects rotor response."},
+        )
+    )
+    s7 = RecordingSkill(
+        SkillOutput(status="ok", summary="S7 ok", structured_result={"recommendations": [{"model_family": "m"}]})
+    )
+    v3 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V3 ok",
+            structured_result={"reviewer_notes": []},
+        )
+    )
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        citation_check_skill=v2,
+        style_skill=v4,
+        model_selection_skill=s7,
+        reviewer_skill=v3,
+    )
+
+    output = orchestrator.handle_query(
+        "Which model should I use for critical speed?",
+        constraints={
+            "scope": "in_scope",
+            "s4_enabled": False,
+            "difficulty": "extreme",
+            "advisory_routing_enabled": True,
+            "advisory_skills": ["s7"],
+        },
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert output.structured_result["answer"] == "## Conclusion\nCritical speed affects rotor response."
+    assert [step["skill"] for step in output.structured_result["chain"]] == [
+        "s2_retrieval",
+        "s3_qa_summary",
+        "v2_citation_check",
+        "v4_style",
+        "s7_model_selection",
+        "v3_reviewer",
+    ]
+    assert output.structured_result["advisory_routing"]["selected_skills"] == ["s7_model_selection"]
+    assert len(s7.calls) == 1
+    assert len(v3.calls) == 1

@@ -409,3 +409,95 @@ provider path, sensor integration, or data-acquisition pipeline changed.
 
 Rollback: remove the added Chinese keyword entries and the Chinese evidence
 coverage test.
+
+### Obj9 - S6/S7/S8 routing activation gate (2026-06-17)
+
+Default-off advisory routing gate update.
+
+- Added `AdvisoryRoutingDecision` and `route_advisory_skills(...)` in
+  `src/vibration_agent/agent/routing.py`.
+- Added routing settings:
+  - `advisory_routing_enabled` (default `false`)
+  - `advisory_intent_routing_enabled` (default `false`)
+  - `advisory_allowed_skills` (default empty)
+- Exported the advisory routing helper from `vibration_agent.agent`.
+- Updated `TutorOrchestrator` to run a post-V4 advisory lane only when the gate
+  selects S6/S7/S8.
+- Advisory lane output is structured handoff context under
+  `structured_result["advisory_routing"]`; it does not rewrite the V4 final
+  answer and is marked `structured_handoff_only`.
+- Added deterministic routing and orchestrator tests for disabled default,
+  explicit skill-list activation, intent activation, and enabled-with-no-skill
+  behavior.
+
+Default behavior is unchanged when `advisory_routing_enabled` is false. S6/S7/S8
+remain absent from ordinary answers unless the operator or caller explicitly
+enables the advisory gate. No live-provider path, API envelope, V2/V4 checker,
+or final-answer renderer changed.
+
+Rollback: remove the advisory routing settings/helper/export, remove the
+TutorOrchestrator advisory lane, and remove Obj9 routing/orchestrator tests.
+
+### Obj9 review polish - routing overhead and extreme/advisory coverage (2026-06-17)
+
+Low-cost routing-gate polish after senior review.
+
+- Reused a single settings object inside each `TutorOrchestrator._run_chain`
+  execution for both model routing and advisory routing, avoiding an extra
+  Obj9 config load on the default path while still honoring config-enabled
+  advisory routing.
+- Added orchestrator coverage for `difficulty=extreme` with advisory routing
+  enabled, proving advisory handoff runs before V3 reviewer and does not change
+  the V4 final answer.
+
+No API envelope, default-off policy, V2/V4 checker, final-answer renderer,
+live-provider path, or advisory rendering contract changed.
+
+Rollback: restore separate route settings lookup and remove the
+extreme-plus-advisory orchestrator test.
+
+### Obj10 - Rendered DOCX pagination and rich asset anchoring (2026-06-17)
+
+Optional DOCX pagination and asset-anchor update.
+
+- Added optional `metadata` to `OcrPage` with a default empty object.
+- Added `src/vibration_agent/ingestion/assets.py` with
+  `asset_anchor_metadata(...)` and anchor schema version
+  `p4.rich_asset_anchor.v1`.
+- Extended `parse_docx(...)` with explicit `pagination_mode="logical|rendered"`.
+  Logical mode remains the default.
+- Added optional headless LibreOffice (`soffice`) DOCX-to-PDF rendering support
+  for rendered page-count metadata.
+- Missing LibreOffice, rendered-PDF inspection failures, and missing
+  block-to-page layout mapping fall back to logical DOCX pagination with
+  explicit `metadata["docx_pagination"]` reasons/warnings.
+- DOCX table/image assets now carry optional rich anchor metadata including
+  source, page anchor type, block id or DOCX relationship id, and rendered page
+  number when known.
+
+Existing DOCX/PDF ingestion contracts remain backward compatible. The default
+pipeline does not require LibreOffice and does not enable rendered DOCX
+pagination unless explicitly requested. No chunk schema, retrieval schema,
+V2/V4 contract, or final-answer renderer changed.
+
+Rollback: remove `OcrPage.metadata`, remove the asset-anchor helper, restore
+`parse_docx(...)` to logical-only behavior, and remove Obj10 DOCX rendered
+fallback/anchor tests.
+
+### Obj10 review polish - DOCX warning redaction and anchor semantics (2026-06-17)
+
+Low-cost rendered-DOCX polish after senior review.
+
+- Redacted local filesystem paths from rendered DOCX fallback warnings before
+  storing them in `OcrPage.metadata["warnings"]`.
+- Added focused coverage for nonzero `soffice` stderr containing Windows and
+  POSIX local paths.
+- Documented rich anchor semantics: `anchor.page_no` is the parser's logical page
+  anchor, while `anchor.rendered_page_no` is only present when a rendered backend
+  can locate the asset without guessing.
+
+No schema field, default pagination behavior, chunk contract, LibreOffice
+requirement, or rendered-page fallback policy changed.
+
+Rollback: remove the local-path redaction helper/test and restore the previous
+anchor helper docstring.

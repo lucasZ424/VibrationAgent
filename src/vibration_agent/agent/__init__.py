@@ -7,11 +7,13 @@ from .model_registry import (
     default_model_registry,
 )
 from .routing import (
+    AdvisoryRoutingDecision,
     Difficulty,
     RouteDecision,
     RoutingPolicy,
     clear_default_routing_policy_cache,
     default_routing_policy,
+    route_advisory_skills,
     route_task,
 )
 from .skill_registry import AgentSkill, AgentSkillRegistry
@@ -33,6 +35,7 @@ from .supervisor import (
 __all__ = [
     "AgentSkill",
     "AgentSkillRegistry",
+    "AdvisoryRoutingDecision",
     "CorrectionClient",
     "Difficulty",
     "ExecutionResult",
@@ -54,5 +57,6 @@ __all__ = [
     "default_model_registry",
     "default_routing_policy",
     "next_supervisor_action",
+    "route_advisory_skills",
     "route_task",
 ]

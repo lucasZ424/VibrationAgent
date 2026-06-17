@@ -63,6 +63,9 @@ class RoutingSettings(BaseModel):
     opus_difficulties: list[str] = Field(default_factory=lambda: ["extreme"])
     repeated_failure_threshold: int = Field(default=2, ge=1)
     explicit_extreme_markers: list[str] = Field(default_factory=lambda: ["extreme", "opus", "senior_supervisor"])
+    advisory_routing_enabled: bool = False
+    advisory_intent_routing_enabled: bool = False
+    advisory_allowed_skills: list[str] = Field(default_factory=list)
 
 
 class RetrievalSettings(BaseModel):
@@ -399,6 +402,15 @@ def load(workspace: Path | None = None) -> Settings:
             opus_difficulties=list(routing_section.get("opus_difficulties", ["extreme"])),
             repeated_failure_threshold=int(routing_section.get("repeated_failure_threshold", 2)),
             explicit_extreme_markers=list(routing_section.get("explicit_extreme_markers", ["extreme", "opus", "senior_supervisor"])),
+            advisory_routing_enabled=_env_bool(
+                "ADVISORY_ROUTING_ENABLED",
+                bool(routing_section.get("advisory_routing_enabled", False)),
+            ),
+            advisory_intent_routing_enabled=_env_bool(
+                "ADVISORY_INTENT_ROUTING_ENABLED",
+                bool(routing_section.get("advisory_intent_routing_enabled", False)),
+            ),
+            advisory_allowed_skills=list(routing_section.get("advisory_allowed_skills", [])),
         ),
         llm=LlmSettings(
             providers=dict(llm_section.get("providers", {})),

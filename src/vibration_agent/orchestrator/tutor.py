@@ -1,8 +1,8 @@
 """Tutor-Orchestrator: the Phase-0 user-facing query entry point.
 
 Phase-2 wiring calls S2 -> S3 -> V2 -> V4, with V3 reviewer added only for
-extreme tasks. Deferred S4-S8 skills stay registered but are not invoked by this
-orchestrator.
+extreme tasks. S6-S8 remain off the default path and require the Phase-4
+advisory routing gate.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
 
-from ..agent.routing import Difficulty, RouteDecision, route_task
+from ..agent.routing import AdvisoryRoutingDecision, Difficulty, RouteDecision, route_advisory_skills, route_task
 from ..agent.supervisor import SupervisorLoop
 from ..config import load
 from ..schemas import SkillInput, SkillOutput, UserMode
@@ -235,6 +235,9 @@ class TutorOrchestrator:
         citation_check_skill: Skill | None = None,
         style_skill: Skill | None = None,
         reviewer_skill: Skill | None = None,
+        literature_search_skill: Skill | None = None,
+        model_selection_skill: Skill | None = None,
+        experiment_advice_skill: Skill | None = None,
         supervisor_loop: SupervisorLoop | None = None,
         settings: Any | None = None,
     ) -> None:
@@ -246,6 +249,9 @@ class TutorOrchestrator:
         self.citation_check_skill = citation_check_skill or CitationCheckSkill()
         self.style_skill = style_skill or OutputStyleSkill()
         self.reviewer_skill = reviewer_skill or ReviewerSkill()
+        self.literature_search_skill = literature_search_skill
+        self.model_selection_skill = model_selection_skill
+        self.experiment_advice_skill = experiment_advice_skill
         self.supervisor_loop = supervisor_loop or SupervisorLoop()
         self._settings = settings
 
@@ -280,12 +286,125 @@ class TutorOrchestrator:
         )
         return _bool_value(value, default=default)
 
-    def _route_decision(self, *, context: Mapping[str, Any], constraints: Mapping[str, Any]) -> RouteDecision:
-        settings = self._settings or load()
+    def _route_decision(
+        self,
+        *,
+        context: Mapping[str, Any],
+        constraints: Mapping[str, Any],
+        settings: Any | None = None,
+    ) -> RouteDecision:
+        settings = settings or self._settings or load()
         return route_task(constraints=constraints, context=context, settings=settings)
 
     def _review_enabled(self, *, route_decision: RouteDecision) -> bool:
         return route_decision.difficulty == Difficulty.EXTREME
+
+    def _advisory_route_decision(
+        self,
+        query: str,
+        *,
+        user_mode: UserMode,
+        context: Mapping[str, Any],
+        constraints: Mapping[str, Any],
+        settings: Any | None = None,
+    ) -> AdvisoryRoutingDecision:
+        settings = settings or self._settings or load()
+        return route_advisory_skills(
+            query,
+            user_mode=user_mode,
+            constraints=constraints,
+            context=context,
+            settings=settings,
+        )
+
+    def _advisory_skill(self, skill_name: str) -> Skill:
+        if skill_name == "s6_literature_search":
+            if self.literature_search_skill is None:
+                from ..skills import LiteratureSearchSkill
+
+                self.literature_search_skill = LiteratureSearchSkill()
+            return self.literature_search_skill
+        if skill_name == "s7_model_selection":
+            if self.model_selection_skill is None:
+                from ..skills import ModelSelectionSkill
+
+                self.model_selection_skill = ModelSelectionSkill()
+            return self.model_selection_skill
+        if skill_name == "s8_experiment_advice":
+            if self.experiment_advice_skill is None:
+                from ..skills import ExperimentAdviceSkill
+
+                self.experiment_advice_skill = ExperimentAdviceSkill()
+            return self.experiment_advice_skill
+        raise KeyError(f"Unknown advisory skill: {skill_name}")
+
+    def _advisory_constraints(self, skill_name: str, constraints: Mapping[str, Any]) -> dict[str, Any]:
+        next_constraints = dict(constraints)
+        if skill_name == "s6_literature_search":
+            next_constraints.setdefault("s6_enabled", True)
+        elif skill_name == "s7_model_selection":
+            next_constraints.setdefault("s7_enabled", True)
+        elif skill_name == "s8_experiment_advice":
+            next_constraints.setdefault("s8_enabled", True)
+        return next_constraints
+
+    def _run_advisory_lane(
+        self,
+        *,
+        query: str,
+        task_id: str,
+        user_mode: UserMode,
+        context: Mapping[str, Any],
+        constraints: Mapping[str, Any],
+        s2_result: dict[str, Any],
+        route_decision: AdvisoryRoutingDecision,
+    ) -> tuple[list[dict[str, str]], dict[str, dict[str, Any]], dict[str, Any], list[str]]:
+        chain: list[dict[str, str]] = []
+        skill_results: dict[str, dict[str, Any]] = {}
+        outputs: dict[str, dict[str, Any]] = {}
+        warnings: list[str] = []
+        for skill_name in route_decision.selected_skills:
+            skill = self._advisory_skill(skill_name)
+            skill_input = SkillInput(
+                task_id=task_id,
+                user_query=query,
+                context={**context, "s2_result": s2_result},
+                constraints=self._advisory_constraints(skill_name, constraints),
+                user_mode=user_mode,
+            )
+            try:
+                skill_output = skill.run(skill_input)
+            except Exception as exc:  # noqa: BLE001 - advisory lane must not break final answers
+                skill_output = SkillOutput(
+                    status="insufficient",
+                    summary=f"{skill_name} advisory route failed.",
+                    structured_result={
+                        "task_id": task_id,
+                        "skill": skill_name,
+                        "routing": {"default_chain": False, "requires_activation_gate": True},
+                    },
+                    warnings=[f"{skill_name} advisory route failed: {type(exc).__name__}: {exc}"],
+                    handoff_recommendation="Use the default V2/V4-bound answer; rerun the advisory skill explicitly after fixing the route.",
+                )
+            chain.append(_chain_step(skill_name, skill_output))
+            skill_key = skill_name.split("_", 1)[0]
+            skill_results[skill_key] = skill_output.structured_result
+            outputs[skill_key] = skill_output.model_dump(mode="python")
+            warnings.extend(skill_output.warnings)
+        advisory_result = {
+            "enabled": route_decision.enabled,
+            "selected_skills": list(route_decision.selected_skills),
+            "reason": route_decision.reason,
+            "reasons": route_decision.reasons,
+            "rendering": route_decision.rendering,
+            "v2_v4_policy": route_decision.v2_v4_policy,
+            "outputs": outputs,
+            "limitations": [
+                "Advisory lane output is structured handoff context and is not rendered into the final answer.",
+                "Final user-facing claims still require the default V2/V4-bound answer path.",
+            ],
+        }
+        return chain, skill_results, advisory_result, warnings
 
     def _engineering_analysis_enabled(self, *, user_mode: UserMode, context: Mapping[str, Any], constraints: Mapping[str, Any]) -> bool:
         value = _first_control_value(constraints, context, keys=("s4_enabled", "s4_engineering_enabled"))
@@ -381,7 +500,8 @@ class TutorOrchestrator:
         context_dict = _copy_context(context)
         constraints_dict = _copy_constraints(constraints)
         current_task_id = _task_id(task_id or str(context_dict.get("task_id") or constraints_dict.get("task_id") or ""))
-        route_decision = self._route_decision(context=context_dict, constraints=constraints_dict)
+        settings = self._settings or load()
+        route_decision = self._route_decision(context=context_dict, constraints=constraints_dict, settings=settings)
 
         if not is_in_scope(query, context=context_dict, constraints=constraints_dict):
             language = _query_language(query)
@@ -586,6 +706,41 @@ class TutorOrchestrator:
             skill_results = {**skill_results, "s4": s4_output.structured_result}
         if s5_output is not None:
             skill_results = {**skill_results, "s5": s5_output.structured_result}
+        advisory_warnings: list[str] = []
+        advisory_result: dict[str, Any] | None = None
+        advisory_route_decision = self._advisory_route_decision(
+            query,
+            user_mode=user_mode,
+            context=context_dict,
+            constraints=constraints_dict,
+            settings=settings,
+        )
+        if advisory_route_decision.selected_skills:
+            advisory_chain, advisory_skill_results, advisory_result, advisory_warnings = self._run_advisory_lane(
+                query=query,
+                task_id=current_task_id,
+                user_mode=user_mode,
+                context=context_dict,
+                constraints=constraints_dict,
+                s2_result=s2_for_downstream,
+                route_decision=advisory_route_decision,
+            )
+            chain = [*chain, *advisory_chain]
+            skill_results = {**skill_results, **advisory_skill_results}
+        elif advisory_route_decision.enabled:
+            advisory_result = {
+                "enabled": True,
+                "selected_skills": [],
+                "reason": advisory_route_decision.reason,
+                "reasons": advisory_route_decision.reasons,
+                "rendering": advisory_route_decision.rendering,
+                "v2_v4_policy": advisory_route_decision.v2_v4_policy,
+                "outputs": {},
+                "limitations": [
+                    "Advisory routing gate is enabled, but no S6/S7/S8 skill was selected.",
+                    "Default V2/V4-bound answer path remains authoritative.",
+                ],
+            }
         reviewer_notes: list[dict[str, Any]] = []
         reviewer_warnings: list[str] = []
         if self._review_enabled(route_decision=route_decision):
@@ -627,23 +782,28 @@ class TutorOrchestrator:
         else:
             final_status = v4_output.status
 
+        final_structured_result = {
+            "task_id": current_task_id,
+            "scope": "in_scope",
+            "chain": chain,
+            "answer": v4_output.structured_result.get("answer", ""),
+            "reviewer_notes": reviewer_notes,
+            "v4": v4_output.structured_result,
+            "skill_results": skill_results,
+        }
+        if advisory_result is not None:
+            final_structured_result["advisory_routing"] = advisory_result
+
         final_output = SkillOutput(
             status=final_status,
             summary=v4_output.summary,
-            structured_result={
-                "task_id": current_task_id,
-                "scope": "in_scope",
-                "chain": chain,
-                "answer": v4_output.structured_result.get("answer", ""),
-                "reviewer_notes": reviewer_notes,
-                "v4": v4_output.structured_result,
-                "skill_results": skill_results,
-            },
+            structured_result=final_structured_result,
             citations=v4_output.citations,
             warnings=[
                 *v1_warnings,
                 *s4_warnings,
                 *s5_warnings,
+                *advisory_warnings,
                 *_merge_warnings(s2_output, s3_output, v2_output, v4_output),
                 *reviewer_warnings,
             ],

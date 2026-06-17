@@ -260,6 +260,7 @@ class OcrPage(BaseModel):
     blocks: list[PageBlock] = Field(default_factory=list)
     assets: list[DocumentAsset] = Field(default_factory=list)
     needs_review: bool = False
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 

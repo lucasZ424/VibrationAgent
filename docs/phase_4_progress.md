@@ -31,8 +31,8 @@ or edit them unless explicitly asked.
 6. S6 literature search prototype: complete
 7. S7 model selection prototype: complete
 8. S8 experiment advice prototype: complete
-9. S6/S7/S8 routing activation gate: pending
-10. Rendered DOCX pagination and rich asset anchoring: pending
+9. S6/S7/S8 routing activation gate: complete
+10. Rendered DOCX pagination and rich asset anchoring: complete
 11. LaTeX/MathML rendering contract: pending
 12. Symbolic proof / CAS feasibility spike: pending
 13. Backend interface freeze: pending
@@ -663,3 +663,154 @@ warning.
 - Cleared for Obj9 after focused and non-large regression verification. Obj9
   owns any S6/S7/S8 routing activation; without that gate, S8 remains
   explicit-call-only.
+
+## Obj9 Notes
+
+- Added a deterministic advisory routing gate for S6/S7/S8 in
+  `src/vibration_agent/agent/routing.py`.
+- Added default-off routing settings:
+  `advisory_routing_enabled`, `advisory_intent_routing_enabled`, and
+  `advisory_allowed_skills`.
+- The default query chain remains unchanged. If `advisory_routing_enabled` is
+  not set by config, context, or constraints, S6/S7/S8 are not selected even
+  when the query contains literature/model/measurement intent.
+- Explicit activation path: set `advisory_routing_enabled=true` and provide
+  `advisory_skills` / `routed_skills` / `activate_skills` using aliases such as
+  `s6`, `s7`, `s8`, `literature`, `model_selection`, or `experiment_advice`.
+- Intent activation path: only available when both
+  `advisory_routing_enabled=true` and `advisory_intent_routing_enabled=true`.
+  Deterministic query/user-mode terms may then select S6/S7/S8, optionally
+  restricted by `advisory_allowed_skills`.
+- `TutorOrchestrator` runs the advisory lane after V4 and before optional V3.
+  The advisory lane appends structured handoff output under
+  `structured_result["advisory_routing"]` and `skill_results["s6"|"s7"|"s8"]`;
+  it does not rewrite or render the final V4 answer.
+- Advisory outputs use `rendering="structured_handoff_only"` and
+  `v2_v4_policy="do_not_render_as_final_answer"` so Obj9 does not expand answer
+  authority without a later rendering/faithfulness design.
+- Post-review polish reuses one settings object for model routing and advisory
+  routing inside each `_run_chain` call, avoiding an extra Obj9 config load on
+  the default path.
+- Post-review polish added coverage for `difficulty=extreme` with advisory
+  routing enabled, proving advisory handoff runs before V3 reviewer and does not
+  change the V4 answer.
+
+## Obj9 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_routing.py tests\unit\test_tutor_orchestrator.py tests\unit\test_s6_literature_search.py tests\unit\test_s7_model_selection.py tests\unit\test_s8_experiment_advice.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider
+```
+
+Result: passed, 63 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj9-final -p no:cacheprovider
+```
+
+Result: passed, 434 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_routing.py tests\unit\test_tutor_orchestrator.py tests\unit\test_s6_literature_search.py tests\unit\test_s7_model_selection.py tests\unit\test_s8_experiment_advice.py tests\unit\test_agent_control_plane.py -q -p no:cacheprovider
+```
+
+Result: passed, 64 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj9-polish -p no:cacheprovider
+```
+
+Result: passed, 435 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+## Obj9 Residual Risk
+
+- S6 external literature remains structured handoff context only. External
+  literature still needs ingestion or a V2-compatible external-evidence contract
+  before it can support final answer claims.
+- S7/S8 advisory assumptions, limitations, and safety text are not rendered as
+  final answer claims by Obj9. A future rendering objective must decide how to
+  present them without bypassing V2/V4 faithfulness.
+- Intent routing uses deliberately narrow deterministic terms. Broader
+  automatic routing should wait for replay eval coverage.
+
+## Obj9 Next Obj Gate
+
+- Cleared for Obj10 after focused and full non-large regression, provided
+  review does not find routing-policy gaps. Obj10 can assume S6/S7/S8 have a
+  controlled explicit advisory lane but are not automatically rendered into
+  final answers.
+
+## Obj10 Notes
+
+- Added optional `OcrPage.metadata` for page-level parser metadata. The field
+  defaults to an empty object and keeps existing page/chunk contracts backward
+  compatible.
+- Added `src/vibration_agent/ingestion/assets.py` with a shared
+  `asset_anchor_metadata(...)` helper and anchor schema version
+  `p4.rich_asset_anchor.v1`.
+- Extended `parse_docx(...)` with `pagination_mode="logical|rendered"`.
+  Logical mode remains the default and preserves Phase-3 DOCX page behavior.
+- Added optional rendered DOCX pagination support through headless LibreOffice
+  (`soffice`) DOCX-to-PDF conversion. CI does not require LibreOffice; the
+  rendered lane is explicit and testable through injected/mocked page-count
+  paths.
+- Missing `soffice`, failed rendered-PDF inspection, and missing block-to-page
+  layout mapping all fall back to the existing logical page while recording
+  `metadata["docx_pagination"]` warnings/reasons.
+- DOCX table and image assets now receive rich optional anchor metadata
+  recording source, page anchor type, block id or DOCX relationship id, and
+  rendered page number when safely known.
+- Post-review polish redacts local paths from rendered DOCX fallback warnings
+  before they are stored in `OcrPage.metadata["warnings"]`.
+- Anchor metadata semantics: `anchor.page_no` remains the parser's logical page
+  anchor; `anchor.rendered_page_no` is present only when a rendered backend can
+  locate the asset on a rendered page without guessing.
+
+## Obj10 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_docx_parser.py tests\unit\test_asset_model.py tests\unit\test_chunking_strategy.py tests\unit\test_classify.py -q -p no:cacheprovider
+```
+
+Result: passed, 28 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj10 -p no:cacheprovider
+```
+
+Result: passed, 438 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_docx_parser.py tests\unit\test_asset_model.py tests\unit\test_chunking_strategy.py tests\unit\test_classify.py -q -p no:cacheprovider
+```
+
+Result: passed, 29 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj10-polish -p no:cacheprovider
+```
+
+Result: passed, 439 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+## Obj10 Residual Risk
+
+- Multi-page rendered DOCX block-to-page mapping is not implemented in Obj10.
+  The rendered page count is recorded, but text/assets stay on the logical
+  fallback page until a layout map is available.
+- LibreOffice rendering is explicit and optional. CI and default ingestion do
+  not require `soffice`.
+- Rich asset anchors are metadata-only; downstream UI/rendering still decides
+  how to display or navigate them.
+
+## Obj10 Next Obj Gate
+
+- Cleared for Obj11 after non-large regression, provided review does not require
+  real LibreOffice integration on the CI path. Obj11 may assume DOCX assets carry
+  optional rich anchor metadata and rendered DOCX pagination has a safe fallback.
