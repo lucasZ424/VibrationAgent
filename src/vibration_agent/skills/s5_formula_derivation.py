@@ -16,6 +16,7 @@ from vibration_agent.config import Settings, load
 from vibration_agent.schemas import Citation, S3LlmClaim, S5DerivationStep, S5LlmResponse, SkillInput, SkillOutput
 
 from .base import Skill
+from .formula_rendering import formula_renders_from_assets
 
 _PROMPT_VERSION = "s5_formula_derivation.v1"
 _SCHEMA_VERSION = "s5.v1"
@@ -451,6 +452,7 @@ class FormulaDerivationSkill(Skill):
                 )
             else:
                 if llm is not None:
+                    formula_renders, formula_warnings = formula_renders_from_assets(llm.assets)
                     result = {
                         **dict(structured),
                         "task_id": payload.task_id,
@@ -462,6 +464,7 @@ class FormulaDerivationSkill(Skill):
                         "derivation_steps": llm.derivation_steps,
                         "claims": llm.claims,
                         "assets": llm.assets,
+                        "formula_renders": formula_renders,
                         "synthesis_mode": "llm",
                         "token_cost": llm.token_cost,
                         "cost": llm.cost,
@@ -479,6 +482,7 @@ class FormulaDerivationSkill(Skill):
                         warnings=[
                             *(list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else []),
                             *llm.warnings,
+                            *formula_warnings,
                         ],
                         handoff_recommendation="Pass S5 output through V2 before V4 rendering.",
                     )
@@ -525,6 +529,7 @@ class FormulaDerivationSkill(Skill):
         step_block = "\n".join(_step_text(step) for step in steps)
         conclusion = "Conclusion: the derivation is limited to the cited relation and axiomatic algebraic rearrangement."
         minimal_model = "\n".join(part for part in (formula_text, step_block) if part)
+        formula_renders, formula_warnings = formula_renders_from_assets(formula_assets)
         result = {
             **dict(structured),
             "task_id": payload.task_id,
@@ -536,6 +541,7 @@ class FormulaDerivationSkill(Skill):
             "derivation_steps": steps,
             "claims": claims,
             "assets": formula_assets,
+            "formula_renders": formula_renders,
             "synthesis_mode": "deterministic",
             "token_cost": None,
             "cost": None,
@@ -553,6 +559,7 @@ class FormulaDerivationSkill(Skill):
             warnings=[
                 *(list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else []),
                 *llm_warnings,
+                *formula_warnings,
             ],
             handoff_recommendation="Pass S5 output through V2 before V4 rendering.",
         )

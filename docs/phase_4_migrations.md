@@ -501,3 +501,44 @@ requirement, or rendered-page fallback policy changed.
 
 Rollback: remove the local-path redaction helper/test and restore the previous
 anchor helper docstring.
+
+### Obj11 - LaTeX/MathML rendering contract (2026-06-17)
+
+Formula-rendering schema and V4 contract update.
+
+- Added `FormulaRender` with schema version `p4.formula_render.v1`.
+- Added additive `structured_result["formula_renders"]` output for S5 formula
+  derivations and V4 styled answers.
+- `formula_renders` records `plain_text` as the stable CLI/API fallback and may
+  include valid `latex` or `mathml` markup for render-capable clients.
+- Invalid formula markup is marked with `status: invalid_markup`; invalid
+  `latex`/`mathml` fields are omitted from the render record, `plain_text`
+  remains available, and warnings are surfaced.
+- V4 preserves the plain-text final answer and citations. Formula markup is
+  structured metadata only and is not rendered into the answer body.
+
+No symbolic proof, CAS dependency, frontend renderer, provider path, chain order,
+or citation contract changed.
+
+Rollback: remove `FormulaRender`, remove the formula-rendering helper, stop
+writing `formula_renders` from S5/V4, and remove Obj11 S5/V4 tests.
+
+### Obj11 review polish - bounded LaTeX structure checks (2026-06-17)
+
+Low-cost formula-rendering hardening after senior review.
+
+- Extended deterministic LaTeX validation beyond brace balance for two common
+  malformed-but-brace-balanced cases:
+  - `\frac` must have two braced arguments.
+  - `\begin{...}` / `\end{...}` environments must be matched and nested.
+- Added V4 coverage proving those malformed LaTeX records degrade to
+  `status: invalid_markup` while retaining `plain_text` and citations.
+- Documented that `status: renderable` remains a client-attempt contract, not a
+  full TeX-render success guarantee.
+
+No full LaTeX parser, symbolic proof, CAS dependency, frontend renderer,
+provider path, chain order, or citation contract changed.
+
+Rollback: remove the extra LaTeX structure checks and the added malformed
+LaTeX assertions; the original brace-balance-only Obj11 contract remains
+backward compatible.

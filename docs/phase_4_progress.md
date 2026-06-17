@@ -33,7 +33,7 @@ or edit them unless explicitly asked.
 8. S8 experiment advice prototype: complete
 9. S6/S7/S8 routing activation gate: complete
 10. Rendered DOCX pagination and rich asset anchoring: complete
-11. LaTeX/MathML rendering contract: pending
+11. LaTeX/MathML rendering contract: complete
 12. Symbolic proof / CAS feasibility spike: pending
 13. Backend interface freeze: pending
 14. Web UI read-only operator surface: pending
@@ -814,3 +814,87 @@ warning.
 - Cleared for Obj11 after non-large regression, provided review does not require
   real LibreOffice integration on the CI path. Obj11 may assume DOCX assets carry
   optional rich anchor metadata and rendered DOCX pagination has a safe fallback.
+
+## Obj11 Notes
+
+- Added `FormulaRender` as the stable formula rendering representation with
+  schema version `p4.formula_render.v1`.
+- Added shared formula-rendering helpers for S5/V4. They build render metadata
+  from formula assets or upstream `formula_renders` and keep `plain_text` as the
+  mandatory fallback for CLI/API clients.
+- S5 now emits additive `structured_result["formula_renders"]` for formula
+  derivations. Existing `answer`, `minimal_model`, `assets`, and citations stay
+  plain-text compatible.
+- V4 now preserves/normalizes additive `formula_renders` while keeping final
+  `structured_result["answer"]` as the existing markdown/plain-text engineering
+  template.
+- Invalid LaTeX/MathML markup is fail-loud but non-fatal: the render record is
+  marked `invalid_markup`, invalid markup fields are omitted, `plain_text`
+  remains available, and warnings are surfaced.
+- Review polish extended LaTeX checks for common malformed-but-brace-balanced
+  markup: `\frac` must have two braced arguments, and `\begin{...}` /
+  `\end{...}` environments must match.
+- Obj11 does not add symbolic proof, CAS, a frontend renderer, live provider
+  calls, or a chain-order change.
+
+## Obj11 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py tests\unit\test_v4_style_skill.py -q -p no:cacheprovider
+```
+
+Result: passed, 30 tests.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py tests\unit\test_v4_style_skill.py -q -p no:cacheprovider
+```
+
+Result: passed, 30 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py tests\unit\test_v4_style_skill.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider
+```
+
+Result: passed, 49 tests.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_s5_derivation.py tests\unit\test_v4_style_skill.py tests\unit\test_tutor_orchestrator.py -q -p no:cacheprovider
+```
+
+Result: passed, 49 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj11 -p no:cacheprovider
+```
+
+Result: passed, 444 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+Post-review polish command:
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj11-polish -p no:cacheprovider
+```
+
+Result: passed, 444 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+## Obj11 Residual Risk
+
+- LaTeX validation is intentionally lightweight and deterministic. It catches
+  malformed brace structure plus narrow `\frac` and environment-pair errors, but
+  `status: renderable` is still not a full TeX-render success guarantee.
+- MathML validation checks XML parseability and `<math>` root shape only. Real
+  client rendering remains a UI responsibility.
+- Formula metadata currently comes from explicit formula assets or upstream
+  formula-render records; Obj11 does not infer formulas from arbitrary prose.
+
+## Obj11 Next Obj Gate
+
+- Cleared for Obj12 after focused and non-large regression verification. Obj12
+  remains a feasibility spike and must not add a mandatory CAS dependency
+  without a separate production objective.

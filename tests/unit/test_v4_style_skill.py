@@ -103,6 +103,135 @@ def test_v4_renders_english_sections_in_fixed_order_and_omits_empty_sections():
     assert output.citations[0].chunk_id == "c1"
 
 
+def test_v4_preserves_formula_render_contract_without_rendering_markup_in_answer():
+    # WHY: V4 is the final answer formatter; Obj11 formula metadata is for
+    # clients, not a license to inject markup into the plain-text answer.
+    payload = SkillInput(
+        task_id="t1",
+        user_query="formula",
+        context={
+            "s3_result": {
+                "status": "ok",
+                "structured_result": {
+                    "language": "en",
+                    "minimal_model": "F = k x",
+                    "claims": [{"text": "The cited formula is F = k x.", "chunk_id": "c1", "doc_id": "doc1"}],
+                    "formula_renders": [
+                        {
+                            "formula_id": "f1",
+                            "plain_text": "F = k x",
+                            "latex": r"F = k x",
+                            "status": "renderable",
+                            "source": "asset",
+                            "source_asset_id": "f1",
+                        }
+                    ],
+                },
+                "citations": [{"chunk_id": "c1", "doc_id": "doc1", "pages": [2]}],
+            }
+        },
+    )
+
+    output = OutputStyleSkill().run(payload)
+
+    assert output.status == "ok"
+    assert output.citations[0].chunk_id == "c1"
+    assert output.structured_result["formula_renders"][0]["schema_version"] == "p4.formula_render.v1"
+    assert output.structured_result["formula_renders"][0]["status"] == "renderable"
+    assert "## Minimal Model / Formula\nF = k x" in output.structured_result["answer"]
+
+
+def test_v4_invalid_formula_markup_degrades_and_keeps_citations():
+    # WHY: render metadata may be supplied by upstream skills; V4 must fail loud
+    # on invalid markup while keeping the citation-bound plain-text answer.
+    payload = SkillInput(
+        task_id="t1",
+        user_query="formula",
+        context={
+            "s3_result": {
+                "status": "ok",
+                "structured_result": {
+                    "language": "en",
+                    "minimal_model": "F = k x",
+                    "claims": [{"text": "The cited formula is F = k x.", "chunk_id": "c1", "doc_id": "doc1"}],
+                    "formula_renders": [
+                        {
+                            "formula_id": "f1",
+                            "plain_text": "F = k x",
+                            "latex": r"F = k {x",
+                        },
+                        {
+                            "formula_id": "f2",
+                            "plain_text": "F/k",
+                            "latex": r"\frac{F}",
+                        },
+                        {
+                            "formula_id": "f3",
+                            "plain_text": "x",
+                            "latex": r"\begin{matrix}x\end{array}",
+                        },
+                    ],
+                },
+                "citations": [{"chunk_id": "c1", "doc_id": "doc1", "pages": [2]}],
+            }
+        },
+    )
+
+    output = OutputStyleSkill().run(payload)
+
+    render = output.structured_result["formula_renders"][0]
+    assert output.citations[0].chunk_id == "c1"
+    assert render["status"] == "invalid_markup"
+    assert render["latex"] is None
+    assert render["plain_text"] == "F = k x"
+    assert output.structured_result["formula_renders"][1]["status"] == "invalid_markup"
+    assert output.structured_result["formula_renders"][2]["status"] == "invalid_markup"
+    assert any("invalid LaTeX formula markup" in warning for warning in output.warnings)
+    assert "F = k x" in output.structured_result["answer"]
+
+
+def test_v4_builds_mathml_formula_render_from_formula_asset():
+    # WHY: clients can render MathML from structured metadata while CLI/API
+    # answer text remains a normal engineering section.
+    payload = SkillInput(
+        task_id="t1",
+        user_query="formula",
+        context={
+            "s3_result": {
+                "status": "ok",
+                "structured_result": {
+                    "language": "en",
+                    "minimal_model": "x",
+                    "claims": [
+                        {
+                            "text": "The displacement term is x.",
+                            "chunk_id": "c1",
+                            "doc_id": "doc1",
+                            "assets": [{"asset_id": "f1", "object_type": "formula"}],
+                        }
+                    ],
+                    "assets": [
+                        {
+                            "asset_id": "f1",
+                            "object_type": "formula",
+                            "text_preview": "x",
+                            "mathml": "<math><mi>x</mi></math>",
+                        }
+                    ],
+                },
+                "citations": [{"chunk_id": "c1", "doc_id": "doc1", "pages": [2]}],
+            }
+        },
+    )
+
+    output = OutputStyleSkill().run(payload)
+
+    render = output.structured_result["formula_renders"][0]
+    assert render["status"] == "renderable"
+    assert render["mathml"] == "<math><mi>x</mi></math>"
+    assert "## Minimal Model / Formula\nx" in output.structured_result["answer"]
+
+
 def test_v4_compacts_page_ranges_in_evidence_lines():
     payload = SkillInput(
         task_id="t1",

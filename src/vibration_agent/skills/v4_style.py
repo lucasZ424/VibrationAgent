@@ -12,6 +12,7 @@ from pydantic import ValidationError
 
 from ..schemas import Citation, SkillInput, SkillOutput
 from .base import Skill
+from .formula_rendering import normalize_formula_renders
 
 _SECTION_DEFS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("conclusion", ("conclusion", "answer")),
@@ -316,18 +317,25 @@ class OutputStyleSkill(Skill):
         citations, citation_warnings = _citation_records(source, structured)
         claims = _claim_records(structured)
         assets = _asset_records(structured, claims)
+        formula_renders, formula_warnings = normalize_formula_renders(structured.get("formula_renders"), assets)
         evidence = _evidence_lines(citations, claims, language)
         if evidence:
             content_sections.append((_title("evidence", language), "\n".join(evidence)))
             section_keys.append("evidence")
 
-        warnings = [*warnings, *citation_warnings]
+        warnings = [*warnings, *citation_warnings, *formula_warnings]
         if not content_sections:
             status = upstream_status if upstream_status in {"insufficient", "fail"} else "insufficient"
             return SkillOutput(
                 status=status,
                 summary="V4 requires upstream answer sections or citations to render.",
-                structured_result={"task_id": payload.task_id, "language": language, "section_keys": [], "assets": assets},
+                structured_result={
+                    "task_id": payload.task_id,
+                    "language": language,
+                    "section_keys": [],
+                    "assets": assets,
+                    "formula_renders": formula_renders,
+                },
                 citations=citations,
                 warnings=[*warnings, "No renderable upstream content supplied to V4."],
                 handoff_recommendation="Run S3 first and pass its SkillOutput as context.s3_result.",
@@ -345,6 +353,7 @@ class OutputStyleSkill(Skill):
                 "section_keys": section_keys,
                 "sections": {key: body for key, (_, body) in zip(section_keys, content_sections, strict=True)},
                 "assets": assets,
+                "formula_renders": formula_renders,
                 "source_status": upstream_status,
             },
             citations=citations,

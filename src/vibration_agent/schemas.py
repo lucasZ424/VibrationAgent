@@ -16,6 +16,8 @@ from pydantic import AliasChoices, BaseModel, ConfigDict, Field, model_validator
 UserMode = Literal["engineering", "definition", "derivation", "research"]
 SkillStatus = Literal["ok", "insufficient", "fail"]
 EvidenceType = Literal["documented", "inferred", "heuristic"]
+FormulaRenderStatus = Literal["renderable", "plain_text_fallback", "invalid_markup"]
+FormulaRenderSource = Literal["asset", "structured_field", "unknown"]
 LlmCostSource = Literal["local_estimate"]
 Intent = Literal[
     "definition",
@@ -80,6 +82,18 @@ class SkillOutput(BaseModel):
     citations: list[Citation] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     handoff_recommendation: str | None = None
+
+
+class FormulaRender(BaseModel):
+    schema_version: Literal["p4.formula_render.v1"] = "p4.formula_render.v1"
+    formula_id: str = Field(min_length=1)
+    plain_text: str = Field(min_length=1)
+    latex: str | None = None
+    mathml: str | None = None
+    status: FormulaRenderStatus = "plain_text_fallback"
+    source: FormulaRenderSource = "unknown"
+    source_asset_id: str | None = None
+    warnings: list[str] = Field(default_factory=list)
 
 
 class LlmTokenUsage(BaseModel):

@@ -11,12 +11,14 @@ from vibration_agent.skills.base import Skill
 from vibration_agent.skills.s5_formula_derivation import _validate_derivation_steps
 
 
-def _formula_asset() -> dict:
-    return {"asset_id": "f1", "object_type": "formula", "text_preview": "F = k x"}
+def _formula_asset(**updates) -> dict:
+    asset = {"asset_id": "f1", "object_type": "formula", "text_preview": "F = k x"}
+    asset.update(updates)
+    return asset
 
 
-def _row(text: str = "The cited formula is F = k x for linear stiffness.") -> dict:
-    return {"chunk_id": "c1", "doc_id": "d1", "pages": [4], "text": text, "assets": [_formula_asset()]}
+def _row(text: str = "The cited formula is F = k x for linear stiffness.", asset: dict | None = None) -> dict:
+    return {"chunk_id": "c1", "doc_id": "d1", "pages": [4], "text": text, "assets": [asset or _formula_asset()]}
 
 
 def _s2(row: dict | None = None) -> dict:
@@ -24,7 +26,8 @@ def _s2(row: dict | None = None) -> dict:
     return {"status": "ok", "structured_result": {"retrieval_context": [row]}}
 
 
-def _s3(claim_text: str = "The cited formula is F = k x for linear stiffness.") -> dict:
+def _s3(claim_text: str = "The cited formula is F = k x for linear stiffness.", asset: dict | None = None) -> dict:
+    asset = asset or _formula_asset()
     return {
         "status": "ok",
         "structured_result": {
@@ -35,7 +38,7 @@ def _s3(claim_text: str = "The cited formula is F = k x for linear stiffness.") 
                     "chunk_id": "c1",
                     "doc_id": "d1",
                     "pages": [4],
-                    "assets": [_formula_asset()],
+                    "assets": [asset],
                 }
             ],
             "synthesis_mode": "deterministic",
@@ -95,6 +98,36 @@ def test_s5_formula_derivation_builds_evidence_and_axiomatic_step_chain():
     assert checked.status == "ok"
     assert checked.structured_result["unsupported_claims"] == []
     assert checked.structured_result["citation_check"]["derivation_step_count"] == 2
+
+
+def test_s5_records_renderable_formula_contract_without_changing_citations():
+    # WHY: Obj11 adds UI/API render metadata while the evidence-bound S5 answer
+    # and citations stay plain-text compatible.
+    asset = _formula_asset(latex=r"F = k x")
+    output = FormulaDerivationSkill().run(_payload(s2=_s2(_row(asset=asset)), s3=_s3(asset=asset)))
+
+    render = output.structured_result["formula_renders"][0]
+    assert render["schema_version"] == "p4.formula_render.v1"
+    assert render["formula_id"] == "f1"
+    assert render["plain_text"] == "F = k x"
+    assert render["latex"] == r"F = k x"
+    assert render["status"] == "renderable"
+    assert output.citations[0].chunk_id == "c1"
+    assert "F = k x" in output.structured_result["answer"]
+
+
+def test_s5_invalid_latex_markup_degrades_to_plain_text_formula_render():
+    # WHY: broken formula markup must be loud for render clients but must not
+    # remove the fallback derivation text.
+    asset = _formula_asset(latex=r"\frac{F}{k")
+    output = FormulaDerivationSkill().run(_payload(s2=_s2(_row(asset=asset)), s3=_s3(asset=asset)))
+
+    render = output.structured_result["formula_renders"][0]
+    assert render["status"] == "invalid_markup"
+    assert render["latex"] is None
+    assert render["plain_text"] == "F = k x"
+    assert any("invalid LaTeX formula markup" in warning for warning in output.warnings)
+    assert "F = k x" in output.structured_result["answer"]
 
 
 def test_s5_llm_replay_multistep_derivation_passes_v2(tmp_path):
