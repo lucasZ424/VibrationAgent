@@ -8,13 +8,20 @@ This product is designed for local, personal deployment by one engineering user.
 
 Development should prioritize corpus quality, retrieval reliability, citation traceability, Chinese/English engineering usability, and local reproducibility before production API hardening. Shared, remote, or public deployment changes the security model and must be treated as explicit hardening work.
 
-## Phase-3 Runtime Scope
+The Phase-4 remote/shared hardening decision is recorded in
+`docs/phase_4_remote_shared_hardening_decision.md`; remote/shared hardening is
+deferred unless product positioning explicitly changes.
 
-Phase 3 is the current frozen local personal knowledge-base runtime with
-default-off model-backed engineering-assistant lanes. Phase 1 and Phase 2 remain
-documented compatibility baselines in `docs/phase_1_interface_freeze.md` and
-`docs/phase_2_interface_freeze.md`; the Phase-3 freeze is recorded in
-`docs/phase_3_interface_freeze.md`.
+## Phase-4 Runtime Scope
+
+Phase 4 is the current frozen local personal engineering-assistant baseline.
+The final freeze is recorded in `docs/phase_4_interface_freeze.md`, with the
+backend freeze in `docs/phase_4_backend_interface_freeze.md`. Phase 1, Phase 2,
+and Phase 3 remain documented compatibility baselines in their freeze docs.
+
+The next recommended work is local iteration: run the operator/API against a
+real vibration corpus, expand taxonomy from misses, and improve retrieval,
+citations, and backend ergonomics from actual use.
 
 Current active and available skills:
 
@@ -31,7 +38,7 @@ Current active and available skills:
 | V4 | Output-style shaping | active |
 | S6-S8 | literature search, model selection, experiment advice | deferred |
 
-## Phase-3 Runtime Rules
+## Phase-4 Runtime Rules
 
 - Default answer mode is engineering.
 - Default query chain is `S2 -> S3 -> optional S4/S5 -> V2 -> V4`, with V3
@@ -43,7 +50,8 @@ Current active and available skills:
   entry points.
 - S3/S4/S5 LLM branches and the Anthropic supervisor lane are default-off,
   budget-governed, replayable, and manual-live-only.
-- S6-S8 remain deferred and must not be called by the Phase-3 runtime.
+- S6-S8 remain default-off advisory handoff skills and do not render final
+  answers unless a future migration changes that boundary.
 - `src/vibration_agent/schemas.py` is the single source of truth for I/O contracts.
 - `src/vibration_agent/config.py` is the single source of truth for config loading.
 - Markdown is not a required Agent intermediate format; structured JSON/JSONL and asset references are preferred.

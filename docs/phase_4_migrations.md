@@ -1,6 +1,6 @@
 # Phase 4 Migrations
 
-Updated: 2026-06-15
+Updated: 2026-06-18
 
 ## Purpose
 
@@ -721,3 +721,91 @@ changed.
 Rollback: remove the explicit `path_prefixes` support from observability
 helpers, restore API redaction calls to the default path regexes, and remove the
 custom POSIX prefix tests.
+
+### Obj16 - Remote/shared hardening decision (2026-06-18)
+
+Documentation-only scope decision.
+
+- Added `docs/phase_4_remote_shared_hardening_decision.md`.
+- Decided that remote/shared hardening is deferred for Phase 4.
+- Recorded that multi-user authorization, tenant isolation, durable distributed
+  rate limits, remote/shared metrics, k8s/public ingress, remote secrets
+  management, and multi-user audit trails are Phase-5 candidates only if product
+  positioning changes from local-first/single-user.
+- Added the revisit gate required before implementation: deployment target,
+  identity/authorization model, tenant/data isolation boundary, secrets
+  ownership, durable backend, retention/redaction policy, security tests, and
+  rollback path.
+- Updated README and architecture references to the Obj16 decision.
+
+No runtime schema, API route, response shape, provider path, retrieval behavior,
+chain order, CI workflow, deployment default, authorization model, or
+observability contract changed.
+
+Rollback: remove the Obj16 decision document and remove the Obj16 references
+from README, architecture, progress, and the deferred/polish audit. No runtime
+rollback is required.
+
+### Obj16 review polish - retained local controls and Phase-5 candidate home (2026-06-18)
+
+Documentation-only decision polish after senior review.
+
+- Clarified in `docs/phase_4_remote_shared_hardening_decision.md` that the
+  optional local API token and in-process rate limiter are retained
+  single-user local controls.
+- Added `docs/phase_5_candidate_scope.md` as the durable home for Phase-5
+  candidates.
+- Recorded that Phase 5 is not active and that the recommended next work is a
+  local iteration cycle focused on backend operation, real-run testing,
+  knowledge-base quality, retrieval/citation misses, and taxonomy coverage
+  before remote/shared expansion.
+
+No runtime schema, API route, response shape, provider path, retrieval behavior,
+chain order, CI workflow, deployment default, authorization model, or
+observability contract changed.
+
+Rollback: remove the retained-local-controls clarification and delete
+`docs/phase_5_candidate_scope.md`.
+
+### Obj17 - Phase-4 final interface freeze (2026-06-18)
+
+Documentation-only final freeze.
+
+- Added `docs/phase_4_interface_freeze.md`.
+- Froze Phase 4 as the local-first, single-user engineering-assistant baseline
+  for real local iteration.
+- Updated README and architecture to point to the Phase-4 final freeze as the
+  current baseline.
+- Recorded that Phase 4 includes the Obj13 backend freeze, Obj14 read-only
+  operator UI, Obj15 local-first observability, Obj16 remote/shared defer
+  decision, and the Phase-5 candidate scope.
+- Recorded final verification: full non-large regression, replay LLM eval, and
+  retrieval eval.
+
+No runtime schema, API route, response shape, provider path, retrieval behavior,
+chain order, CI workflow, deployment default, authorization model, observability
+contract, or final-answer authority changed.
+
+Rollback: remove `docs/phase_4_interface_freeze.md`, restore README and
+architecture pointers to the prior Phase-4 in-progress language, and remove
+the Obj17 progress/audit entries. No runtime rollback is required.
+
+### Obj17 review polish - final freeze summary and API delta clarity (2026-06-18)
+
+Documentation-only final-freeze polish after senior review.
+
+- Updated `docs/phase_4_deferred_and_polish_audit.md` so its Freeze Summary
+  says Phase 4 is fully frozen through Obj17 and points to
+  `docs/phase_4_interface_freeze.md`.
+- Added an explicit API-surface delta to `docs/phase_4_interface_freeze.md`:
+  Obj14 added `/operator` and `/operator/assets/{path}`, Obj15 added
+  `/diagnostics` and migrated `/health` to offline semantics, and `/query`,
+  `/ingest`, `/scope`, chain order, retrieval, provider, and final-answer
+  contracts did not change.
+
+No runtime schema, API route, response shape, provider path, retrieval behavior,
+chain order, CI workflow, deployment default, authorization model, observability
+contract, or final-answer authority changed.
+
+Rollback: restore the previous audit summary and remove the API-surface delta
+paragraph from the final freeze.

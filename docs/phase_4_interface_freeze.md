@@ -1,0 +1,172 @@
+# Phase 4 Interface Freeze
+
+Date: 2026-06-18
+
+## Freeze Decision
+
+Phase 4 is frozen as the local-first, single-user engineering assistant
+baseline for real local iteration.
+
+This freeze is additive on top of:
+
+- `docs/phase_3_interface_freeze.md`
+- `docs/phase_4_backend_interface_freeze.md`
+- `docs/phase_4_remote_shared_hardening_decision.md`
+
+Phase 4 does not redefine the product as remote, shared, public, or multi-user.
+The next recommended work is local operation against real vibration-engineering
+corpora: knowledge-base growth, taxonomy expansion, retrieval/citation miss
+analysis, and backend reliability polishing from actual use.
+
+## Frozen Runtime Position
+
+The default query path remains:
+
+```text
+S2 retrieval
+  -> S3 evidence-bound synthesis
+  -> optional S4 engineering analysis OR optional S5 formula derivation
+  -> V2 citation check
+  -> V4 style
+  -> optional V3 reviewer / supervisor for extreme or flagged outputs
+```
+
+S1 ingestion remains an explicit corpus-building entry point. S6/S7/S8 remain
+default-off advisory handoff skills unless an explicit advisory routing gate is
+enabled; their outputs do not become final-answer authority.
+
+The system is suitable for local engineering-assistant trial use, not for
+unsupervised engineering truth, remote deployment, or multi-user production.
+
+## Frozen Phase-4 Additions
+
+Phase 4 freezes these additions:
+
+- broader replay eval, V2 calibration, and retrieval target fixtures;
+- offline retrieval recall audit and replacement gate;
+- optional/default-off embedding provider support;
+- Qdrant reindex/replacement gate with explicit non-replacement baseline;
+- deterministic V2 evidence-support hardening;
+- default-off S6 literature search, S7 model selection, and S8 experiment
+  advice prototypes;
+- controlled advisory routing gate for S6/S7/S8;
+- optional rendered DOCX pagination metadata and rich asset anchors;
+- formula rendering metadata with plain-text fallback;
+- CAS/symbolic-proof defer decision;
+- backend interface freeze through Obj13;
+- read-only local operator UI at `/operator`;
+- local-first observability with offline `/health`, default-off dependency
+  probing through `/diagnostics`, and structured redacted logs;
+- remote/shared hardening decision: deferred;
+- Phase-5 candidate scope document.
+
+## Frozen API And UI Surface
+
+Frozen local API routes:
+
+- `GET /health`
+- `GET /diagnostics`
+- `GET /scope`
+- `POST /ingest`
+- `POST /query`
+- `GET /operator`
+- `GET /operator/assets/{path}`
+
+Relative to the Obj13 backend freeze, Obj14 added the additive `/operator` and
+`/operator/assets/{path}` routes. Obj15 added the additive `/diagnostics` route
+and migrated `/health` to offline semantics with additive
+`ApiHealthResponse.diagnostics` and `ApiDiagnosticsResponse` schemas. No
+`/query`, `/ingest`, `/scope`, chain order, retrieval, provider, or
+final-answer contract changed.
+
+`/health` is a local liveness/config probe and must not require Postgres,
+Qdrant, external network services, or live model providers.
+
+`/diagnostics` is read-only. By default it does not probe external dependencies;
+`probe_dependencies=true` is an explicit operator action for configured
+Postgres/Qdrant reachability checks.
+
+`/operator` is read-only. It may query existing local API contracts and display
+diagnostics, citations, chain state, warnings, supervisor metadata, cost
+metadata, and raw response JSON. It must not expose ingestion, delete, admin,
+provider-key, live-provider, remote deployment, or multi-user management
+controls without a future migration.
+
+## Frozen Local Configuration Boundary
+
+`.env` is the only local dotenv file read by `config.load()`. `.env.local` and
+`.env.example` are not runtime sources.
+
+Live model providers, external search, OpenAI embeddings, Qdrant, Postgres, and
+rendered DOCX backends remain opt-in/manual or explicitly configured. CI must
+continue to pass without live provider keys, external network services, Qdrant,
+Postgres, or LibreOffice.
+
+## Accepted Residual Risks
+
+Accepted Phase-4 residual risks are recorded in
+`docs/phase_4_deferred_and_polish_audit.md`. The important current risks are:
+
+- V2 is deterministic evidence support, not general semantic entailment.
+- S5 is evidence-bound derivation support, not formal symbolic proof.
+- Formula rendering metadata is render-attempt metadata, not proof metadata.
+- S6 external literature candidates are not final-answer evidence unless later
+  ingested or covered by a V2-compatible external-evidence contract.
+- DOCX rendered pagination lacks multi-page block-to-rendered-page mapping.
+- The operator UI is a minimal read-only local surface, not a full workbench.
+- Remote/shared hardening is deferred and not implemented.
+- Fixture evals are regression nets, not proof of real-corpus reliability.
+
+## Phase-5 And Local Iteration
+
+`docs/phase_5_candidate_scope.md` is the durable home for future candidates.
+Phase 5 is not active.
+
+Before any remote/shared expansion, the project should run a local iteration
+cycle:
+
+- ingest a representative vibration-engineering corpus;
+- expand taxonomy terms, symbols, units, aliases, and bilingual mappings from
+  real misses;
+- run real operator/API questions;
+- collect retrieval misses, unsupported citation examples, false blocks, false
+  allows, and workflow friction;
+- improve local backend behavior only where real evidence justifies it.
+
+## Final Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-final-freeze -p no:cacheprovider
+```
+
+Result: passed, 453 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\llm_eval.py --output data\exports\ci\phase4_final_llm_eval.json
+```
+
+Result: 7 cases, 7 passed, 0 failed, pass rate 1.0, citation faithfulness pass
+rate 1.0, unsupported numeric block rate 1.0.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\retrieval_eval.py --output data\exports\ci\phase4_final_retrieval_eval.json
+```
+
+Result: 4 cases, 3 evidence cases, 1 expected-miss case,
+`top_k_recall@5 = 1.0`, `top_k_recall@10 = 1.0`, no missing evidence cases,
+and `replacement_justified_by_baseline = false`.
+
+## Change Rule After Freeze
+
+Any post-freeze change to schemas, API routes or response shapes, chain order,
+retrieval replacement behavior, provider request shape, replay/eval fixture
+layout, ingestion output shape, operator UI contract, observability contract, or
+final-answer authority must:
+
+1. Record a migration in `docs/phase_4_migrations.md`.
+2. Add or update tests/fixtures before downstream callers depend on the change.
+3. Preserve local-first deterministic defaults unless a new objective explicitly
+   changes the product boundary.
+4. Update this freeze or a successor freeze if the change becomes part of a new
+   stable baseline.

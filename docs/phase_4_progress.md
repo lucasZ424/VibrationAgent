@@ -1,6 +1,6 @@
 # Phase 4 Progress
 
-Updated: 2026-06-17
+Updated: 2026-06-18
 
 ## Execution Model
 
@@ -38,8 +38,8 @@ or edit them unless explicitly asked.
 13. Backend interface freeze: complete
 14. Web UI read-only operator surface: complete
 15. Local-first observability essentials: complete
-16. Remote/shared hardening decision: pending
-17. Phase-4 final interface freeze: pending
+16. Remote/shared hardening decision: complete
+17. Phase-4 final interface freeze: complete
 
 ## Obj0 Notes
 
@@ -1226,3 +1226,165 @@ warning.
   observability/API tests. Obj16 should decide or defer remote/shared scope
   without changing the local-first default unless that product decision is
   explicit.
+
+## Obj16 Notes
+
+- Added `docs/phase_4_remote_shared_hardening_decision.md`.
+- Decision: remote/shared hardening is deferred. Phase 4 remains a local-first,
+  single-user product baseline.
+- Recorded that multi-user authorization, tenant isolation, durable distributed
+  rate limits, remote/shared metrics, k8s/public ingress, remote secrets
+  management, and multi-user audit trails are not implemented in Phase 4.
+- Defined the revisit gate required before remote/shared hardening can become
+  implementation scope: deployment target, identity/authorization model,
+  tenant/data isolation boundary, secrets ownership, durable backend choices,
+  retention/redaction policy, security tests, and rollback path.
+- Updated `README.md` and `docs/architecture.md` to point to the Obj16
+  decision document.
+- Reviewed runtime scope and made no code/config/API changes.
+
+## Obj16 Verification
+
+```powershell
+git diff --check
+```
+
+Result: no whitespace errors; existing CRLF/LF warnings remain for `README.md`
+and `docs/architecture.md`.
+
+```powershell
+rg -n "Phase 4 remains a local-first|remote/shared hardening is deferred|Remote/shared hardening decision: complete" docs README.md
+```
+
+Result: decision text is present in the Obj16 decision doc, progress ledger,
+README, architecture, migration log, and deferred/polish audit.
+
+## Obj16 Residual Risk
+
+- No remote/shared hardening was implemented. This is intentional while the
+  product remains local-first and single-user.
+- If the product later moves to shared, remote, or public access, Obj16 is not
+  sufficient as a security baseline; a new implementation objective must satisfy
+  the documented revisit gate.
+
+## Obj16 Next Obj Gate
+
+- Cleared for Obj17 final Phase-4 interface freeze. Obj17 should freeze the
+  Phase-4 final interface with Obj16 recorded as a deferred remote/shared
+  decision, not as implemented security hardening.
+
+## Obj16 Review Follow-Up
+
+- Fixed Obj16 `#1`: true clarity issue. The Obj16 decision document now
+  explicitly states that the optional local API token and in-process rate
+  limiter are retained single-user local controls, while multi-user
+  authorization and durable distributed rate limiting remain deferred.
+- Fixed Obj16 `#2`: useful forward-looking polish. Added
+  `docs/phase_5_candidate_scope.md` as the durable home for Phase-5 candidates,
+  including remote/shared hardening candidates and the recommended pause for
+  local backend, real-run, knowledge-base, and taxonomy iteration before any
+  remote/multi-user expansion.
+
+## Obj16 Review Follow-Up Verification
+
+```powershell
+rg -n "optional API token|in-process rate limiter|Phase 5 is not active|local iteration cycle" docs\phase_4_remote_shared_hardening_decision.md docs\phase_5_candidate_scope.md
+```
+
+Result: retained local controls and Phase-5 candidate/pause guidance are
+documented in the expected files.
+
+## Obj17 Notes
+
+- Added `docs/phase_4_interface_freeze.md`.
+- Froze Phase 4 as the local-first, single-user engineering-assistant baseline
+  for real local iteration.
+- The final freeze incorporates:
+  - inherited Phase-3 freeze;
+  - Obj13 backend interface freeze;
+  - Obj14 read-only operator UI;
+  - Obj15 local-first observability;
+  - Obj16 remote/shared hardening defer decision;
+  - `docs/phase_5_candidate_scope.md` as the durable future-candidate home.
+- Updated README and architecture to point to the Phase-4 final freeze as the
+  current baseline.
+- Recorded that the next recommended work is not remote/shared expansion, but
+  local real-run iteration: corpus ingestion, taxonomy expansion, retrieval and
+  citation miss analysis, and backend ergonomics from actual operator use.
+- No runtime schema, API response shape, provider path, retrieval behavior,
+  chain order, final-answer authority, deployment default, or security model
+  changed.
+
+## Obj17 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-final-freeze -p no:cacheprovider
+```
+
+Result: passed, 453 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\llm_eval.py --output data\exports\ci\phase4_final_llm_eval.json
+```
+
+Result: passed with 7 cases, 7 passed, 0 failed, pass rate 1.0, citation
+faithfulness pass rate 1.0, and unsupported numeric block rate 1.0.
+
+```powershell
+.\.venv\Scripts\python.exe scripts\retrieval_eval.py --output data\exports\ci\phase4_final_retrieval_eval.json
+```
+
+Result: passed with 4 cases, 3 evidence cases, 1 expected-miss case,
+`top_k_recall@5 = 1.0`, `top_k_recall@10 = 1.0`, no missing evidence cases, and
+`replacement_justified_by_baseline = false`.
+
+```powershell
+git diff --check
+```
+
+Result: no whitespace errors; existing CRLF/LF warnings remain for `README.md`
+and `docs/architecture.md`.
+
+## Obj17 Residual Risk
+
+- Phase 4 is a local engineering-assistant baseline, not a remote/shared
+  production security baseline.
+- The eval/retrieval gates are fixture-sized regression nets. Real engineering
+  reliability now depends on local corpus ingestion, real operator questions,
+  taxonomy expansion, and miss-driven backend iteration.
+- S6/S7/S8, external evidence, symbolic checking, rendered-page mapping,
+  retrieval replacement, and model-backed V2 entailment remain future
+  candidates rather than frozen default behavior.
+
+## Obj17 Next Phase Gate
+
+- Phase 4 is frozen.
+- Phase 5 is not active.
+- The project should enter local iteration before any remote/shared expansion:
+  build the real knowledge base, enrich taxonomy, run operator/API trials, and
+  use retrieval/citation failures to prioritize backend improvements.
+
+## Obj17 Review Follow-Up
+
+- Fixed Obj17 `#1`: true stale-doc issue. Updated
+  `docs/phase_4_deferred_and_polish_audit.md` so its Freeze Summary states that
+  Phase 4 is fully frozen through Obj17 and points to the final interface
+  freeze, instead of saying the backend is merely ready for Obj13.
+- Fixed Obj17 `#2`: useful API-surface clarity polish. Added an explicit API
+  delta line to `docs/phase_4_interface_freeze.md`: relative to the Obj13
+  backend freeze, Obj14 added `/operator` and `/operator/assets/{path}`, Obj15
+  added `/diagnostics` and migrated `/health` to offline semantics, and
+  `/query`, `/ingest`, `/scope`, chain order, retrieval, provider, and
+  final-answer contracts did not change.
+- Reviewed Obj17 `#3`: process hygiene only. Obj16 decision docs and Obj17
+  freeze docs should be committed together or with Obj16 first, so freeze
+  references are not dangling in history.
+
+## Obj17 Review Follow-Up Verification
+
+```powershell
+rg -n "Phase 4 is fully frozen|Relative to the Obj13 backend freeze|Obj14 added the additive" docs\phase_4_deferred_and_polish_audit.md docs\phase_4_interface_freeze.md
+```
+
+Result: updated freeze summary and API-surface delta are present.

@@ -1,13 +1,14 @@
 # Phase 4 Deferred And Polish Audit
 
-Updated: 2026-06-17
+Updated: 2026-06-18
 
 ## Freeze Summary
 
-Phase 4 backend objectives Obj1-Obj12 are complete. The backend is ready for
-Obj13 freeze before UI and local observability work. Items below are accepted
-residual risks, explicit later-phase scope, or operator-only work. They should
-not be treated as forgotten Obj1-Obj12 implementation tasks.
+Phase 4 is fully frozen through Obj17. The final interface freeze is recorded
+in `docs/phase_4_interface_freeze.md`, with the backend freeze recorded in
+`docs/phase_4_backend_interface_freeze.md`. Items below are accepted residual
+risks, explicit later-phase scope, or operator-only work. They should not be
+treated as forgotten Phase-4 implementation tasks.
 
 ## Completed Polish Before Backend Freeze
 
@@ -29,6 +30,13 @@ not be treated as forgotten Obj1-Obj12 implementation tasks.
   and basic operator diagnostics without adding remote/shared hardening.
 - Obj15 review follow-up added explicit workspace-prefix path redaction for
   custom POSIX workspace roots.
+- Obj16 explicitly deferred remote/shared hardening and recorded the revisit
+  gate required before implementation.
+- Obj16 review follow-up added `docs/phase_5_candidate_scope.md` as the durable
+  home for deferred Phase-5 candidates and recommended a local real-run /
+  knowledge-base / taxonomy iteration before remote/shared expansion.
+- Obj17 added the final Phase-4 interface freeze and closed Phase 4 as the
+  local-first, single-user engineering-assistant baseline.
 
 ## Accepted Runtime Limits
 
@@ -75,8 +83,6 @@ not be treated as forgotten Obj1-Obj12 implementation tasks.
 ## Deferred To Later Objectives Or Phases
 
 - UI read-only operator surface: Obj14.
-- Remote/shared hardening decision: Obj16.
-- Final Phase-4 interface freeze: Obj17.
 - V2 model-backed entailment or broader semantic support checks.
 - Retrieval replacement or Qdrant reindex after a real recall gap and candidate
   improvement satisfy the Obj2/Obj4 gate.
@@ -86,7 +92,9 @@ not be treated as forgotten Obj1-Obj12 implementation tasks.
 - Production symbolic checker, only if event-driven demand and labeled eval
   cases justify an optional default-off implementation.
 - Multi-user authz, durable rate limiting, remote deployment, k8s, and
-  shared-service security hardening.
+  shared-service security hardening. Obj16 records these as deferred until the
+  product target explicitly changes from local-first/single-user; the durable
+  candidate list is `docs/phase_5_candidate_scope.md`.
 
 ## Freeze Follow-Up Notes
 
@@ -95,8 +103,10 @@ not be treated as forgotten Obj1-Obj12 implementation tasks.
   field.
 - Obj15 observability preserves redaction rules for API keys, bearer tokens,
   prompt secrets, long raw source text, and local absolute paths in logs.
-- Obj16 should decide whether remote/shared hardening is real scope. Until that
-  decision changes product positioning, the product remains local-first and
-  single-user.
+- Obj16 decided remote/shared hardening is deferred. Until a future objective
+  changes product positioning, the product remains local-first and single-user.
+- Before starting Phase 5, prefer a local iteration cycle: real operator runs,
+  corpus ingestion, retrieval/citation miss analysis, backend friction fixes,
+  and taxonomy expansion from actual misses.
 - Any future backend contract change must be recorded in
   `docs/phase_4_migrations.md` before callers are updated.

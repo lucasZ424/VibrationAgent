@@ -8,6 +8,10 @@ The product target is local personal deployment: one trusted user, local corpus 
 
 If the product moves to shared, remote, or public access, API path safety, authentication, authorization, rate limiting, and persistence readiness become new scope rather than implicit Phase-1 requirements.
 
+Phase 4 keeps that boundary. `docs/phase_4_remote_shared_hardening_decision.md`
+records remote/shared hardening as deferred until a future objective explicitly
+changes the deployment target and security model.
+
 ## Layer To Code Map
 
 | Layer | Code Location |
@@ -251,24 +255,23 @@ and Phase-4 candidate backlog are recorded in
 Future schema/API/chain/replay/provider-contract changes must follow
 `docs/phase_3_interface_freeze.md` and `docs/phase_3_migrations.md`.
 
-## Phase-4 Development Boundary
+## Phase-4 Interface Freeze
 
-Phase 4 planning starts from `docs/phase_4_development_order.md`. The initial
-boundary is post-freeze expansion, not a replacement of the Phase-3 runtime:
-broader eval, retrieval recall attribution, optional embedding/retrieval
-upgrades, stronger evidence support, S6/S7/S8 prototypes, richer rendering, and
-late UI/deployment hardening.
+Phase 4 is frozen in `docs/phase_4_interface_freeze.md` as the local-first,
+single-user engineering-assistant baseline for real local iteration.
 
 Phase-4 changes that affect schemas, provider requests, replay hashes,
 structured-result keys, chain order, retrieval contracts, API shapes, or
 ingestion outputs must be recorded in `docs/phase_4_migrations.md` before
 callers are updated.
 
-As of Obj13, the Phase-4 backend is frozen before UI and observability work.
-The frozen backend contract is recorded in
-`docs/phase_4_backend_interface_freeze.md`; accepted residual risks and
-deferred work are recorded in `docs/phase_4_deferred_and_polish_audit.md`.
+The final Phase-4 freeze includes the Obj13 backend freeze, Obj14 read-only
+operator UI, Obj15 local-first observability, and Obj16 remote/shared hardening
+defer decision. Accepted residual risks and deferred work are recorded in
+`docs/phase_4_deferred_and_polish_audit.md`; future candidates are collected in
+`docs/phase_5_candidate_scope.md`.
+
 The default answer path remains V2/V4-bound. S6/S7/S8 are default-off advisory
-handoff skills, Obj11 formula rendering is metadata only, and Obj12 keeps
-symbolic proof/CAS deferred unless a later optional checker objective satisfies
-the documented eval gate.
+handoff skills, Obj11 formula rendering is metadata only, Obj12 keeps symbolic
+proof/CAS deferred, and Obj16 keeps remote/shared hardening deferred unless a
+future objective explicitly changes the product boundary.
