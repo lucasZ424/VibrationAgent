@@ -9,7 +9,7 @@ API_key.txt
 data/
 .claude/
 
-# Data artifacts 鈥?keep directory, ignore contents
+# Data artifacts keep directory, ignore contents
 data/raw/*
 data/ocr/*
 data/extracted/*
