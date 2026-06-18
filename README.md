@@ -361,23 +361,23 @@ fixture layout, provider request shapes, API shapes, or ingestion output shapes
 must follow `docs/phase_3_interface_freeze.md` and
 `docs/phase_3_migrations.md`.
 
-## Phase-4 Backend Freeze
+## Phase-4 Final Freeze
 
-Phase 4 is the first post-freeze expansion cycle. The approved development
-order is recorded in `docs/phase_4_development_order.md`; progress and contract
-changes are tracked in `docs/phase_4_progress.md` and
-`docs/phase_4_migrations.md`.
+Phase 4 is frozen as the current local-first, single-user engineering-assistant
+baseline. The final interface freeze is recorded in
+`docs/phase_4_interface_freeze.md`; progress and contract changes are tracked
+in `docs/phase_4_progress.md` and `docs/phase_4_migrations.md`.
 
-As of Obj13, the Phase-4 backend is frozen before UI and observability work.
-The backend freeze is recorded in `docs/phase_4_backend_interface_freeze.md`;
-accepted residual risks and deferred items are recorded in
-`docs/phase_4_deferred_and_polish_audit.md`.
+The Obj13 backend freeze remains the backend subset of the final freeze and is
+recorded in `docs/phase_4_backend_interface_freeze.md`. Accepted residual risks
+and deferred items are recorded in `docs/phase_4_deferred_and_polish_audit.md`;
+future candidates are collected in `docs/phase_5_candidate_scope.md`.
 
-The frozen backend keeps final answers on the V2/V4-bound path. S6/S7/S8 are
-default-off advisory handoff skills, not final-answer renderers. Formula
-rendering metadata is structured fallback information for clients, not symbolic
-proof. CAS/symbolic proof remains deferred unless a future optional checker
-objective satisfies the documented eval gate.
+The frozen Phase-4 baseline keeps final answers on the V2/V4-bound path.
+S6/S7/S8 are default-off advisory handoff skills, not final-answer renderers.
+Formula rendering metadata is structured fallback information for clients, not
+symbolic proof. CAS/symbolic proof and remote/shared hardening remain deferred
+unless a future objective satisfies the documented gates.
 
 ## Development Start Points
 

@@ -205,7 +205,7 @@ Candidate Phase-4 scope includes:
 
 At the time this handoff was created, the worktree already showed:
 
-- `D docs/session_handoff_p3_2026_06_08.md`
+- `D session_handoff_p3_2026_06_08.md` under `docs/`
 - `?? docs/session_handoff_supervisor_review_pattern.md`
 
 Those were pre-existing relative to this handoff creation. Do not assume they
@@ -227,4 +227,3 @@ This handoff adds:
    are user-review artifacts.
 5. If API keys are needed, rely on local `.env` / `.env.local` and never print
    or inspect key values.
-
