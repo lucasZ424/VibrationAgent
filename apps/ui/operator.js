@@ -9,6 +9,7 @@ const citations = document.querySelector("#citations");
 const warnings = document.querySelector("#warnings");
 const supervisor = document.querySelector("#supervisor");
 const cost = document.querySelector("#cost");
+const diagnostics = document.querySelector("#diagnostics");
 const rawOutput = document.querySelector("#rawOutput");
 
 function setStatus(text, state = "") {
@@ -130,6 +131,36 @@ function renderPayload(payload) {
   rawOutput.classList.remove("empty");
 }
 
+function renderDiagnostics(payload) {
+  const dependencies = payload.dependencies || {};
+  const local = payload.diagnostics || {};
+  const rows = [
+    ["status", payload.status],
+    ["workspace", payload.workspace],
+    ["external_probe", local.external_dependency_probe],
+    ["redaction", local.redaction],
+    ["operator_ui", local.operator_ui],
+    ["postgres", dependencies.postgres && dependencies.postgres.status],
+    ["qdrant", dependencies.qdrant && dependencies.qdrant.status],
+    ["llm_live", local.llm_live_enabled],
+    ["embeddings", local.embedding_provider_enabled],
+  ];
+  renderFacts(diagnostics, rows, "No diagnostics.");
+}
+
+async function loadDiagnostics(headers = {}) {
+  try {
+    const response = await fetch("/health", {headers});
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(JSON.stringify(payload));
+    }
+    renderDiagnostics(payload);
+  } catch (error) {
+    renderFacts(diagnostics, [["status", "unavailable"], ["reason", error.message]], "No diagnostics.");
+  }
+}
+
 function requestBody(formData) {
   const constraints = {};
   const difficulty = formData.get("difficulty");
@@ -164,9 +195,11 @@ form.addEventListener("submit", async (event) => {
   if (token) {
     headers["x-api-key"] = token;
   }
+  const diagnosticsHeaders = token ? {"x-api-key": token} : {};
   setStatus("Running");
   form.querySelector("button[type='submit']").disabled = true;
   try {
+    await loadDiagnostics(diagnosticsHeaders);
     const response = await fetch("/query", {
       method: "POST",
       headers,
@@ -199,7 +232,10 @@ clearButton.addEventListener("click", () => {
   clearElement(warnings, "No warnings.");
   renderFacts(supervisor, [], "No supervisor metadata.");
   renderFacts(cost, [], "No cost metadata.");
+  renderFacts(diagnostics, [], "No diagnostics.");
   rawOutput.textContent = "{}";
   rawOutput.classList.add("empty");
   setStatus("Idle");
 });
+
+loadDiagnostics();

@@ -114,8 +114,10 @@ The API is a localhost development entry point. Defaults preserve the trusted
 local workflow: auth, CORS, and rate limiting are disabled unless explicitly
 enabled in `configs/api.yaml` or environment variables. HTTP ingestion now
 validates that requested paths stay inside the configured workspace before any
-other API gate runs. `/health` reports `ok`, `degraded`, or `fail` plus optional
-Postgres/Qdrant dependency details when those dependencies are enabled.
+other API gate runs. `/health` is a local liveness/config probe and does not
+touch Postgres, Qdrant, external networks, or live model providers. Use
+`/diagnostics?probe_dependencies=true` only when an operator explicitly wants
+Postgres/Qdrant reachability diagnostics.
 
 Start the local FastAPI server:
 
@@ -127,6 +129,12 @@ Check runtime status:
 
 ```powershell
 Invoke-RestMethod http://127.0.0.1:8000/health
+```
+
+Check local diagnostics without external probes:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:8000/diagnostics
 ```
 
 Open the local read-only operator UI:

@@ -37,7 +37,7 @@ or edit them unless explicitly asked.
 12. Symbolic proof / CAS feasibility spike: complete
 13. Backend interface freeze: complete
 14. Web UI read-only operator surface: complete
-15. Local-first observability essentials: pending
+15. Local-first observability essentials: complete
 16. Remote/shared hardening decision: pending
 17. Phase-4 final interface freeze: pending
 
@@ -1146,3 +1146,83 @@ ignore/progress rules.
 - Cleared for Obj15 local-first observability essentials after focused API
   verification and full non-large regression. Obj15 must preserve the local UI
   defaults and keep diagnostics redacted.
+
+## Obj15 Notes
+
+- Added `src/vibration_agent/observability.py` with deterministic redaction and
+  JSON structured-log helpers.
+- Redaction covers sensitive keys, API-key-like assignments, bearer tokens,
+  local absolute paths, and long raw text.
+- Added API request structured logging through middleware. Logs include method,
+  path, status code, duration, and error type when applicable; they do not log
+  headers, query text, request bodies, provider keys, or local paths.
+- Converted the query observability log to the same structured event format for
+  `supervisor_status`, `supervisor_invocations`, output status, and task id.
+- Migrated `/health` to a local liveness/config probe. It no longer touches
+  Postgres, Qdrant, external networks, or live model providers.
+- Added read-only `GET /diagnostics`. By default it reports local config and
+  dependency configured/disabled status without external probes. Operators can
+  explicitly pass `probe_dependencies=true` to run the existing Postgres/Qdrant
+  reachability checks.
+- Added a Diagnostics panel to the local `/operator` UI. It reads `/health`,
+  reusing the existing API token field when a query run supplies one.
+- Reviewed `.github/workflows/test.yml`; no change was needed because CI does
+  not require Postgres/Qdrant/live-provider health probes.
+- No `/query` response shape, retrieval behavior, provider path, chain order,
+  final-answer authority, write/admin API, or remote/shared hardening was added.
+
+## Obj15 Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_observability.py tests\unit\test_api_main.py tests\unit\test_api_hardening.py -q -p no:cacheprovider
+```
+
+Result: passed, 26 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj15 -p no:cacheprovider
+```
+
+Result: passed, 451 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+## Obj15 Review Follow-Up
+
+- Fixed Obj15 `#1`: true low-impact brittleness. Observability redaction now
+  accepts explicit local path prefixes and the API passes the configured
+  workspace into workspace/diagnostics redaction. This covers custom POSIX
+  workspaces such as `/opt/...` or `/srv/...` without broadening the fixed POSIX
+  path regex enough to catch normal URL/API paths.
+
+## Obj15 Review Follow-Up Verification
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\unit\test_observability.py tests\unit\test_api_main.py tests\unit\test_api_hardening.py -q -p no:cacheprovider
+```
+
+Result: passed, 28 tests.
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests -q -m "not large_corpus" --basetemp=data\exports\pytest-p4-obj15-review-polish -p no:cacheprovider
+```
+
+Result: passed, 453 tests; skipped 2; deselected 1; one Qdrant compatibility
+warning.
+
+## Obj15 Residual Risk
+
+- Observability is local/basic only. It does not add durable metrics storage,
+  tracing, log rotation, dashboards, multi-user audit trails, or remote
+  monitoring.
+- `/diagnostics?probe_dependencies=true` can still touch configured Postgres or
+  Qdrant by explicit operator request; the default `/health` and `/diagnostics`
+  paths do not.
+- Browser visual verification of the Diagnostics panel was not run in this
+  objective; API/UI smoke tests verify route availability and asset references.
+
+## Obj15 Next Obj Gate
+
+- Cleared for Obj16 remote/shared hardening decision after focused
+  observability/API tests. Obj16 should decide or defer remote/shared scope
+  without changing the local-first default unless that product decision is
+  explicit.

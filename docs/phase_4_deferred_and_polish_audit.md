@@ -25,6 +25,10 @@ not be treated as forgotten Obj1-Obj12 implementation tasks.
   cases while preserving plain-text fallback.
 - Obj12 grounded the CAS defer decision in domain fit, current S5 fixture
   counts, timeout/complexity risks, and event-driven revisit triggers.
+- Obj15 added local-first structured logs, redacted health/diagnostics surfaces,
+  and basic operator diagnostics without adding remote/shared hardening.
+- Obj15 review follow-up added explicit workspace-prefix path redaction for
+  custom POSIX workspace roots.
 
 ## Accepted Runtime Limits
 
@@ -71,7 +75,6 @@ not be treated as forgotten Obj1-Obj12 implementation tasks.
 ## Deferred To Later Objectives Or Phases
 
 - UI read-only operator surface: Obj14.
-- Local-first observability essentials: Obj15.
 - Remote/shared hardening decision: Obj16.
 - Final Phase-4 interface freeze: Obj17.
 - V2 model-backed entailment or broader semantic support checks.
@@ -90,8 +93,8 @@ not be treated as forgotten Obj1-Obj12 implementation tasks.
 - Obj14 UI work should treat backend outputs as read-only contracts and must
   cite `docs/phase_4_backend_interface_freeze.md` before depending on a new API
   field.
-- Obj15 observability must preserve redaction rules: no API keys, bearer
-  tokens, prompt secrets, long raw source text, or local absolute paths in logs.
+- Obj15 observability preserves redaction rules for API keys, bearer tokens,
+  prompt secrets, long raw source text, and local absolute paths in logs.
 - Obj16 should decide whether remote/shared hardening is real scope. Until that
   decision changes product positioning, the product remains local-first and
   single-user.

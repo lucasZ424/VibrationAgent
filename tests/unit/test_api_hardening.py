@@ -60,19 +60,61 @@ def test_api_ingest_path_whitelist_runs_before_auth(monkeypatch):
     assert "outside the configured workspace" in payload["detail"][0]["reason"]
 
 
-def test_api_health_reports_degraded_dependency(monkeypatch):
+def test_api_health_does_not_probe_external_dependencies(monkeypatch):
+    settings = _settings(
+        database=DatabaseSettings(postgres_enabled=True, postgres_url="postgresql://example", qdrant_enabled=True),
+    )
+    monkeypatch.setattr(api_main, "get_settings", lambda workspace=None: settings)
+    monkeypatch.setattr(api_main, "_postgres_dependency", lambda settings: (_ for _ in ()).throw(AssertionError))
+    monkeypatch.setattr(api_main, "_qdrant_dependency", lambda settings: (_ for _ in ()).throw(AssertionError))
+
+    response = TestClient(api_main.app).get("/health")
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["status"] == "ok"
+    assert payload["dependencies"]["postgres"]["status"] == "enabled"
+    assert payload["dependencies"]["qdrant"]["status"] == "enabled"
+    assert payload["diagnostics"]["external_dependency_probe"] == "not_run"
+
+
+def test_api_diagnostics_can_probe_dependencies_explicitly(monkeypatch):
     settings = _settings(
         database=DatabaseSettings(postgres_enabled=True, postgres_url="", qdrant_enabled=False),
     )
     monkeypatch.setattr(api_main, "get_settings", lambda workspace=None: settings)
 
-    response = TestClient(api_main.app).get("/health")
+    response = TestClient(api_main.app).get("/diagnostics?probe_dependencies=true")
 
     payload = response.json()
     assert response.status_code == 200
     assert payload["status"] == "degraded"
     assert payload["dependencies"]["postgres"]["status"] == "fail"
     assert payload["dependencies"]["qdrant"]["status"] == "disabled"
+    assert payload["diagnostics"]["external_dependency_probe"] == "run"
+
+
+def test_api_diagnostics_redacts_probe_details(monkeypatch):
+    settings = _settings(
+        database=DatabaseSettings(postgres_enabled=True, postgres_url="postgresql://example", qdrant_enabled=False),
+    )
+    monkeypatch.setattr(api_main, "get_settings", lambda workspace=None: settings)
+    monkeypatch.setattr(
+        api_main,
+        "_postgres_dependency",
+        lambda settings: {
+            "status": "fail",
+            "detail": "OPENAI_API_KEY=sk-test failed at C:\\Challenge\\secret\\file.txt",
+        },
+    )
+
+    response = TestClient(api_main.app).get("/diagnostics?probe_dependencies=true")
+
+    detail = response.json()["dependencies"]["postgres"]["detail"]
+    assert "sk-test" not in detail
+    assert "C:\\Challenge" not in detail
+    assert "[redacted]" in detail
+    assert "[local-path]" in detail
 
 
 def test_api_health_status_can_fail_when_all_dependencies_fail():

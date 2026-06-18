@@ -49,6 +49,9 @@ def test_api_health_returns_runtime_status():
     assert payload["status"] == "ok"
     assert payload["app"]
     assert payload["workspace"]
+    assert payload["dependencies"]["postgres"]["status"] == "disabled"
+    assert payload["diagnostics"]["external_dependency_probe"] == "not_run"
+    assert payload["diagnostics"]["redaction"] == "enabled"
     assert "s2_retrieval" in payload["phase0_pipeline"]
     assert "s4_engineering_analysis" in payload["phase0_pipeline"]
     assert "s5_formula_derivation" in payload["phase0_pipeline"]
@@ -80,6 +83,7 @@ def test_api_serves_read_only_operator_ui():
     assert response.status_code == 200
     assert "Vibration Agent" in response.text
     assert "Run Query" in response.text
+    assert "Diagnostics" in response.text
     assert "/operator/assets/operator.js" in response.text
     assert "/operator/assets/styles.css" in response.text
     assert "/ingest" not in response.text
@@ -95,6 +99,8 @@ def test_operator_ui_assets_reference_frozen_query_contract():
     assert "output.warnings" in response.text
     assert "structured.supervisor_status" in response.text
     assert "structured.supervisor_cost" in response.text
+    assert 'fetch("/health"' in response.text
+    assert "renderDiagnostics" in response.text
 
 
 def test_api_ingest_plan_only_empty_dir_returns_insufficient(tmp_path):
@@ -209,7 +215,10 @@ def test_api_query_logs_supervisor_status_for_routing_observability(caplog):
     response = client.post("/query", json={"query": "what is the capital of France?"})
 
     assert response.status_code == 200
-    assert "query supervisor_status=not_triggered supervisor_invocations=0" in caplog.text
+    assert '"event": "api_query"' in caplog.text
+    assert '"supervisor_status": "not_triggered"' in caplog.text
+    assert '"supervisor_invocations": 0' in caplog.text
+    assert "capital of France" not in caplog.text
 
 
 def test_api_runtime_error_response_has_locatable_reason(monkeypatch, tmp_path):

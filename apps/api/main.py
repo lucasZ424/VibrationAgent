@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -21,10 +22,12 @@ from apps.api.auth import is_authorized  # noqa: E402
 from apps.api.middleware.rate_limit import InMemoryRateLimiter  # noqa: E402
 from vibration_agent.config import Settings, load  # noqa: E402
 from vibration_agent.ingestion.pipeline import chunk_documents, ingest as plan_ingestion  # noqa: E402
+from vibration_agent.observability import log_event, redact_text, redact_value  # noqa: E402
 from vibration_agent.orchestrator import TutorOrchestrator  # noqa: E402
 from vibration_agent.schemas import (  # noqa: E402
     PHASE0_ACTIVE_SKILLS,
     PHASE0_DEFERRED_SKILLS,
+    ApiDiagnosticsResponse,
     ApiErrorItem,
     ApiErrorResponse,
     ApiHealthResponse,
@@ -80,6 +83,35 @@ def _configure_cors() -> None:
 
 
 _configure_cors()
+
+
+@app.middleware("http")
+async def structured_request_logging(request: Request, call_next):
+    started_at = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception as exc:
+        log_event(
+            logger,
+            logging.ERROR,
+            "api_request",
+            method=request.method,
+            path=request.url.path,
+            status_code=500,
+            duration_ms=int((time.perf_counter() - started_at) * 1000),
+            error_type=type(exc).__name__,
+        )
+        raise
+    log_event(
+        logger,
+        logging.INFO,
+        "api_request",
+        method=request.method,
+        path=request.url.path,
+        status_code=response.status_code,
+        duration_ms=int((time.perf_counter() - started_at) * 1000),
+    )
+    return response
 
 
 def _http_status_for_exception(exc: Exception) -> int:
@@ -228,7 +260,10 @@ def _postgres_dependency(settings: Settings) -> dict[str, Any]:
         finally:
             conn.close()
     except Exception as exc:
-        return {"status": "fail", "detail": f"{type(exc).__name__}: {exc}"}
+        return {
+            "status": "fail",
+            "detail": redact_text(f"{type(exc).__name__}: {exc}", path_prefixes=[settings.paths.workspace]),
+        }
     return {"status": "ok", "detail": "postgres reachable"}
 
 
@@ -242,7 +277,10 @@ def _qdrant_dependency(settings: Settings) -> dict[str, Any]:
         if hasattr(client, "get_collection"):
             client.get_collection(settings.database.qdrant_collection)
     except Exception as exc:
-        return {"status": "fail", "detail": f"{type(exc).__name__}: {exc}"}
+        return {
+            "status": "fail",
+            "detail": redact_text(f"{type(exc).__name__}: {exc}", path_prefixes=[settings.paths.workspace]),
+        }
     return {"status": "ok", "detail": "qdrant reachable"}
 
 
@@ -253,6 +291,19 @@ def _health_dependencies(settings: Settings) -> dict[str, dict[str, Any]]:
     }
 
 
+def _configured_dependencies(settings: Settings) -> dict[str, dict[str, Any]]:
+    return {
+        "postgres": {
+            "status": "enabled" if settings.database.postgres_enabled else "disabled",
+            "detail": "configured; reachability not probed",
+        },
+        "qdrant": {
+            "status": "enabled" if settings.database.qdrant_enabled else "disabled",
+            "detail": "configured; reachability not probed",
+        },
+    }
+
+
 def _health_status(dependencies: dict[str, dict[str, Any]]) -> str:
     statuses = [str(item.get("status")) for item in dependencies.values()]
     if not any(status == "fail" for status in statuses):
@@ -260,6 +311,26 @@ def _health_status(dependencies: dict[str, dict[str, Any]]) -> str:
     if statuses and all(status == "fail" for status in statuses):
         return "fail"
     return "degraded"
+
+
+def _api_workspace(settings: Settings) -> str:
+    return str(redact_value(str(settings.paths.workspace), path_prefixes=[settings.paths.workspace]))
+
+
+def _local_diagnostics(settings: Settings, *, probe_dependencies: bool) -> dict[str, Any]:
+    return {
+        "schema_version": "p4.local_observability.v1",
+        "redaction": "enabled",
+        "external_dependency_probe": "run" if probe_dependencies else "not_run",
+        "operator_ui": "available" if UI_DIR.exists() else "missing",
+        "auth_enabled": settings.api.auth_enabled,
+        "rate_limit_enabled": settings.api.rate_limit_enabled,
+        "cors_enabled": settings.api.cors_enabled,
+        "llm_live_enabled": settings.llm.live_enabled,
+        "llm_capture_enabled": settings.llm.capture_enabled,
+        "embedding_provider_enabled": settings.embeddings.enabled,
+        "advisory_routing_enabled": settings.routing.advisory_routing_enabled,
+    }
 
 
 @app.get("/operator", response_class=FileResponse)
@@ -276,15 +347,39 @@ def health(request: Request, workspace: str | None = None) -> ApiHealthResponse:
         raise
     except Exception as exc:
         _raise_api_error(exc, loc=["query", "workspace"])
-    dependencies = _health_dependencies(settings)
-    status = _health_status(dependencies)
     return ApiHealthResponse(
-        status=status,
+        status="ok",
         app=settings.app_name,
-        workspace=str(settings.paths.workspace),
+        workspace=_api_workspace(settings),
         default_user_mode=settings.default_user_mode,
         phase0_pipeline=settings.phase0_pipeline,
-        dependencies=dependencies,
+        dependencies=_configured_dependencies(settings),
+        diagnostics=_local_diagnostics(settings, probe_dependencies=False),
+    )
+
+
+@app.get("/diagnostics", response_model=ApiDiagnosticsResponse)
+def diagnostics(
+    request: Request,
+    workspace: str | None = None,
+    probe_dependencies: bool = False,
+) -> ApiDiagnosticsResponse:
+    try:
+        settings = get_settings(workspace)
+        _enforce_api_controls(request, settings)
+    except ApiHandledError:
+        raise
+    except Exception as exc:
+        _raise_api_error(exc, loc=["query", "workspace"])
+    dependencies = _health_dependencies(settings) if probe_dependencies else _configured_dependencies(settings)
+    return ApiDiagnosticsResponse(
+        status=_health_status(dependencies),
+        app=settings.app_name,
+        workspace=_api_workspace(settings),
+        default_user_mode=settings.default_user_mode,
+        phase0_pipeline=settings.phase0_pipeline,
+        dependencies=redact_value(dependencies, path_prefixes=[settings.paths.workspace]),
+        diagnostics=_local_diagnostics(settings, probe_dependencies=probe_dependencies),
     )
 
 
@@ -372,10 +467,14 @@ def query(http_request: Request, request: ApiQueryRequest) -> ApiQueryResponse:
         structured = output.structured_result
         supervisor_status = structured.get("supervisor_status") if isinstance(structured, dict) else None
         supervisor_invocations = structured.get("supervisor_invocations") if isinstance(structured, dict) else None
-        logger.info(
-            "query supervisor_status=%s supervisor_invocations=%s",
-            supervisor_status or "not_triggered",
-            supervisor_invocations if supervisor_invocations is not None else 0,
+        log_event(
+            logger,
+            logging.INFO,
+            "api_query",
+            status=output.status,
+            task_id=_task_id_from_output(output),
+            supervisor_status=supervisor_status or "not_triggered",
+            supervisor_invocations=supervisor_invocations if supervisor_invocations is not None else 0,
         )
     except ApiHandledError:
         raise

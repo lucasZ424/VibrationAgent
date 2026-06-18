@@ -671,3 +671,53 @@ behavior, or citation contract changed.
 Rollback: restore `.env.example` from history only if a future objective decides
 to reintroduce a tracked sanitized template; remove `.claude/` from `.gitignore`
 only if Claude artifacts intentionally become repo-owned files.
+
+### Obj15 - Local-first observability essentials (2026-06-17)
+
+Local observability API and logging update.
+
+- Added deterministic redaction and structured-log helpers in
+  `src/vibration_agent/observability.py`.
+- Added API request structured logging with schema version
+  `p4.local_observability.v1`.
+- Converted the query supervisor observability log to structured JSON while
+  avoiding raw query text, request bodies, headers, API keys, bearer tokens,
+  prompt secrets, long raw text, and local absolute paths.
+- Added additive `ApiHealthResponse.diagnostics`.
+- Added `ApiDiagnosticsResponse`.
+- Migrated `GET /health` semantics: it is now a local liveness/config probe and
+  does not run Postgres, Qdrant, external network, or live-provider checks.
+- Added `GET /diagnostics`. Default behavior reports local diagnostics and
+  configured/disabled dependency status without external probes. Passing
+  `probe_dependencies=true` explicitly runs the existing Postgres/Qdrant
+  reachability checks and returns redacted dependency details.
+- Added a read-only Diagnostics panel to `/operator` that consumes `/health`.
+
+No `/query` response shape, retrieval behavior, provider path, chain order,
+final-answer authority, write/admin API, live-provider default, or remote/shared
+hardening contract changed.
+
+Rollback: remove the observability helper, remove the request/query structured
+logging calls, remove `ApiDiagnosticsResponse`, remove
+`ApiHealthResponse.diagnostics`, restore `/health` dependency probing if needed,
+remove `/diagnostics`, remove the operator Diagnostics panel, and restore Obj15
+tests/docs.
+
+### Obj15 review polish - explicit workspace path redaction (2026-06-18)
+
+Low-cost redaction polish after senior review.
+
+- Extended local observability redaction so callers can pass explicit local path
+  prefixes.
+- API workspace and diagnostics redaction now pass the configured workspace
+  path, covering custom POSIX roots such as `/opt/...` or `/srv/...` without
+  broadening fixed POSIX path matching enough to catch ordinary URL/API paths.
+- Added unit coverage for explicit custom POSIX workspace-prefix redaction.
+
+No API route, response shape, logging schema, health/diagnostics semantics,
+provider path, retrieval behavior, chain order, or final-answer contract
+changed.
+
+Rollback: remove the explicit `path_prefixes` support from observability
+helpers, restore API redaction calls to the default path regexes, and remove the
+custom POSIX prefix tests.

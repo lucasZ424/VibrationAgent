@@ -381,6 +381,17 @@ class ApiHealthResponse(BaseModel):
     default_user_mode: UserMode
     phase0_pipeline: list[str]
     dependencies: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    diagnostics: dict[str, Any] = Field(default_factory=dict)
+
+
+class ApiDiagnosticsResponse(BaseModel):
+    status: Literal["ok", "degraded", "fail"] = "ok"
+    app: str
+    workspace: str
+    default_user_mode: UserMode
+    phase0_pipeline: list[str]
+    dependencies: dict[str, dict[str, Any]] = Field(default_factory=dict)
+    diagnostics: dict[str, Any] = Field(default_factory=dict)
 
 
 class ApiScopeResponse(BaseModel):
