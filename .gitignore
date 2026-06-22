@@ -37,8 +37,4 @@ apps/ui/.next/
 graphify-out/
 
 # Local issue review logs
-docs/issue_log/issues*
-docs/issue_log_p2/issues*
-docs/issue_log_p3/issues*
-docs/issue_log_p4/issues*
-docs/issue_log_p5/issues*
+docs/issues
