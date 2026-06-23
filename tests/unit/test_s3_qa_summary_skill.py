@@ -204,6 +204,45 @@ def test_s3_accepts_s2_result_handoff_shape_and_relative_confidence():
     assert output.citations[0].confidence == 1.0
 
 
+def test_s3_critical_speed_outcome_question_rejects_definition_only_evidence():
+    # WHY: a user asking what happens at/after critical speed needs mechanism or
+    # response evidence; returning a definition note is worse than insufficient.
+    payload = SkillInput(
+        task_id="critical-outcome",
+        user_query="旋转机械到达临界转速后会发生什么？",
+        context={
+            "retrieval_context": [
+                _evidence("def", "注：ISO2041中给出了相同的共振转速/临界转速定义。", language="zh")
+            ]
+        },
+    )
+
+    output = QASummarySkill().run(payload)
+
+    assert output.status == "insufficient"
+    assert "outcome" in output.warnings[-1]
+
+
+def test_s3_critical_speed_outcome_question_prefers_response_evidence():
+    # WHY: when both definition and response evidence are retrieved, answer with
+    # the engineering effect that the user asked about.
+    payload = SkillInput(
+        task_id="critical-outcome",
+        user_query="旋转机械到达临界转速后会发生什么？",
+        context={
+            "retrieval_context": [
+                _evidence("def", "注：ISO2041中给出了相同的共振转速/临界转速定义。", language="zh"),
+                _evidence("effect", "临界转速附近转子振动响应会被放大，振幅明显增大。", language="zh"),
+            ]
+        },
+    )
+
+    output = QASummarySkill().run(payload)
+
+    assert output.status == "ok"
+    assert [claim["chunk_id"] for claim in output.structured_result["claims"]] == ["effect"]
+
+
 def test_s3_uses_retrieval_results_field_path():
     payload = SkillInput(
         task_id="t1",

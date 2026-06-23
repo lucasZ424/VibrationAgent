@@ -127,7 +127,14 @@ touch Postgres, Qdrant, external networks, or live model providers. Use
 `/diagnostics?probe_dependencies=true` only when an operator explicitly wants
 Postgres/Qdrant reachability diagnostics.
 
-Start the local FastAPI server:
+Start the local operator UI. This starts the FastAPI server, waits for
+`/health`, and opens the browser:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\start_operator.py
+```
+
+Start only the local FastAPI server:
 
 ```powershell
 .\.venv\Scripts\uvicorn.exe apps.api.main:app --reload
@@ -145,7 +152,7 @@ Check local diagnostics without external probes:
 Invoke-RestMethod http://127.0.0.1:8000/diagnostics
 ```
 
-Open the local read-only operator UI:
+Open the local read-only operator UI when the server is already running:
 
 ```text
 http://127.0.0.1:8000/operator

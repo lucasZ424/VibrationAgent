@@ -15,7 +15,15 @@ from vibration_agent.schemas import Intent
 _DOMAIN_ALIASES: dict[str, tuple[str, ...]] = {
     "damping_ratio": ("damping ratio", "zeta", "ζ", "阻尼比", "相对阻尼"),
     "natural_frequency": ("natural frequency", "omega_n", "ωn", "固有频率", "自然频率"),
-    "critical_speed": ("critical speed", "临界转速", "临界速度"),
+    "critical_speed": (
+        "critical speed",
+        "resonant speed",
+        "resonance",
+        "临界转速",
+        "临界速度",
+        "共振转速",
+        "共振",
+    ),
     "rotor_unbalance": ("rotor unbalance", "unbalance", "不平衡", "转子不平衡"),
     "orbit": ("orbit", "shaft orbit", "轴心轨迹", "转子轨迹"),
     "synchronous_response": ("synchronous response", "1x", "一倍频", "同步响应"),
@@ -36,6 +44,8 @@ _SYMBOL_ALIASES: dict[str, tuple[str, ...]] = {
 
 _STANDARD_MARKERS = ("standard", "iso", "api ", "gb/t", "规范", "标准")
 _SCOPE_MARKERS = ("scope", "适用范围", "范围", "适用于")
+_OUTCOME_MARKERS = ("发生什么", "会怎样", "如何变化", "什么影响", "what happens", "affect", "effect")
+_CRITICAL_SPEED_OUTCOME_EXPANSIONS = ("响应放大", "振幅增大", "振动增大", "response amplification", "amplitude increase")
 
 
 def _clean_query(query: str) -> str:
@@ -93,6 +103,8 @@ def normalize(query: str) -> dict[str, Any]:
         expansions.extend(_DOMAIN_ALIASES[term])
     for symbol in detected_symbols:
         expansions.extend(_SYMBOL_ALIASES[symbol])
+    if "critical_speed" in detected_terms and _contains_any(cleaned, _OUTCOME_MARKERS):
+        expansions.extend(_CRITICAL_SPEED_OUTCOME_EXPANSIONS)
 
     expanded = " ".join(dict.fromkeys([cleaned, *expansions])) if cleaned else ""
     return {

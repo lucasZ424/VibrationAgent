@@ -26,9 +26,11 @@ def tokenize(text: str) -> list[str]:
         if any(separator in token for separator in ("-", "/", ".")):
             tokens.extend(part for part in re.split(r"[-./]+", token) if part)
     for segment in _CJK_RE.findall(text):
-        tokens.extend(segment)
+        if len(segment) == 1:
+            tokens.append(segment)
         tokens.extend(segment[index : index + 2] for index in range(max(len(segment) - 1, 0)))
         tokens.extend(segment[index : index + 3] for index in range(max(len(segment) - 2, 0)))
+        tokens.extend(segment[index : index + 4] for index in range(max(len(segment) - 3, 0)))
     return [token for token in tokens if token.strip()]
 
 

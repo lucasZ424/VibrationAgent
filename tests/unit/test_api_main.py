@@ -94,6 +94,7 @@ def test_operator_ui_assets_reference_frozen_query_contract():
 
     assert response.status_code == 200
     assert 'fetch("/query"' in response.text
+    assert "renderAnswerText" in response.text
     assert "output.citations" in response.text
     assert "structured.chain" in response.text
     assert "output.warnings" in response.text

@@ -60,6 +60,37 @@ function addText(parent, tag, value) {
   return node;
 }
 
+function renderAnswerText(element, value) {
+  element.innerHTML = "";
+  const lines = text(value).split(/\r?\n/);
+  let list = null;
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      list = null;
+      return;
+    }
+    if (trimmed.startsWith("## ")) {
+      list = null;
+      addText(element, "h3", trimmed.slice(3));
+      return;
+    }
+    if (trimmed.startsWith("- ")) {
+      if (!list) {
+        list = document.createElement("ul");
+        element.appendChild(list);
+      }
+      addText(list, "li", trimmed.slice(2));
+      return;
+    }
+    list = null;
+    addText(element, "p", trimmed);
+  });
+  if (!element.childNodes.length) {
+    element.textContent = "No answer text returned.";
+  }
+}
+
 function renderFacts(element, rows, emptyText) {
   element.innerHTML = "";
   if (!rows.length) {
@@ -100,7 +131,7 @@ function renderPayload(payload) {
   const structured = output.structured_result || {};
   const answerText = structured.answer || output.summary || "";
   answerStatus.textContent = `${payload.status || output.status || "unknown"}`;
-  answer.textContent = answerText || "No answer text returned.";
+  renderAnswerText(answer, answerText);
   answer.classList.toggle("empty", !answerText);
   taskId.textContent = payload.task_id ? `task: ${payload.task_id}` : "";
 

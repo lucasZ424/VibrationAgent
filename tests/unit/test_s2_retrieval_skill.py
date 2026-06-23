@@ -107,6 +107,27 @@ def test_tokenize_indexes_hyphenated_compounds_as_whole_and_parts():
     assert "system" in tokens
 
 
+def test_tokenize_cjk_avoids_single_character_noise_for_engineering_queries():
+    # WHY: broad single-character matches such as 旋/转/机/械 can outrank the
+    # actual engineering phrase and make real-corpus answers cite irrelevant chunks.
+    tokens = tokenize("旋转机械临界转速")
+
+    assert "旋" not in tokens
+    assert "转" not in tokens
+    assert "旋转" in tokens
+    assert "临界转速" in tokens
+
+
+def test_query_normalize_expands_critical_speed_outcome_questions():
+    # WHY: "what happens after reaching critical speed" needs response/outcome
+    # evidence, not only definition chunks containing the phrase.
+    result = normalize("旋转机械到达临界转速后会发生什么？")
+
+    assert "critical speed" in result["normalized_query"]
+    assert "共振" in result["normalized_query"]
+    assert "响应放大" in result["normalized_query"]
+
+
 def test_hybrid_search_returns_retrieval_output_with_reasons():
     chunks = [
         _chunk("c1", "转子不平衡会产生明显的一倍频同步响应，幅值和相位随转速变化。", pages=[10], topic="rotor_unbalance"),

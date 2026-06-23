@@ -172,6 +172,24 @@ button:disabled {
   white-space: pre-wrap;
 }
 
+.answer h3 {
+  margin: 18px 0 8px;
+  font-size: 16px;
+}
+
+.answer h3:first-child {
+  margin-top: 0;
+}
+
+.answer p,
+.answer ul {
+  margin: 8px 0;
+}
+
+.answer li {
+  margin: 4px 0;
+}
+
 .empty {
   color: var(--muted);
 }

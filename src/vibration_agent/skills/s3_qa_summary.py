@@ -196,6 +196,28 @@ _SCOPE_CLAIM_MARKERS = (
     "this document specifies",
     "this standard specifies",
 )
+_CRITICAL_SPEED_OUTCOME_QUERY_MARKERS = (
+    "发生什么",
+    "会怎样",
+    "如何变化",
+    "影响",
+    "what happens",
+    "affect",
+    "effect",
+)
+_CRITICAL_SPEED_TERMS = ("临界转速", "临界速度", "critical speed", "resonant speed", "共振转速")
+_CRITICAL_SPEED_OUTCOME_CLAIM_MARKERS = (
+    "响应",
+    "振幅",
+    "幅值",
+    "放大",
+    "增大",
+    "amplified",
+    "amplification",
+    "response",
+    "amplitude",
+)
+_DEFINITION_ONLY_MARKERS = ("定义", "definition")
 
 
 def _explicit_structural_line(line: str) -> bool:
@@ -625,6 +647,16 @@ def _ranked_claims(rows: list[dict[str, Any]], query: str, *, limit: int) -> lis
         scope_candidates = [candidate for candidate in candidates if _is_scope_claim(candidate["text"])]
         if scope_candidates:
             candidates = scope_candidates
+    if _is_critical_speed_outcome_query(query):
+        outcome_candidates = [
+            candidate
+            for candidate in candidates
+            if _is_critical_speed_outcome_claim(candidate["text"])
+        ]
+        if outcome_candidates:
+            candidates = outcome_candidates
+        else:
+            return []
     candidates.sort(key=lambda item: (-float(item["score"]), item["order"]))
     selected: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -637,6 +669,25 @@ def _ranked_claims(rows: list[dict[str, Any]], query: str, *, limit: int) -> lis
         if len(selected) >= limit:
             break
     return selected
+
+
+def _contains_casefold(text: str, markers: tuple[str, ...]) -> bool:
+    lowered = text.casefold()
+    return any(marker.casefold() in lowered for marker in markers)
+
+
+def _is_critical_speed_outcome_query(query: str) -> bool:
+    return _contains_casefold(query, _CRITICAL_SPEED_TERMS) and _contains_casefold(
+        query, _CRITICAL_SPEED_OUTCOME_QUERY_MARKERS
+    )
+
+
+def _is_critical_speed_outcome_claim(text: str) -> bool:
+    if _contains_casefold(text, _DEFINITION_ONLY_MARKERS):
+        return False
+    return _contains_casefold(text, _CRITICAL_SPEED_TERMS) and _contains_casefold(
+        text, _CRITICAL_SPEED_OUTCOME_CLAIM_MARKERS
+    )
 
 
 def _claims_to_answer(claims: list[dict[str, Any]], *, language: str, prefix: str) -> str:
@@ -653,6 +704,8 @@ def _claims_to_answer(claims: list[dict[str, Any]], *, language: str, prefix: st
 def _qa(rows: list[dict[str, Any]], payload: SkillInput, language: str) -> tuple[str, list[dict[str, Any]], list[str]]:
     claims = _ranked_claims(rows, payload.user_query, limit=_max_claims(payload, "qa"))
     if not claims:
+        if _is_critical_speed_outcome_query(payload.user_query):
+            return "", [], ["Retrieved evidence does not contain critical-speed outcome evidence."]
         return "", [], ["Retrieved evidence contains no usable text claims."]
     prefix = "根据已检索证据，可以确定：" if language == "zh" else "Based on the retrieved evidence:"
     return _claims_to_answer(claims, language=language, prefix=prefix), claims, []
