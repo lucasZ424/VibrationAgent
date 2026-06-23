@@ -8,6 +8,7 @@ cite them without forcing them into the main body text.
 from __future__ import annotations
 
 import re
+from collections import Counter
 from typing import Iterable
 
 from vibration_agent.schemas import AssetObjectType, AssetType, DocumentAsset, OcrPage, PageBlock
@@ -23,7 +24,9 @@ _SPACED_MATH_OPERATOR_RE = re.compile(r"[A-Za-z0-9α-ωΑ-Ω)]\s*(?:\+|\*|/|\^|�
 _MATH_WORD_RE = re.compile(r"\b(?:sin|cos|tan|sqrt|log|exp)\b|[ωΩζπ]")
 _WORD_RE = re.compile(r"[A-Za-z0-9_]+|[\u4e00-\u9fff]")
 _REFERENCE_LIKE_RE = re.compile(r"^\s*\d+\.\s+.+(?:\bet\s+al\b|\b19\d{2}\b|\b20\d{2}\b|,)", re.IGNORECASE)
+_BRACKET_REFERENCE_RE = re.compile(r"^\s*\[\d+\]\s*\S+")
 _PAGE_NUMBER_RE = re.compile(r"^\s*\d+\s*$")
+_TERMINAL_PROSE_RE = re.compile(r"[.!?。！？；;][\"'”’）】》]*$")
 
 
 def normalize_bbox(bbox: object) -> list[float] | list[list[float]] | None:
@@ -122,6 +125,45 @@ def classify_text_block(
     return "body"
 
 
+def promote_font_titles(blocks: Iterable[PageBlock], *, ratio: float = 1.25) -> list[PageBlock]:
+    """Promote short large-font body blocks relative to the page font baseline."""
+    materialized = [
+        block.validated_copy(metadata={**block.metadata, "layout_role": "bibliography"})
+        if block.block_type == "body" and _BRACKET_REFERENCE_RE.match(block.text)
+        else block
+        for block in blocks
+    ]
+    sizes: list[float] = []
+    for block in materialized:
+        value = block.metadata.get("max_font_size")
+        if block.block_type == "body" and isinstance(value, int | float) and value > 0:
+            sizes.append(round(float(value), 1))
+    if len(sizes) < 2:
+        return materialized
+
+    counts = Counter(sizes)
+    baseline = max(counts, key=lambda size: (counts[size], -size))
+    page_max = max(sizes)
+    promoted: list[PageBlock] = []
+    for block in materialized:
+        value = block.metadata.get("max_font_size")
+        text = re.sub(r"\s+", " ", block.text).strip()
+        elevated = bool(
+            block.block_type == "body"
+            and isinstance(value, int | float)
+            and float(value) >= baseline * ratio
+            and 0 < len(text) <= 80
+            and not _TERMINAL_PROSE_RE.search(text)
+        )
+        if elevated and float(value) >= page_max - 0.1:
+            promoted.append(block.validated_copy(block_type="title"))
+        elif elevated and block.metadata.get("layout_role") != "bibliography":
+            promoted.append(block.validated_copy(metadata={**block.metadata, "layout_role": "label"}))
+        else:
+            promoted.append(block)
+    return promoted
+
+
 def asset_from_block(
     *,
     page: OcrPage,
@@ -183,6 +225,7 @@ def enrich_page_layout(page: OcrPage) -> OcrPage:
 
         blocks.append(block.validated_copy(block_type=block_type, asset_id=asset_id, asset_path=asset_path))
 
+    blocks = promote_font_titles(blocks)
     body_text = "\n".join(block.text for block in blocks if block.block_type in {"body", "title"} and block.text.strip())
     normalized_text = body_text.strip() if blocks else page.normalized_text
     return page.model_copy(update={"blocks": blocks, "assets": assets, "normalized_text": normalized_text})

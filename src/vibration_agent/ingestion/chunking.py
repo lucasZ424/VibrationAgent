@@ -22,6 +22,7 @@ class Paragraph:
     section_key: str = FRONT_MATTER_SECTION_KEY
     section_title: str | None = None
     section_level: int = 0
+    layout_role: str | None = None
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,7 @@ def pages_to_paragraphs(pages: Sequence[OcrPage]) -> list[Paragraph]:
                         section_key=current_section_key,
                         section_title=current_section_title,
                         section_level=current_section_level,
+                        layout_role=str(block.metadata.get("layout_role")) if block.metadata.get("layout_role") else None,
                     )
                 )
                 emitted_from_blocks = True
@@ -120,6 +122,7 @@ def pages_to_paragraphs(pages: Sequence[OcrPage]) -> list[Paragraph]:
                             section_key=current_section_key,
                             section_title=current_section_title,
                             section_level=current_section_level,
+                            layout_role=str(block.metadata.get("layout_role")) if block.metadata.get("layout_role") else None,
                         )
                     )
                     emitted_from_blocks = True
@@ -135,6 +138,7 @@ def pages_to_paragraphs(pages: Sequence[OcrPage]) -> list[Paragraph]:
                         section_key=current_section_key,
                         section_title=current_section_title,
                         section_level=current_section_level,
+                        layout_role=str(block.metadata.get("layout_role")) if block.metadata.get("layout_role") else None,
                     )
                 )
                 emitted_from_blocks = True
@@ -293,6 +297,25 @@ def _section_metadata(
     }
 
 
+def _text_segments(paragraphs: Sequence[Paragraph]) -> list[dict[str, Any]]:
+    segments: list[dict[str, Any]] = []
+    offset = 0
+    for paragraph in paragraphs:
+        start = offset
+        end = start + len(paragraph.text)
+        segment = {
+            "page_no": paragraph.page_no,
+            "start": start,
+            "end": end,
+            "block_type": paragraph.block_type,
+        }
+        if paragraph.layout_role:
+            segment["layout_role"] = paragraph.layout_role
+        segments.append(segment)
+        offset = end + 2  # chunk text joins paragraphs with two newlines
+    return segments
+
+
 def _bibliography_metadata(bibliography: DocumentBibliography | None) -> dict[str, Any]:
     """Serialize bibliography for chunk metadata; empty/None when unavailable."""
     if bibliography is None:
@@ -388,6 +411,7 @@ def chunk_paragraphs(
             "target_tokens": target_tokens,
             "overlap_tokens": overlap_tokens,
             "bibliography": _bibliography_metadata(bibliography),
+            "text_segments": _text_segments(current),
             **section_meta,
         }
         chunks.append(

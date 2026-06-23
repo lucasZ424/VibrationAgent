@@ -19,16 +19,19 @@ def _s2(row: dict | None = None) -> dict:
     return {"status": "ok", "structured_result": {"retrieval_context": [row]}}
 
 
-def _s3(claim_text: str = "Critical speed can amplify rotor vibration response.") -> dict:
+def _s3(claim_text: str = "Critical speed can amplify rotor vibration response.", *, language: str | None = None) -> dict:
+    structured_result = {
+        "answer": f"{claim_text} (evidence: c1)",
+        "claims": [{"text": claim_text, "chunk_id": "c1", "doc_id": "d1", "pages": [2]}],
+        "synthesis_mode": "deterministic",
+        "token_cost": 99,
+        "cost": {"estimated_usd": 0.99, "source": "upstream"},
+    }
+    if language is not None:
+        structured_result["language"] = language
     return {
         "status": "ok",
-        "structured_result": {
-            "answer": f"{claim_text} (evidence: c1)",
-            "claims": [{"text": claim_text, "chunk_id": "c1", "doc_id": "d1", "pages": [2]}],
-            "synthesis_mode": "deterministic",
-            "token_cost": 99,
-            "cost": {"estimated_usd": 0.99, "source": "upstream"},
-        },
+        "structured_result": structured_result,
         "citations": [{"chunk_id": "c1", "doc_id": "d1", "pages": [2]}],
     }
 
@@ -78,6 +81,29 @@ def test_s4_engineering_analysis_uses_visible_cited_evidence_and_passes_v2():
 
     assert checked.status == "ok"
     assert checked.structured_result["unsupported_claims"] == []
+
+
+def test_s4_deterministic_framing_uses_threaded_chinese_language():
+    claim = "临界转速附近转子响应会被放大。"
+    output = EngineeringAnalysisSkill().run(
+        _payload(s2=_s2(_row(claim)), s3=_s3(claim, language="zh"))
+    )
+
+    assert output.status == "ok"
+    assert output.structured_result["language"] == "zh"
+    assert output.structured_result["engineering_meaning"] == f"工程意义仅限于所引证据：{claim}"
+    assert output.structured_result["premises"] == "仅适用于检索到的证据块：c1。"
+    assert output.structured_result["failure_modes"] == "请勿超出所引工况、单位或数值范围进行外推。"
+    assert output.structured_result["next_action"] == "在应用阈值、维护措施或模型假设前，请先核对所引证据块。"
+
+
+def test_s4_deterministic_framing_infers_chinese_for_legacy_payload_without_language():
+    claim = "阻尼比控制自由振动的衰减速度。"
+    output = EngineeringAnalysisSkill().run(_payload(s2=_s2(_row(claim)), s3=_s3(claim)))
+
+    assert output.status == "ok"
+    assert output.structured_result["language"] == "zh"
+    assert output.structured_result["engineering_meaning"].startswith("工程意义仅限于所引证据")
 
 
 def test_s4_llm_replay_response_generates_rich_analysis_and_passes_v2(tmp_path):

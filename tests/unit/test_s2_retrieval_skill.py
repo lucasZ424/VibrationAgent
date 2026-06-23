@@ -3,7 +3,7 @@ from pathlib import Path
 
 from vibration_agent.retrieval.bm25 import tokenize
 from vibration_agent.retrieval.hybrid import load_chunks, search
-from vibration_agent.retrieval.query_normalize import normalize
+from vibration_agent.retrieval.query_normalize import focus_aliases, normalize
 from vibration_agent.retrieval.rerank import run as rerank_run
 from vibration_agent.schemas import SkillInput
 from vibration_agent.skills import RetrievalSkill
@@ -66,6 +66,36 @@ def test_query_normalize_detects_vibration_intent_terms_and_symbols():
     assert "zeta" in result["detected_symbols"]
     assert "阻尼比" in result["normalized_query"]
     assert "damping ratio" in result["normalized_query"]
+
+
+def test_query_normalize_bridges_real_corpus_turbine_and_order_analysis_terms():
+    turbine = normalize("汽轮发电机组轴系扭振的适用范围")
+    order = normalize("旋转机械阶比分析有什么作用")
+
+    assert "透平" in turbine["normalized_query"]
+    assert "轴系" in turbine["normalized_query"]
+    assert "torsional vibration" in turbine["normalized_query"]
+    assert "order analysis" in order["normalized_query"]
+
+
+def test_query_normalize_does_not_expand_gas_turbine_to_steam_turbine():
+    # WHY: the generic English word "turbine" must not turn a gas-turbine query into 汽轮机 evidence.
+    result = normalize("gas turbine torsional vibration")
+
+    assert "汽轮机" not in result["normalized_query"]
+
+
+def test_query_focus_aliases_choose_the_longest_detected_domain_phrase():
+    aliases = focus_aliases("阶比分析在旋转机械扭振测量中的作用是什么？")
+
+    assert "阶比分析" in aliases
+    assert "扭振" not in aliases
+
+
+def test_query_normalize_prioritizes_standard_scope_over_generic_definition():
+    result = normalize("GB/T 33199.1-2016 的适用范围是什么？")
+
+    assert result["intent_hint"] == "standard_lookup"
 
 
 def test_tokenize_indexes_hyphenated_compounds_as_whole_and_parts():

@@ -15,6 +15,7 @@ from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 from .base import Skill
 
 _REF_RE = re.compile(r"\[([A-Za-z0-9_.:/#-]+)\]")
+_NUMERIC_BIBLIOGRAPHY_REF_RE = re.compile(r"\d+(?:-\d+)*")
 _NUMBER_RE = re.compile(r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?%?")
 _NUMBER_UNIT_RE = re.compile(
     r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?\s*(?:Hz|kHz|rpm|r/min|rad/s|m/s2|m/s\^2|mm/s|m/s|N|kN|Pa|kPa|MPa|GPa|kg|g|s|ms|V|A|W|dB|%)\b",
@@ -170,7 +171,11 @@ def _derivation_steps(structured: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def _visible_refs(answer: str) -> set[str]:
-    return {match.group(1) for match in _REF_RE.finditer(answer or "")}
+    return {
+        reference
+        for match in _REF_RE.finditer(answer or "")
+        if not _NUMERIC_BIBLIOGRAPHY_REF_RE.fullmatch(reference := match.group(1))
+    }
 
 
 def _claim_tokens(text: str) -> set[str]:

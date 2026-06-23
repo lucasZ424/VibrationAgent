@@ -52,6 +52,36 @@ def test_v4_renders_s3_answer_as_conclusion_and_preserves_evidence_and_assets():
     assert "documented" not in answer
 
 
+def test_v4_preserves_localized_chinese_engineering_sections():
+    source = SkillOutput(
+        status="ok",
+        structured_result={
+            "language": "zh",
+            "answer": "临界转速附近转子响应会被放大。（证据：c1）",
+            "engineering_meaning": "工程意义仅限于所引证据：临界转速附近转子响应会被放大。",
+            "premises": "仅适用于检索到的证据块：c1。",
+            "failure_modes": "请勿超出所引工况、单位或数值范围进行外推。",
+            "next_action": "在应用阈值、维护措施或模型假设前，请先核对所引证据块。",
+            "claims": [
+                {"text": "临界转速附近转子响应会被放大。", "chunk_id": "c1", "doc_id": "doc1", "pages": [3]}
+            ],
+        },
+        citations=[Citation(chunk_id="c1", doc_id="doc1", pages=[3])],
+    )
+
+    output = OutputStyleSkill().run(
+        SkillInput(task_id="t1", user_query="临界转速有什么影响？", context={"s3_result": source})
+    )
+
+    answer = output.structured_result["answer"]
+    assert "## 工程意义" in answer
+    assert "## 适用前提" in answer
+    assert "Engineering implication" not in answer
+    assert "Apply this only" not in answer
+    assert "Do not extrapolate" not in answer
+    assert "Inspect the cited chunks" not in answer
+
+
 def test_v4_renders_english_sections_in_fixed_order_and_omits_empty_sections():
     payload = SkillInput(
         task_id="t1",

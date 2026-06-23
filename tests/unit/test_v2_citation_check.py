@@ -70,6 +70,40 @@ def test_v2_accepts_claims_citing_visible_retrieved_chunks():
     assert output.citations[0].chunk_id == "c1"
 
 
+def test_v2_ignores_numeric_paper_reference_markers_in_supported_claims():
+    # WHY: bibliography markers such as [29] are source text, not Agent chunk citations.
+    row = _row(text="Order analysis is required for non-stationary vibration signals [29].")
+    s3 = _s3(
+        answer="Order analysis is required for non-stationary vibration signals [29] [c1].",
+        claims=[
+            {
+                "text": "Order analysis is required for non-stationary vibration signals [29].",
+                "chunk_id": "c1",
+                "doc_id": "doc1",
+            }
+        ],
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2([row])))
+
+    assert output.status == "ok"
+    assert output.structured_result["citation_check"]["visible_answer_refs"] == ["c1"]
+
+
+def test_v2_ignores_numeric_paper_reference_ranges():
+    # WHY: numeric bibliography ranges such as [29-31] are not Agent chunk citations.
+    row = _row(text="Order tracking methods are widely used [29-31].")
+    s3 = _s3(
+        answer="Order tracking methods are widely used [29-31] [c1].",
+        claims=[{"text": "Order tracking methods are widely used [29-31].", "chunk_id": "c1", "doc_id": "doc1"}],
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2([row])))
+
+    assert output.status == "ok"
+    assert output.structured_result["citation_check"]["visible_answer_refs"] == ["c1"]
+
+
 def test_v2_blocks_references_to_chunks_not_visible_to_s2():
     s3 = _s3(
         answer="Critical speed amplifies rotor response [missing].",

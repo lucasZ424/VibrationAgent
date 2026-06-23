@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from vibration_agent.config import load
 from vibration_agent.retrieval import dense
 from vibration_agent.retrieval.embeddings import text_hash
@@ -22,6 +24,15 @@ def test_qdrant_payload_keeps_retrieval_context_text():
     assert payload["text"] == "rotor damping evidence"
     assert payload["api_context"] == "short context"
     assert payload["embedding_model"] == "fake-model"
+
+
+def test_qdrant_stable_point_id_is_uuid_for_runtime_api_compatibility():
+    # WHY: Qdrant's HTTP API rejects arbitrary SHA1 hex strings as point ids; a
+    # stable UUID keeps reindex idempotent while satisfying the runtime contract.
+    point_id = qdrant.stable_point_id("doc1_p0001_00001")
+
+    assert str(UUID(point_id)) == point_id
+    assert qdrant.stable_point_id("doc1_p0001_00001") == point_id
 
 
 def test_qdrant_upsert_initializes_collection_with_vector_dimension(monkeypatch):

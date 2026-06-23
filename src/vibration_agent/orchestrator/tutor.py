@@ -175,7 +175,9 @@ def _copy_constraints(constraints: Mapping[str, Any] | None) -> dict[str, Any]:
 def _merge_warnings(*outputs: SkillOutput) -> list[str]:
     warnings: list[str] = []
     for output in outputs:
-        warnings.extend(output.warnings)
+        for warning in output.warnings:
+            if warning not in warnings:
+                warnings.append(warning)
     return warnings
 
 

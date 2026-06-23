@@ -1,0 +1,8 @@
+{"chunk_id":"r1_gbt33199_scope_p0005","doc_id":"r1_gbt33199","title":"GB/T 33199.1 机械振动 旋转机械扭振","source_type":"standard","pages":[5],"text":"本部分适用于陆地安装、额定功率大于50MW的电站透平发电机组和燃气轮机发电机组。","api_context":"本部分适用于陆地安装、额定功率大于50MW的电站透平发电机组和燃气轮机发电机组。","metadata":{"section_title":"1 范围"}}
+{"chunk_id":"r1_order_analysis_intro_p0002","doc_id":"r1_order_analysis_paper","title":"旋转机械阶比分析研究","source_type":"paper","pages":[2],"text":"阶比分析用于旋转机械升速和降速过程中的非平稳振动信号分析，可按转速阶次识别振动成分。","api_context":"阶比分析用于旋转机械升速和降速过程中的非平稳振动信号分析，可按转速阶次识别振动成分。","metadata":{"section_title":"引言"}}
+{"chunk_id":"r1_distractor_standard_frequency","doc_id":"r1_distractor_standard","title":"机械振动标准","source_type":"standard","pages":[10],"text":"轴系扭振固有频率应避开线路频率。","metadata":{}}
+{"chunk_id":"r1_distractor_standard_measurement","doc_id":"r1_distractor_standard","title":"机械振动标准","source_type":"standard","pages":[11],"text":"扭振测量报告应记录仪器和工况。","metadata":{}}
+{"chunk_id":"r1_distractor_manual_orbit","doc_id":"r1_distractor_manual","title":"状态监测手册","source_type":"manual","pages":[1],"text":"轴心轨迹用于观察转子横向振动。","metadata":{}}
+{"chunk_id":"r1_distractor_paper_bearing","doc_id":"r1_distractor_bearing","title":"轴承故障分析","source_type":"paper","pages":[1],"text":"包络谱可用于滚动轴承故障诊断。","metadata":{}}
+{"chunk_id":"r1_distractor_book_damping","doc_id":"r1_distractor_book","title":"转子动力学","source_type":"book","pages":[1],"text":"阻尼影响临界转速附近的共振响应。","metadata":{}}
+{"chunk_id":"r1_distractor_note_balance","doc_id":"r1_distractor_note","title":"现场记录","source_type":"note","pages":[1],"text":"不平衡通常产生一倍频同步振动。","metadata":{}}

@@ -230,6 +230,7 @@ def _ingestion_result(result: dict[str, Any]) -> ApiIngestionResult:
         input_path=result.get("input_path"),
         document_count=result.get("document_count"),
         documents=result.get("documents") or [],
+        storage=result.get("storage") or {},
         warnings=result.get("warnings") or [],
     )
 

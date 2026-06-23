@@ -2,7 +2,7 @@ from pathlib import Path
 
 import fitz
 
-from vibration_agent.ingestion.layout import classify_text_block, enrich_page_layout
+from vibration_agent.ingestion.layout import classify_text_block, enrich_page_layout, promote_font_titles
 from vibration_agent.ingestion.pymupdf_parser import parse_native_pdf
 from vibration_agent.schemas import OcrPage, PageBlock
 
@@ -75,6 +75,48 @@ def test_layout_avoids_common_formula_and_title_false_positives():
 
     assert [block.block_type for block in page.blocks] == ["body", "body", "body", "body", "figure"]
     assert page.normalized_text == "123\nrotor-bearing-system\npp. 12-15, 18-20\n10. Smith, J. et al., 1998."
+
+
+def test_font_title_promotion_uses_page_baseline_and_preserves_large_prose():
+    # WHY: brochure headings lack numbering, but larger complete prose must remain body evidence.
+    blocks = [
+        PageBlock(
+            block_id="cover-title",
+            text="ORBIT 60系列系统概述",
+            block_type="body",
+            metadata={"max_font_size": 24.0},
+        ),
+        PageBlock(
+            block_id="tagline",
+            text="涵盖全厂• 一体化系统",
+            block_type="body",
+            metadata={"max_font_size": 13.0},
+        ),
+        PageBlock(
+            block_id="body",
+            text="Orbit 60为关键设备提供连续在线监测和保护。",
+            block_type="body",
+            metadata={"max_font_size": 10.0},
+        ),
+        PageBlock(
+            block_id="large-prose",
+            text="该系统提供独立保护功能。",
+            block_type="body",
+            metadata={"max_font_size": 14.0},
+        ),
+        PageBlock(
+            block_id="reference",
+            text="[7] Zhang et al. Order analysis methods.",
+            block_type="body",
+            metadata={"max_font_size": 10.0},
+        ),
+    ]
+
+    promoted = promote_font_titles(blocks)
+
+    assert [block.block_type for block in promoted] == ["title", "body", "body", "body", "body"]
+    assert promoted[1].metadata["layout_role"] == "label"
+    assert promoted[4].metadata["layout_role"] == "bibliography"
 
 
 def test_chapter_running_header_is_not_classified_as_title_when_too_close_to_top():

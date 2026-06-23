@@ -10,8 +10,8 @@ def test_phase4_retrieval_eval_reports_top_k_recall_and_expected_misses():
 
     assert report["schema_version"] == "phase4.retrieval_eval.report.v1"
     assert report["target_schema_version"] == "phase4.retrieval_targets.v1"
-    assert report["case_count"] == 4
-    assert report["evidence_case_count"] == 3
+    assert report["case_count"] == 6
+    assert report["evidence_case_count"] == 5
     assert report["expected_miss_case_count"] == 1
     assert report["required_top_k"] == [5, 10]
     assert report["scorecard"]["top_k_recall@5"] == 1.0

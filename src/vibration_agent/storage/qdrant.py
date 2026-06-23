@@ -1,7 +1,7 @@
 """Qdrant payload mapping, dry-run planning, and runtime read/write helpers."""
 from __future__ import annotations
 
-import hashlib
+import uuid
 from dataclasses import dataclass
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -46,7 +46,7 @@ class QdrantWritePlan:
 
 
 def stable_point_id(chunk_id: str) -> str:
-    return hashlib.sha1(chunk_id.encode("utf-8")).hexdigest()
+    return str(uuid.uuid5(uuid.NAMESPACE_URL, f"vibration-agent:chunk:{chunk_id}"))
 
 
 def chunk_payload(

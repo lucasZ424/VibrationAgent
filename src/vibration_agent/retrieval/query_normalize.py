@@ -21,6 +21,10 @@ _DOMAIN_ALIASES: dict[str, tuple[str, ...]] = {
     "synchronous_response": ("synchronous response", "1x", "一倍频", "同步响应"),
     "misalignment": ("misalignment", "不对中", "轴系不对中"),
     "bearing_fault": ("bearing fault", "轴承故障", "bearing defect"),
+    "steam_turbine": ("steam turbine", "汽轮机", "汽轮", "透平"),
+    "torsional_vibration": ("torsional vibration", "扭转振动", "扭振"),
+    "order_analysis": ("order analysis", "order tracking", "阶比分析", "阶次分析"),
+    "shaft_train": ("shaft train", "shafting", "轴系"),
 }
 
 _SYMBOL_ALIASES: dict[str, tuple[str, ...]] = {
@@ -29,6 +33,9 @@ _SYMBOL_ALIASES: dict[str, tuple[str, ...]] = {
     "omega_d": ("omega_d", "ωd", "damped natural frequency", "阻尼固有频率"),
     "Q": ("Q", "quality factor", "品质因数"),
 }
+
+_STANDARD_MARKERS = ("standard", "iso", "api ", "gb/t", "规范", "标准")
+_SCOPE_MARKERS = ("scope", "适用范围", "范围", "适用于")
 
 
 def _clean_query(query: str) -> str:
@@ -40,13 +47,33 @@ def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
     return any(term.lower() in lowered for term in terms)
 
 
+def is_standard_scope_query(query: str) -> bool:
+    lowered = query.lower()
+    return any(marker in lowered for marker in _STANDARD_MARKERS) and any(
+        marker in lowered for marker in _SCOPE_MARKERS
+    )
+
+
+def focus_aliases(query: str) -> tuple[str, ...]:
+    """Return the alias family with the longest member present in the query."""
+    lowered = _clean_query(query).lower()
+    matches: list[tuple[int, tuple[str, ...]]] = []
+    for aliases in _DOMAIN_ALIASES.values():
+        matched_lengths = [len(alias) for alias in aliases if alias.lower() in lowered]
+        if matched_lengths:
+            matches.append((max(matched_lengths), aliases))
+    return max(matches, key=lambda item: item[0])[1] if matches else ()
+
+
 def infer_intent(query: str) -> Intent:
     lowered = query.lower()
+    if is_standard_scope_query(query):
+        return "standard_lookup"
     if any(marker in lowered for marker in ("define", "definition", "what is", "是什么", "定义")):
         return "definition"
     if any(marker in lowered for marker in ("compare", "difference", " vs ", "versus", "区别", "对比", "比较")):
         return "comparison"
-    if any(marker in lowered for marker in ("standard", "iso", "api ", "gb/t", "规范", "标准")):
+    if any(marker in lowered for marker in _STANDARD_MARKERS):
         return "standard_lookup"
     if any(marker in lowered for marker in ("summary", "summarize", "总结", "概述", "摘要")):
         return "summary"

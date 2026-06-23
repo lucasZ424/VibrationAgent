@@ -95,6 +95,55 @@ def test_chunk_pages_keeps_page_enumeration_when_section_spans_pages(tmp_path):
     assert MemoryChunk.model_validate(chunks[0]).pages == [4, 5]
 
 
+def test_chunk_pages_preserves_typed_text_segments_for_layout_aware_synthesis(tmp_path):
+    # WHY: S3 must distinguish headings from body evidence without re-parsing flattened text.
+    page = OcrPage(
+        doc_id="doc1",
+        page_no=1,
+        primary_engine="pymupdf",
+        blocks=[
+            PageBlock(block_id="title", text="Orbit 60 System Overview", block_type="title"),
+            PageBlock(
+                block_id="label",
+                text="Selection Guide",
+                block_type="body",
+                metadata={"layout_role": "label"},
+            ),
+            PageBlock(block_id="body", text="Orbit 60 continuously monitors machinery.", block_type="body"),
+        ],
+    )
+
+    chunk = chunk_pages(
+        [page],
+        doc_id="doc1",
+        title="Orbit Manual",
+        source_path=tmp_path / "manual.pdf",
+        source_type="manual",
+        target_tokens=600,
+        overlap_tokens=60,
+    )[0]
+
+    title = "Orbit 60 System Overview"
+    label = "Selection Guide"
+    body = "Orbit 60 continuously monitors machinery."
+    assert chunk["metadata"]["text_segments"] == [
+        {"page_no": 1, "start": 0, "end": len(title), "block_type": "title"},
+        {
+            "page_no": 1,
+            "start": len(title) + 2,
+            "end": len(title) + 2 + len(label),
+            "block_type": "body",
+            "layout_role": "label",
+        },
+        {
+            "page_no": 1,
+            "start": len(title) + 2 + len(label) + 2,
+            "end": len(title) + 2 + len(label) + 2 + len(body),
+            "block_type": "body",
+        },
+    ]
+
+
 def test_chunk_sections_uses_structured_section_boundaries(tmp_path):
     sections = [
         {

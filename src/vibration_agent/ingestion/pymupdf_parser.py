@@ -5,7 +5,13 @@ import re
 from pathlib import Path
 from typing import Any
 
-from vibration_agent.ingestion.layout import classify_text_block, logical_asset_path, make_asset_id, normalize_bbox
+from vibration_agent.ingestion.layout import (
+    classify_text_block,
+    logical_asset_path,
+    make_asset_id,
+    normalize_bbox,
+    promote_font_titles,
+)
 from vibration_agent.schemas import DocumentAsset, OcrPage, PageBlock
 
 
@@ -176,6 +182,7 @@ def parse_native_pdf(
                     )
                 )
 
+            blocks = promote_font_titles(blocks)
             raw_text = "\n".join(raw_parts)
             normalized_text = normalize_text("\n".join(body_parts))
             pages.append(

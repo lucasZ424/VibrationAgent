@@ -17,7 +17,9 @@ from vibration_agent.agent import ModelRegistry, route_task
 from vibration_agent.config import Settings, load
 from vibration_agent.knowledge.evidence import citation_from_evidence, retrieval_evidence_row
 from vibration_agent.retrieval.bm25 import tokenize
+from vibration_agent.retrieval.query_normalize import focus_aliases, is_standard_scope_query
 from vibration_agent.schemas import Citation, S3LlmClaim, S3LlmResponse, SkillInput, SkillOutput
+from vibration_agent.text import dominant_language
 
 from .base import Skill
 
@@ -74,11 +76,12 @@ def _s2_context(payload: SkillInput) -> tuple[list[Any], bool]:
     if isinstance(s2_result, Mapping):
         structured = s2_result.get("structured_result") if isinstance(s2_result.get("structured_result"), Mapping) else s2_result
         value = structured.get("retrieval_context") if isinstance(structured, Mapping) else None
+        has_retrieval_context = isinstance(value, list) and bool(value)
         if isinstance(value, list):
             candidates.extend(value)
         retrieval_output = structured.get("retrieval_output") if isinstance(structured, Mapping) else None
         hits = retrieval_output.get("hits") if isinstance(retrieval_output, Mapping) else None
-        if isinstance(hits, list):
+        if isinstance(hits, list) and not has_retrieval_context:
             candidates.extend(hits)
             saw_hits_without_text = True
     return candidates, saw_hits_without_text
@@ -153,6 +156,15 @@ def _filter_evidence(rows: list[dict[str, Any]], payload: SkillInput, mode: str)
             for row in filtered
             if expected in _normalize_topic(row.get("topic")) or _normalize_topic(row.get("topic")) in expected
         ]
+    filtered = [
+        row
+        for row in filtered
+        if not re.search(
+            r"^(?:参考文献|references|bibliography)$",
+            str(row.get("metadata", {}).get("section_title") or row.get("topic") or "").strip(),
+            re.IGNORECASE,
+        )
+    ]
     return filtered
 
 
@@ -163,37 +175,162 @@ def _body_text(text: str) -> str:
     return stripped
 
 
+_FINAL_PUNCTUATION_RE = re.compile(r"[。！？!?；;…\.][\"'”’）】》]*$")
+_SECTION_NUMBER_RE = re.compile(r"^\d+(?:\.\d+)+$")
+_STRUCTURAL_LINE_RE = re.compile(
+    r"^(?:\d+(?:\.\d+)*\s+\S|第.+[章节条部分](?:\s|$)|[（(]\d+[)）]|[-•·]\s+|"
+    r"[A-Z][A-Z0-9 _./:-]{2,}$|.{0,30}(?:概述|样本)$|.*\d{2,}[A-Z]\d+.*修订版|"
+    r"[^。！？!?；;]{1,40}[•·][^。！？!?；;]{1,40}$|\[\d+\]\s*\S+)"
+)
+_PAGE_NUMBER_RE = re.compile(r"^\d{1,4}$")
+_CROSS_CHUNK_ORPHAN_RE = re.compile(r"^司[A-Z]")
+_CJK_ASSERTION_MARKERS = ("是", "为", "表示", "用于", "产生", "影响", "规定", "提供", "支持", "增大", "减小")
+_SCOPE_CLAIM_MARKERS = (
+    "适用",
+    "本文件规定",
+    "本标准规定",
+    "本部分规定",
+    "applies to",
+    "applicable to",
+    "scope of",
+    "this document specifies",
+    "this standard specifies",
+)
+
+
+def _explicit_structural_line(line: str) -> bool:
+    stripped = line.strip()
+    short_cjk_label = bool(
+        len(stripped) <= 16
+        and not _FINAL_PUNCTUATION_RE.search(stripped)
+        and sum("\u4e00" <= char <= "\u9fff" for char in stripped) >= max(2, len(stripped) // 2)
+        and not any(marker in stripped for marker in _CJK_ASSERTION_MARKERS)
+    )
+    return bool(
+        _SECTION_NUMBER_RE.fullmatch(stripped)
+        or _STRUCTURAL_LINE_RE.match(stripped)
+        or _PAGE_NUMBER_RE.fullmatch(stripped)
+        or short_cjk_label
+    )
+
+
+def _join_soft_wrap(left: str, right: str) -> str:
+    if left.endswith("-") and right[:1].isascii() and right[:1].isalpha():
+        return left[:-1] + right
+    left_char = left[-1:] or ""
+    right_char = right[:1] or ""
+    if left_char.isascii() and left_char.isalnum() and right_char.isascii() and right_char.isalnum():
+        return left + " " + right
+    return left + right
+
+
+def _line_units(text: str) -> list[tuple[str, bool]]:
+    lines = [re.sub(r"[ \t]+", " ", line).strip() for line in text.splitlines() if line.strip()]
+    if not lines:
+        return []
+
+    structural = [_explicit_structural_line(line) for line in lines]
+    for index in range(1, len(lines)):
+        if _SECTION_NUMBER_RE.fullmatch(lines[index - 1]):
+            structural[index] = True
+        if lines[index] == lines[index - 1]:
+            structural[index - 1] = True
+            structural[index] = True
+
+    units: list[tuple[str, bool]] = [(lines[0], structural[0])]
+    for index in range(1, len(lines)):
+        previous_line = lines[index - 1]
+        line = lines[index]
+        hard_boundary = bool(
+            _FINAL_PUNCTUATION_RE.search(previous_line)
+            or structural[index - 1]
+            or structural[index]
+        )
+        if hard_boundary:
+            units.append((line, structural[index]))
+        else:
+            current, is_structural = units[-1]
+            units[-1] = (_join_soft_wrap(current, line), is_structural)
+    return units
+
+
+def _soft_layout_continuation(left: str, right: str) -> bool:
+    return bool(
+        not _FINAL_PUNCTUATION_RE.search(left)
+        and (
+            len(left) >= 18
+            or re.match(r"^[\u4e00-\u9fff]{1,2}[，、；：。]", right)
+        )
+    )
+
+
+def _reflow_units(text: str) -> list[tuple[str, bool]]:
+    units: list[tuple[str, bool]] = []
+    for paragraph in re.split(r"\n\s*\n", text):
+        paragraph_units = _line_units(paragraph)
+        if not paragraph_units:
+            continue
+        if (
+            units
+            and not units[-1][1]
+            and not paragraph_units[0][1]
+            and _soft_layout_continuation(units[-1][0], paragraph_units[0][0])
+        ):
+            left, _ = units[-1]
+            right, _ = paragraph_units.pop(0)
+            units[-1] = (_join_soft_wrap(left, right), False)
+        units.extend(paragraph_units)
+    return units
+
+
+def _reflow(text: str) -> str:
+    return "\n".join(value for value, _is_structural in _reflow_units(text))
+
+
 def _sentences(text: str) -> list[str]:
-    body = _body_text(text)
-    parts = re.split(r"(?<=[。！？!?；;\.])\s*|\n+", body)
+    parts: list[str] = []
+    for block, is_structural in _reflow_units(_body_text(text)):
+        if is_structural:
+            continue
+        parts.extend(re.split(r"(?<=[。！？!?；;…])\s*|(?<=\.)\s+", block))
     cleaned = [re.sub(r"\s+", " ", part).strip() for part in parts]
-    return [part for part in cleaned if len(part) >= 2]
+    return [part for part in cleaned if len(part) >= 2 and not _CROSS_CHUNK_ORPHAN_RE.match(part)]
 
 
-def _language_hint(row: Mapping[str, Any]) -> str | None:
-    for key in ("language", "doc_language", "source_language"):
-        value = row.get(key)
-        if value in {"zh", "en"}:
-            return str(value)
-    metadata = row.get("metadata")
-    if isinstance(metadata, Mapping):
-        for key in ("language", "doc_language", "source_language"):
-            value = metadata.get(key)
-            if value in {"zh", "en"}:
-                return str(value)
-    return None
+def _row_sentences(row: Mapping[str, Any]) -> list[str]:
+    metadata = row.get("metadata") if isinstance(row.get("metadata"), Mapping) else {}
+    segments = metadata.get("text_segments") if isinstance(metadata, Mapping) else None
+    if not isinstance(segments, list):
+        return _sentences(str(row.get("text") or ""))
+
+    source_text = _body_text(str(row.get("text") or ""))
+    body_segments: list[str] = []
+    for segment in segments:
+        if (
+            not isinstance(segment, Mapping)
+            or segment.get("block_type") == "title"
+            or segment.get("layout_role") in {"label", "bibliography"}
+        ):
+            continue
+        text = str(segment.get("text") or "")
+        if not text and isinstance(segment.get("start"), int) and isinstance(segment.get("end"), int):
+            start = int(segment["start"])
+            end = int(segment["end"])
+            if 0 <= start <= end <= len(source_text):
+                text = source_text[start:end]
+        text = text.strip()
+        if text:
+            body_segments.append(text)
+    return _sentences("\n\n".join(body_segments))
 
 
-def _dominant_language(rows: list[Mapping[str, Any]]) -> str:
-    hints = [_language_hint(row) for row in rows]
-    if hints.count("zh") > hints.count("en"):
-        return "zh"
-    if hints.count("en") > hints.count("zh"):
-        return "en"
-    text = "\n".join(_body_text(str(row.get("text") or "")) for row in rows)
-    cjk = sum(1 for char in text if "\u4e00" <= char <= "\u9fff")
-    latin = sum(1 for char in text if char.isascii() and char.isalpha())
-    return "zh" if cjk >= latin else "en"
+def _is_scope_claim(text: str) -> bool:
+    lowered = text.lower()
+    return (
+        any(marker in lowered for marker in _SCOPE_CLAIM_MARKERS)
+        and "引用文件" not in text
+        and "适用于本文件" not in text
+    )
 
 
 def _citation_label(row: Mapping[str, Any]) -> str:
@@ -460,7 +597,7 @@ def _ranked_claims(rows: list[dict[str, Any]], query: str, *, limit: int) -> lis
     query_tokens = set(tokenize(query))
     candidates: list[dict[str, Any]] = []
     for row_index, row in enumerate(rows):
-        for sentence_index, sentence in enumerate(_sentences(str(row.get("text") or ""))):
+        for sentence_index, sentence in enumerate(_row_sentences(row)):
             sentence_tokens = set(tokenize(sentence))
             overlap = len(query_tokens & sentence_tokens) if query_tokens else 0
             score = overlap * 10 + max(0.0, float(row.get("confidence") or 0.0))
@@ -475,6 +612,19 @@ def _ranked_claims(rows: list[dict[str, Any]], query: str, *, limit: int) -> lis
                     "order": (row_index, sentence_index),
                 }
             )
+    focus = focus_aliases(query)
+    if focus:
+        focused_candidates = [
+            candidate
+            for candidate in candidates
+            if any(alias.casefold() in candidate["text"].casefold() for alias in focus)
+        ]
+        if focused_candidates:
+            candidates = focused_candidates
+    if is_standard_scope_query(query):
+        scope_candidates = [candidate for candidate in candidates if _is_scope_claim(candidate["text"])]
+        if scope_candidates:
+            candidates = scope_candidates
     candidates.sort(key=lambda item: (-float(item["score"]), item["order"]))
     selected: list[dict[str, Any]] = []
     seen: set[str] = set()
@@ -611,7 +761,7 @@ class QASummarySkill(Skill):
                 handoff_recommendation="Run S2 retrieval first and pass retrieval_context to S3.",
             )
 
-        language = _dominant_language(rows)
+        language = dominant_language(rows)
         active_settings = self._settings or load()
         llm_warnings: list[str] = []
         if _llm_enabled(payload, active_settings):

@@ -193,8 +193,8 @@ def test_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
     assert result["status"] == "ok"
     assert produced["pages"] == fixture["pages"]
     assert produced["text"] == fixture["text"]
-    assert produced["metadata"]["section_key"] == fixture["metadata"]["section_key"]
-    assert produced["metadata"]["section_title"] == fixture["metadata"]["section_title"]
+    assert produced["metadata"]["section_key"] == "s0001"
+    assert produced["metadata"]["section_title"] == "Chapter 1 Rotor Vibration"
 
 
 def test_zh_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
@@ -211,7 +211,8 @@ def test_zh_pdf_pipeline_output_stays_aligned_with_chunk_fixture(tmp_path):
     assert produced["page_end"] == 2
     assert produced["pages"] == fixture["pages"]
     assert produced["text"] == fixture["text"]
-    assert produced["metadata"]["section_key"] == fixture["metadata"]["section_key"]
+    assert produced["metadata"]["section_key"] == "s0001"
+    assert produced["metadata"]["section_title"] == "1 转子阻尼与临界转速"
     assert produced["metadata"]["page_boundary_crossed"] is True
 
 

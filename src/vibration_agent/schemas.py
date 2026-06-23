@@ -428,6 +428,7 @@ class ApiIngestionResult(BaseModel):
     input_path: str | None = None
     document_count: int | None = Field(default=None, ge=0)
     documents: list[dict[str, Any]] = Field(default_factory=list)
+    storage: dict[str, Any] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
 
 

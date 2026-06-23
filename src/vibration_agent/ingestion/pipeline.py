@@ -8,6 +8,7 @@ from typing import Any, Iterable
 
 from vibration_agent.config import Settings, load
 from vibration_agent.schemas import DocumentBibliography, DocumentClassification, OcrPage
+from vibration_agent.storage.ingestion import persist_ingestion_result
 
 from .bibliography import extract_bibliography
 from .chunking import SCHEMA_VERSION, chunk_pages, write_api_context_json, write_jsonl
@@ -386,7 +387,7 @@ def chunk_documents(
         )
         for document in classifications
     ]
-    return {
+    result = {
         "status": "ok" if results else "insufficient",
         "stage": "document_structured_export_batch",
         "input_path": str(Path(path).resolve()),
@@ -394,6 +395,9 @@ def chunk_documents(
         "documents": results,
         "warnings": [] if results else ["No supported input files found."],
     }
+    result["storage"] = persist_ingestion_result(result, settings=cfg)
+    result["warnings"].extend(result["storage"].get("warnings", []))
+    return result
 
 
 __all__ = [

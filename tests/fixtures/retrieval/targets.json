@@ -46,6 +46,34 @@
       ]
     },
     {
+      "case_id": "r1_standard_scope_turbine_alias",
+      "query": "GB/T 33199.1 汽轮发电机组轴系扭振的适用范围是什么？",
+      "intent": "standard_lookup",
+      "required_top_k": [5, 10],
+      "expected_evidence": [
+        {
+          "chunk_id": "r1_gbt33199_scope_p0005",
+          "doc_id": "r1_gbt33199",
+          "pages": [5],
+          "rationale": "Locks the 汽轮-to-透平 alias and standard-scope retrieval behavior."
+        }
+      ]
+    },
+    {
+      "case_id": "r1_order_analysis_intro",
+      "query": "阶比分析在旋转机械扭振测量中的作用是什么？",
+      "intent": "definition",
+      "required_top_k": [5, 10],
+      "expected_evidence": [
+        {
+          "chunk_id": "r1_order_analysis_intro_p0002",
+          "doc_id": "r1_order_analysis_paper",
+          "pages": [2],
+          "rationale": "Locks retrieval of the paper introduction for the real order-analysis miss."
+        }
+      ]
+    },
+    {
       "case_id": "rt_bearing_fault_out_of_fixture_scope",
       "query": "Which bearing fault frequency proves an outer race defect?",
       "intent": "engineering",

@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import apps.cli.main as cli_main
 
@@ -74,6 +75,32 @@ def test_cli_config_honors_compact_json_and_workspace(capsys):
     assert "paths" in payload
 
 
+def test_cli_reconfigures_default_stdout_to_utf8_for_redirected_json(monkeypatch, capsys):
+    # WHY: on Windows PowerShell/cmd, redirected stdout may default to GBK and
+    # crash when CLI JSON contains symbols outside that code page.
+    calls = []
+    original_stdout = cli_main.sys.stdout
+
+    def fake_reconfigure(**kwargs):
+        calls.append(kwargs)
+
+    monkeypatch.setattr(
+        cli_main.sys,
+        "stdout",
+        SimpleNamespace(
+            reconfigure=fake_reconfigure,
+            write=original_stdout.write,
+            flush=original_stdout.flush,
+        ),
+    )
+
+    code = main(["scope"])
+
+    assert code == 0
+    assert calls[0]["encoding"] == "utf-8"
+    assert json.loads(capsys.readouterr().out)["workspace"]
+
+
 def test_cli_ask_runs_tutor_chain_with_chunks_jsonl(tmp_path, capsys):
     chunks_path = _write_jsonl(
         tmp_path / "chunks.jsonl",
@@ -96,6 +123,36 @@ def test_cli_ask_runs_tutor_chain_with_chunks_jsonl(tmp_path, capsys):
     ]
     assert "## 结论" in payload["structured_result"]["answer"]
     assert payload["citations"][0]["chunk_id"] == "c1"
+
+
+def test_cli_ask_output_writes_strict_utf8_without_stdout_pipeline(tmp_path, capsys):
+    # WHY: Windows PowerShell 5.1 corrupts UTF-8 native stdout before Out-File re-encodes it.
+    chunks_path = _write_jsonl(
+        tmp_path / "chunks.jsonl",
+        [_chunk("c1", "状态监测支持∆相位分析和•事件标记。")],
+    )
+    output_path = tmp_path / "logs" / "answer.json"
+
+    code = main([
+        "ask",
+        "状态监测支持哪些功能？",
+        "--chunks-jsonl",
+        str(chunks_path),
+        "--top-k",
+        "1",
+        "--output",
+        str(output_path),
+    ])
+
+    raw = output_path.read_bytes()
+    text = raw.decode("utf-8", errors="strict")
+    payload = json.loads(text)
+    assert code == 0
+    assert capsys.readouterr().out == ""
+    assert "状态监测" in text
+    assert "∆" in text
+    assert "•" in text
+    assert payload["status"] == "ok"
 
 
 def test_cli_ask_accepts_multiple_chunks_jsonl_paths(tmp_path, capsys):

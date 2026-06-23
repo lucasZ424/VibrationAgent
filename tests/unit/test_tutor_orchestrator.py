@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from vibration_agent.orchestrator import TutorOrchestrator, handle_query, is_in_scope
-from vibration_agent.orchestrator.tutor import _token_cost
+from vibration_agent.orchestrator.tutor import _merge_warnings, _token_cost
 from vibration_agent.config import RoutingSettings, load
 from vibration_agent.schemas import SkillInput, SkillOutput
 from vibration_agent.skills import (
@@ -39,6 +39,13 @@ def _chunk(chunk_id: str, text: str, *, pages: list[int] | None = None) -> dict:
         "assets": [],
         "metadata": {},
     }
+
+
+def test_merge_warnings_deduplicates_repeated_upstream_warning():
+    warning = "S3 dropped 5 retrieval row(s) without usable chunk text."
+    outputs = [SkillOutput(status="ok", warnings=[warning]) for _ in range(3)]
+
+    assert _merge_warnings(*outputs) == [warning]
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> Path:

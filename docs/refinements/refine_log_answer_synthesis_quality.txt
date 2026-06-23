@@ -1,0 +1,432 @@
+# Refinement Log — Answer & Synthesis Quality (real-corpus iteration R1)
+
+Date: 2026-06-22
+Author: senior-engineer supervisor
+Trigger: first real-corpus answer-quality evaluation (3 ingested files — manual /
+  paper / standard — one question each, run via `apps.cli.main ask`).
+Status: DESIGN (no code changed by this document).
+
+--------------------------------------------------------------------------------
+## 0. Context, scope, and freeze governance
+--------------------------------------------------------------------------------
+
+Phase 4 is **frozen** (`docs/phase_4_interface_freeze.md`). Every code change below
+is a **post-freeze local-iteration refinement** and MUST follow the freeze Change
+Rule:
+
+1. Record a migration entry in `docs/phase_4_migrations.md` BEFORE callers change.
+2. Update tests/fixtures that encode the affected shape BEFORE downstream callers
+   depend on the new behavior.
+3. Preserve local-first deterministic defaults; these refinements *improve* the
+   deterministic output, they do not change the chain order, schema authority, or
+   the LLM-default-off posture.
+4. Re-verify the three frozen gates (full suite / `llm_eval` / `retrieval_eval`)
+   and regenerate+review any golden/replay fixtures that legitimately change.
+
+NONE of these refinements change: chain order (S2→S3→opt S4/S5→V2→V4→opt V3),
+the 7-route API surface, `SkillOutput`/`ApiQueryResponse` schemas, final-answer
+authority (V2/V4-bound), or the LLM-default-off rule. The only schema-adjacent
+change is one ADDITIVE field (`structured_result.language` from S3, Issue 2),
+which is recorded as an additive migration.
+
+What is NOT corruption (verified): the answer logs are clean Chinese. The apparent
+"mojibake" was a UTF-16 display artifact. Stored chunks are clean UTF-8; answer
+logs are clean UTF-16 (see Issue 7).
+
+### Priority waves
+- **Wave A (deterministic answer text, contained blast radius):** Issue 1, Issue 2.
+- **Wave B (retrieval recall/precision):** Issue 4, Issue 5, Issue 6.
+- **Wave C (docs / opt-in, no contract change):** Issue 3, Issue 7.
+
+Do Wave A first (S3/S4 + their unit tests + golden answers only). Wave B touches
+the `retrieval_eval` gate. Wave C is documentation plus one optional CLI flag.
+
+### Files in play (verified references)
+- `src/vibration_agent/skills/s3_qa_summary.py` — `_sentences` (L166-170),
+  `_ranked_claims` (L459-489), `_claims_to_answer` (already zh/en, L492-500),
+  `_dominant_language` (L187-196).
+- `src/vibration_agent/skills/s4_engineering_analysis.py` — deterministic English
+  framing (L416-419); S4 is currently language-blind (no `language` symbol).
+- `src/vibration_agent/retrieval/query_normalize.py` — `_DOMAIN_ALIASES` (L15-24),
+  `infer_intent` (L43-55).
+- `src/vibration_agent/retrieval/hybrid.py` — consumes `intent_hint` (L242/250/279).
+- `src/vibration_agent/ingestion/ocr/paddle_engine.py` — `result_to_page` joins OCR
+  lines with `\n` (L139); `normalize_ocr_text` (L52-57).
+- Tests: `tests/unit/test_s3_qa_summary_skill.py`, `tests/unit/test_v4_style_skill.py`,
+  `tests/unit/test_s4_engineering_analysis.py` (S4 fallback), `tests/unit/test_query_normalize*`.
+- Eval/gate fixtures: `tests/fixtures/llm/` (replay golden), `tests/fixtures/retrieval/targets.json`,
+  `tests/fixtures/eval/v2_calibration/cases.json`; runners `scripts/llm_eval.py`,
+  `scripts/retrieval_eval.py`, `scripts/manual_e2e.py`.
+
+================================================================================
+## ISSUE 1 — Claims are OCR line-fragments, not sentences  [Wave A, HIGH]
+================================================================================
+
+### Issue info
+Deterministic answers list "claims" that are cut mid-sentence:
+- manual: `把Orbit 60状态监测模块（CMM）…为用户提供了一种通过` (ends mid-clause)
+- manual: `力、以及数据可视化能力…System 1是…系统平` (starts and ends mid-word)
+- paper:  `研究和开发阶比分析软件是十分必` / `0 开发工具，开发了一套…系统`
+Visible in all three answers; the single most degrading defect to readability.
+
+### Design loophole addressed
+`_sentences()` (s3_qa_summary.py:166-170) splits on
+`(?<=[。！？!?；;\.])\s*|\n+` — i.e. it treats **any newline run as a hard
+sentence boundary**, equal in weight to 。！？. But scanned-PDF OCR emits one text
+line per detected row, and `result_to_page` joins them with `\n`
+(paddle_engine.py:139); `normalize_ocr_text` keeps single/double `\n`. Justified
+textbook/datasheet lines wrap mid-sentence (observed: `当前主\n\n要采用`). So one
+logical sentence spanning N visual lines becomes N "claims," each a fragment.
+`_ranked_claims` then ranks those fragments and surfaces partial lines as top
+claims.
+
+### New design
+**Primary (synthesis-side, surgical — no re-ingestion): reflow soft line wraps
+before sentence splitting.** Replace the newline-as-delimiter behavior with a
+two-stage process:
+
+1. `_reflow(body)` — rejoin wrapped lines:
+   - Split body into raw lines.
+   - For each line boundary, JOIN to the next line UNLESS one of:
+     (a) the current line already ends with sentence-final punctuation
+         `[。！？!?；;…]` or a closing quote after it; OR
+     (b) the next line is **structural** — matches a clause/heading/enumerator
+         prefix: `^\s*\d+(\.\d+)*\s`, `^\s*第.+[章节条部分]`, `^\s*[（(]\d+[)）]`,
+         `^\s*[-•·]\s`, or an all-caps/section token line.
+   - Join rule by script at the seam: CJK↔CJK or CJK↔Latin → join with NO space;
+     Latin↔Latin → join with a single space; if the left side ends with `-`
+     (hyphenated break) → drop the hyphen and join with no space (de-hyphenate).
+2. `_sentences(text)` then splits the REFLOWED text on sentence-final punctuation
+   ONLY (drop `\n+` from the split), keeping the existing `len >= 2` filter and
+   whitespace cleanup.
+
+Net effect: claims become whole sentences; clause numbers ("3.15", "4.1 概述") and
+list items remain their own units; wrapped prose is glued.
+
+**Secondary (optional, ingestion-side, larger blast radius): apply the same
+`_reflow` inside `normalize_ocr_text`** so STORED chunk text is clean (improves
+evidence snippets and any future sentence-level processing). Deferred because it
+changes stored chunk text → requires re-ingestion + chunk-fixture/replay-hash
+updates. Recommend only after Primary lands and proves the reflow heuristic on the
+real corpus.
+
+### Stepwise implementation
+1. Migration: add `docs/phase_4_migrations.md` entry "R1-Issue1: S3 sentence reflow
+   (deterministic claim text changes; no schema/chain change)".
+2. Add `_reflow(text: str) -> str` near `_sentences` in `s3_qa_summary.py`; implement
+   the join rules above. Keep it pure/deterministic, no new deps.
+3. Change `_sentences` to call `_reflow` first and split only on sentence-final
+   punctuation. Preserve the `_body_text` strip and the `len >= 2` filter.
+4. Add focused unit tests in `test_s3_qa_summary_skill.py`:
+   - 3-line wrapped CJK sentence → exactly ONE claim equal to the full sentence.
+   - "3.15\n禁止频率范围\n…" → "3.15" / heading stays a separate unit (not glued
+     into the prior sentence).
+   - English hyphenated wrap ("vibra-\ntion") → "vibration".
+   - A real fragment from each genre (use the actual chunk text) → no claim ends
+     mid-token.
+5. Regenerate replay golden answers under `tests/fixtures/llm/` that encode S3 QA
+   output; review the diffs (claims should become whole sentences) and commit.
+6. Re-run `scripts/llm_eval.py`; confirm citation-faithfulness and
+   unsupported-numeric-block rates stay 1.0 (reflow must not introduce claims that
+   lack a citation or merge two chunks’ text — `_reflow` operates within a single
+   chunk row, so cross-chunk merging is impossible by construction; assert this in
+   a test).
+
+### Definition of done
+- The three real questions re-run: every conclusion bullet is a grammatically
+  complete sentence; none of `为用户提供了一种通过` / `十分必` / `0 开发工具` /
+  `…系统平` fragments remain.
+- New unit tests pass and would FAIL against the old `\n+`-splitting behavior
+  (intent-encoding, per house rule 9).
+- `_reflow` provably cannot join text across two chunk rows (unit test).
+- Full suite green; `llm_eval` 7/7 with faithfulness=1.0, unsupported-block=1.0;
+  golden fixtures regenerated and reviewed.
+- Migration entry recorded.
+
+================================================================================
+## ISSUE 2 — Chinese answer with hardcoded English boilerplate  [Wave A, HIGH]
+================================================================================
+
+### Issue info
+For zh answers, four V4 sections render English while titles are Chinese:
+`## 工程意义` → "Engineering implication is limited to the cited evidence: …",
+`## 适用前提` → "Apply this only to the retrieved evidence chunks: …",
+`## 失效条件/常见误区` → "Do not extrapolate beyond …",
+`## 下一步建议` → "Inspect the cited chunks before …". Half-translated output for a
+zh user.
+
+### Design loophole addressed
+The deterministic S4 fallback hardcodes these four strings in English
+(s4_engineering_analysis.py:416-419), and S4 has NO language signal (no `language`
+symbol anywhere in the file). S3 already localizes its conclusion (zh/en prefixes,
+s3:496-499), so only S4’s framing is wrong — but because S4 is language-blind it
+cannot pick the right language even though the answer language is known upstream.
+
+### New design
+1. **Thread language S3 → S4 (additive):** S3 computes the resolved language via
+   `_dominant_language` (s3:187-196). Emit it as an additive field
+   `structured_result["language"]` in S3’s output. Extract `_dominant_language`
+   into a tiny shared helper `src/vibration_agent/text/lang.py` (`dominant_language`)
+   and import it from both S3 and S4 (two call sites justify the shared util).
+2. **S4 reads language with a safe fallback:** `language = structured.get("language")
+   or dominant_language([answer] + claim_texts)`; default "en" only if no signal.
+3. **Localize the four strings** via a small template map keyed by language,
+   mirroring S3’s pattern (illustrative zh):
+   - engineering_meaning: `f"工程意义仅限于所引证据：{first_claim}"`
+   - premises: `f"仅适用于检索到的证据块：{', '.join(chunk_ids)}。"`
+   - failure_modes: `"请勿超出所引工况、单位或数值范围进行外推。"`
+   - next_action: `"在应用阈值、维护措施或模型假设前，请先核对所引证据块。"`
+   English strings unchanged for `language=="en"`.
+4. **LLM path untouched** (s4:388-413) — it already returns language-appropriate
+   prose.
+
+### Stepwise implementation
+1. Migration: "R1-Issue2: additive `structured_result.language` from S3; S4
+   deterministic framing localized (zh/en)".
+2. Create `src/vibration_agent/text/lang.py` with `dominant_language(rows_or_texts)`
+   (move logic from S3’s `_dominant_language`; keep S3 calling the shared helper).
+3. S3: include `"language": language` in the structured result it returns.
+4. S4: derive `language` (threaded value → fallback helper → "en"); replace the
+   four hardcoded strings with the language-keyed templates.
+5. Tests:
+   - `test_s4_engineering_analysis.py`: zh evidence fixture → all four fields are
+     Chinese; en evidence fixture → English preserved.
+   - `test_v4_style_skill.py`: a zh end-to-end fixture → none of the six sections
+     contain the English boilerplate sentences.
+   - A schema/contract test asserting `language` is additive/optional (absent →
+     consumers still work).
+6. Regenerate affected `tests/fixtures/llm/` golden answers; review.
+
+### Definition of done
+- zh queries → all six sections Chinese; en queries → English retained.
+- S4 selects language from the threaded field, with a deterministic fallback when
+  absent; `language` is optional/additive (old payloads still validate).
+- Unit + V4 tests updated and would fail against the current English-only fallback.
+- Full suite green; `llm_eval` 7/7; golden fixtures regenerated and reviewed.
+- Migration entry recorded.
+
+================================================================================
+## ISSUE 4 — Scope miss + 汽轮↔透平 synonym gap  [Wave B, MEDIUM]
+================================================================================
+
+### Issue info
+Q1 asked GB/T 33199.1-2016 的**适用范围**. The chunk that states the scope (title
+page: "50MW 以上陆地安装的透平和燃气轮机发电机组") was never retrieved into top-5;
+the answer returned torsional-vibration *mechanism* instead. The query says
+**汽轮**发电机组 while the standard says **透平**发电机组 (synonyms), and nothing
+bridges them.
+
+### Design loophole addressed
+`_DOMAIN_ALIASES` (query_normalize.py:15-24) is the only live synonym layer (the
+"taxonomy YAML" promised in the module docstring does NOT exist yet — confirmed by
+glob). It lacks the turbine-generator / steam-turbine family, torsional-vibration,
+order-analysis, and shaft-train groups that this corpus actually uses. So query
+expansion never adds 透平 when the user types 汽轮, and the scope chunk (which is
+title-page text with modest BM25 weight) is not surfaced.
+
+### New design
+1. **Add domain alias groups** targeting the three genres’ vocabulary, e.g.:
+   - `steam_turbine_generator: ("汽轮发电机组","透平发电机组","汽轮机","透平",
+     "steam turbine","turbine generator","turbo-generator")`
+   - `torsional_vibration: ("扭振","扭转振动","轴系扭振","torsional vibration")`
+   - `order_analysis: ("阶比分析","阶次分析","阶比跟踪","order analysis",
+     "order tracking","Vold-Kalman")`
+   - `shaft_train: ("轴系","转子轴系","耦合轴系","shaft train","coupled shaft")`
+2. **Make taxonomy config-driven (durable):** create the YAML the docstring already
+   references (e.g. `configs/retrieval_taxonomy.yaml`) and load it at import to
+   seed/extend `_DOMAIN_ALIASES` (the in-code dict stays as a fallback when the YAML
+   is missing/sparse — per the existing docstring contract). Future "expand taxonomy
+   from misses" becomes a config edit, not a code edit.
+3. **(Optional) scope-aware boost:** when the query contains 适用范围/范围/scope and
+   a standard token (GB/T, ISO, 标准), give clause-1/title chunks a small topic
+   prior. Lower priority; the alias fix is primary.
+
+### Stepwise implementation
+1. Migration: "R1-Issue4: retrieval synonym groups + optional taxonomy YAML
+   (changes deterministic query expansion / retrieval output)".
+2. Add the alias groups to `_DOMAIN_ALIASES`; (optional) add the YAML loader with
+   the in-code dict as default.
+3. Add a labeled retrieval target to `tests/fixtures/retrieval/targets.json`:
+   query≈"GB/T 33199.1 汽轮发电机组 适用范围" → expected evidence = the scope/title
+   chunk (`gb_t_33199_1_2016_1_50mw_*_p0001*` or the clause-1 body chunk).
+4. Run `scripts/retrieval_eval.py`; confirm the new target is satisfied AND existing
+   targets do NOT regress (recall@10 must stay 1.0; `replacement_justified_by_baseline`
+   semantics unchanged — this EXPANDS recall, the intended direction per the Obj2/Obj4
+   gate).
+5. Update `test_query_normalize*` to assert 汽轮↔透平 co-expansion.
+
+### Definition of done
+- Q1 retrieves the scope/title chunk into top-k; the answer can cite the >50MW
+  land-based turbine & gas-turbine scope.
+- New retrieval target passes; no recall regression on existing targets;
+  `retrieval_eval` recall@5/@10 still 1.0.
+- `normalize("…汽轮发电机组…")` expansion contains 透平 (and vice-versa) — unit test.
+- Migration recorded; taxonomy YAML (if added) documented as the durable alias home.
+
+================================================================================
+## ISSUE 5 — Cross-genre retrieval bleed  [Wave B, LOW]
+================================================================================
+
+### Issue info
+Q3 (order-analysis paper) pulled 3/5 chunks from the *standard* on shared vocab
+(旋转机械, 扭振); the cited chunk was the paper’s development chapter, not the
+abstract that actually defines 阶比分析的作用.
+
+### Design loophole addressed
+Pure BM25+dense lexical overlap with no genre/topic affinity prior: a strongly
+on-topic document (the paper) can be outranked for its own topic when another
+document shares surface vocabulary, and the most definitional chunk (abstract) is
+not preferred over later chapters.
+
+### New design
+- **Primary mitigation is Issue 4:** the `order_analysis` alias family raises the
+  paper’s salience for Q3. Land Issue 4 first and re-measure.
+- **Defer topic priors:** do NOT add a genre/topic-affinity score on a 3-file
+  corpus (premature optimization / overfitting risk). Revisit only if, after Issue
+  4, Q3 still fails a labeled target.
+
+### Stepwise implementation
+1. Add a Q3 retrieval target ("阶比分析 在 扭振/旋转机械 测量中的作用" → expected
+   evidence = paper abstract/intro chunk) to `targets.json`.
+2. Re-run `retrieval_eval` AFTER Issue 4. If satisfied → done (no code). If not →
+   open a follow-up to design a bounded topic-affinity prior, with its own eval.
+
+### Definition of done
+- After Issue 4, Q3 top-k contains ≥3 paper chunks AND the abstract/intro chunk;
+  the new target passes with no regression.
+- If still failing, a separate, eval-backed follow-up is filed (not silently tuned).
+
+================================================================================
+## ISSUE 6 — Intent label: 适用范围 classified "definition"  [Wave B, LOW]
+================================================================================
+
+### Issue info
+Q1 ("…适用范围是什么？") and Q3 ("…作用是什么？") both classify as `definition`.
+For a standard’s *scope* lookup, `standard_lookup` (or a scope intent) is more apt.
+
+### Design loophole addressed
+`infer_intent` (query_normalize.py:43-55) checks `definition` (是什么/定义) BEFORE
+`standard_lookup` (GB/T/标准), so any "…是什么" query short-circuits to definition
+even when it is clearly a standard scope question. Intent currently only labels and
+weakly influences ranking (hybrid.py:242/250/279).
+
+### New design
+- Add a scope cue and reorder precedence: if the query contains a standard token
+  (GB/T, ISO, API, 标准, 规范) AND a scope cue (适用范围, 范围, 适用于, scope),
+  classify `standard_lookup` before the generic `definition` check. Keep the change
+  minimal and ordered; do not invent a new Intent literal unless `standard_lookup`
+  is judged insufficient (it already exists in the `Intent` type).
+
+### Stepwise implementation
+1. Migration: "R1-Issue6: intent precedence for standard scope queries (label
+   behavior change)".
+2. Reorder/extend `infer_intent`; add scope cue tokens.
+3. Unit-test `infer_intent` on the three real queries + a definition control + a
+   standard-scope control; ensure existing intent tests still pass.
+
+### Definition of done
+- Q1 intent = `standard_lookup` (Q3 may remain `definition`, which is acceptable).
+- `infer_intent` unit tests cover scope-vs-definition precedence and would fail on
+  the current ordering; no regression elsewhere; migration recorded.
+
+================================================================================
+## ISSUE 3 — Answers are evidence-echoes, not synthesis  [Wave C, BY DESIGN]
+================================================================================
+
+### Issue info
+Deterministic answers are ranked retrieved fragments + citation IDs + framing, with
+no cross-evidence reasoning. Reads shallow even when retrieval is correct.
+
+### Design loophole addressed
+None — this is the **intended** default. The S3/S4 LLM lanes are default-off per the
+freeze; `_llm_enabled` (s3:220-228) gates real synthesis. The deterministic path is
+deliberately extractive (auditable, zero-cost, replayable). The "loophole" is purely
+one of **expectation/UX**: users may read the extractive output as a failed answer.
+
+### New design (no contract change)
+1. **Document the two modes** in `README.md` / an operator runbook: default =
+   extractive/deterministic (audit + offline); depth = opt-in live S3/S4.
+2. **Provide the enablement runbook** (manual-live, budget-governed, replay-capture):
+   set `settings.llm.s3_enabled` / S4 enable, `LLM_LIVE_ENABLED`, provider key in
+   `.env`, then `scripts/manual_e2e.py --live-openai`; capture via `scripts/llm_capture.py`
+   for replay. Reiterate keys never enter logs/fixtures/commits.
+3. **(Optional, deterministic UX bump)** Once Issue 1 lands, the extractive answer
+   already reads as whole sentences; optionally have the deterministic `_qa` join the
+   top claims into a short coherent paragraph (still 1:1 cited) instead of a bare
+   numbered list. Keep it deterministic; no LLM.
+
+### Stepwise implementation
+1. Add a "Two answer modes" section to README + a runbook under `docs/`.
+2. (Optional) implement the deterministic paragraph join behind the existing claim
+   pipeline; update S3 tests + golden fixtures if adopted.
+
+### Definition of done
+- Docs clearly state default-extractive vs opt-in-live, with the exact, security-safe
+  enablement steps.
+- No code/contract change required (the optional paragraph-join, if taken, ships with
+  its own tests + migration).
+
+================================================================================
+## ISSUE 7 — Answer logs are UTF-16 (NOT a code bug)  [Wave C, INFO]
+================================================================================
+
+### Issue info
+`data/answer_logs/*/*.txt` are UTF-16LE while `chunks.jsonl` are UTF-8; UTF-8 tools
+(including this evaluation) choke until they detect UTF-16.
+
+### Design loophole addressed
+None in the app — grep confirms NO module writes `answer_logs`. The files come from
+PowerShell redirection: `>` / `Out-File` default to UTF-16LE in Windows PowerShell
+5.1. This is an environment/usage artifact, not a code defect.
+
+### New design
+1. **Runbook fix (no code):** redirect with explicit UTF-8 —
+   `... ask … | Out-File -Encoding utf8 path` (or `Set-Content -Encoding utf8`), or
+   run under `pwsh` 7+ (UTF-8 default).
+2. **(Optional CLI enhancement, additive)** add `ask --output PATH` to
+   `apps/cli/main.py` that writes the answer JSON as UTF-8 directly (deterministic,
+   avoids the shell-encoding trap, nicer for logging). Additive CLI flag only — no
+   change to `/query`, the chain, or any schema.
+
+### Stepwise implementation
+1. Add the UTF-8 redirection note to the operator runbook.
+2. (Optional) implement `--output` (open with `encoding="utf-8"`, `ensure_ascii=False`);
+   add a CLI test asserting the file is valid UTF-8 JSON.
+
+### Definition of done
+- Runbook documents UTF-8 logging.
+- (If taken) `ask --output` writes UTF-8 JSON, verified by reading back as UTF-8 in a
+  test; no contract change.
+
+================================================================================
+## GLOBAL DEFINITION OF DONE (refinement set R1)
+================================================================================
+
+- All Wave A + Wave B code changes each have: a `phase_4_migrations.md` entry, tests
+  updated/added BEFORE callers, and regenerated+reviewed fixtures.
+- Frozen gates re-verified and green:
+  - full suite `pytest tests -q -m "not large_corpus" -p no:cacheprovider`
+  - `scripts/llm_eval.py` → 7/7, faithfulness 1.0, unsupported-numeric-block 1.0
+  - `scripts/retrieval_eval.py` → recall@5/@10 = 1.0, no new missing-evidence cases,
+    `replacement_justified_by_baseline` semantics unchanged
+- The three real questions re-run and captured before/after: whole-sentence claims
+  (I1), fully-Chinese sections for zh (I2), scope chunk retrieved for Q1 (I4),
+  ≥3 paper chunks for Q3 (I5), Q1 intent=standard_lookup (I6).
+- Deterministic default preserved: LLM lanes remain default-off; chain order, 7-route
+  API, and SkillOutput/ApiQueryResponse schemas unchanged; the only schema delta is
+  the additive `structured_result.language` (I2), migration-recorded.
+- Freeze touch-up: add a short note to `docs/phase_4_interface_freeze.md` recording
+  that R1 refines deterministic synthesis/retrieval QUALITY without changing any
+  frozen contract (and listing the additive `language` field), per Change-Rule step 4.
+
+### Suggested verification harness (repeatable local-iteration loop)
+- Keep a `scripts/ask_eval_smoke.(ps1|py)` that re-asks the three questions against
+  `data/chunks` and writes UTF-8 JSON, so before/after diffs are mechanical. Pair it
+  with the new retrieval targets so each fixed miss becomes a permanent regression net
+  (the "labeled target per real miss" discipline from Obj1).
+
+### Sequencing summary
+1. I1 → I2 (Wave A: S3/S4 + unit tests + golden answers).
+2. I4 → I5 → I6 (Wave B: retrieval; add targets first, then aliases/intent).
+3. I3, I7 (Wave C: docs + optional additive CLI flag).
+4. Re-run all gates + the 3-question harness; update migrations + freeze note.

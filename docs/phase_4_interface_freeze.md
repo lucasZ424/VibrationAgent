@@ -159,6 +159,58 @@ and `replacement_justified_by_baseline = false`.
 
 ## Change Rule After Freeze
 
+### Post-freeze local iteration R1 - Wave A
+
+The 2026-06-22 R1 Wave-A refinement improves deterministic answer quality by
+reflowing soft PDF/OCR line wraps before S3 claim extraction and localizing S4
+deterministic framing. S4 now consumes the existing additive
+`structured_result.language` field emitted by S3, with a content-based fallback
+for older payloads where that field is absent. The change does not alter chain
+order, schemas, API routes, provider defaults, retrieval behavior, or V2/V4
+final-answer authority. Details and rollback are recorded in
+`docs/phase_4_migrations.md`.
+
+### Post-freeze local iteration R1 - Wave B
+
+The 2026-06-22 R1 Wave-B refinement expands deterministic retrieval aliases,
+corrects standard-scope intent precedence and claim selection, and prevents V2
+from treating numeric paper bibliography markers and ranges as Agent chunk
+references. It adds retrieval and V2 calibration fixtures without changing
+schemas, chain order, API routes, providers, database contracts, or final-answer
+authority. Details and rollback are recorded in `docs/phase_4_migrations.md` and
+`docs/refinements/r1_wave_b_retrieval_scope.md`.
+
+### Post-freeze local iteration R1 - Wave A.2
+
+The 2026-06-22 R1 Wave-A.2 refinement adds optional offset-based typed text
+segments to chunk metadata and makes deterministic S3 claim extraction consume
+them while retaining a bounded fallback for existing chunks. Native layout now
+distinguishes primary titles, labels, and bibliography blocks using page-relative
+font evidence, and S3 applies alias-backed claim focus. This additive
+metadata change does not alter top-level schemas, chain order, API routes,
+providers, database contracts, or final-answer authority. Details and rollback
+are recorded in `docs/phase_4_migrations.md` and
+`docs/refinements/r1_wave_a2_layout_aware_claims.md`.
+
+### Post-freeze local iteration R1 - Wave C
+
+The 2026-06-22 R1 Wave-C refinement adds optional direct UTF-8 JSON file output
+to the three data-producing CLI commands and best-effort UTF-8 stdout
+reconfiguration for redirected CLI JSON. Payload contracts and exit codes remain
+unchanged. Details and rollback are recorded in
+`docs/phase_4_migrations.md` and
+`docs/refinements/r1_wave_c_cli_utf8.md`.
+
+### Post-freeze local iteration R1 - storage persistence
+
+The 2026-06-23 R1 storage refinement wires structured ingestion exports into
+opt-in runtime stores. `chunk_documents()` and API `/ingest` now include an
+additive `storage` summary; Postgres/Qdrant writes remain disabled by default
+and require explicit configuration. Qdrant point ids are now stable UUIDv5 ids,
+which requires reindexing any collection previously populated with SHA1-hex
+point ids. Details and rollback are recorded in `docs/phase_4_migrations.md`
+and `docs/refinements/r1_wave_c_storage_persistence.md`.
+
 Any post-freeze change to schemas, API routes or response shapes, chain order,
 retrieval replacement behavior, provider request shape, replay/eval fixture
 layout, ingestion output shape, operator UI contract, observability contract, or

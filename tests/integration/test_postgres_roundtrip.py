@@ -16,7 +16,7 @@ _MIGRATIONS = Path(__file__).resolve().parents[2] / "db" / "postgres" / "migrati
 def test_postgres_qa_log_roundtrip_and_idempotent_migrations():
     pytest.importorskip("psycopg")
     settings = load()
-    url = settings.database.postgres_url or "postgresql://postgres:postgres@localhost:5432/postgres"
+    url = settings.database.postgres_url or "postgresql://vib:vib@localhost:5432/vibration"
     try:
         conn = postgres_client.connect(url, connect_timeout=2.0)
     except Exception as exc:  # noqa: BLE001 - no live Postgres in this environment

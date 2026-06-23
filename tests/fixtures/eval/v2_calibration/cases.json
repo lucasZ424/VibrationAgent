@@ -341,6 +341,39 @@
       }
     },
     {
+      "case_id": "v2_pos_numeric_paper_reference_marker",
+      "query": "What does the paper state about order analysis?",
+      "expected_supported": true,
+      "retrieval_rows": [
+        {
+          "chunk_id": "v2p_paper_ref",
+          "doc_id": "v2_paper",
+          "pages": [12],
+          "text": "Order analysis is required for non-stationary vibration signals [29] and is widely used [29-31].",
+          "score": 1.0
+        }
+      ],
+      "s3_output": {
+        "status": "ok",
+        "summary": "S3 supported paper claim with bibliography marker",
+        "structured_result": {
+          "language": "en",
+          "answer": "Order analysis is required for non-stationary vibration signals [29] and is widely used [29-31] [v2p_paper_ref].",
+          "claims": [
+            {
+              "text": "Order analysis is required for non-stationary vibration signals [29] and is widely used [29-31].",
+              "chunk_id": "v2p_paper_ref",
+              "doc_id": "v2_paper",
+              "pages": [12],
+              "evidence_type": "documented"
+            }
+          ],
+          "synthesis_mode": "llm"
+        },
+        "citations": [{"chunk_id": "v2p_paper_ref", "doc_id": "v2_paper", "pages": [12]}]
+      }
+    },
+    {
       "case_id": "v2_hard_pos_low_lexical_overlap",
       "query": "How does higher damping affect passage through critical speed?",
       "expected_supported": true,

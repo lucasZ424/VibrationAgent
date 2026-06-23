@@ -809,3 +809,138 @@ contract, or final-answer authority changed.
 
 Rollback: restore the previous audit summary and remove the API-surface delta
 paragraph from the final freeze.
+
+### R1 Wave A - deterministic answer synthesis quality (2026-06-22)
+
+Post-freeze local-iteration refinement driven by the first real-corpus answer
+review.
+
+- Reflow soft PDF/OCR line wraps inside each S3 evidence row before deterministic
+  sentence extraction. Structural headings remain boundaries and text is never
+  joined across chunks.
+- Ignore structural-only headings when ranking deterministic answer claims.
+- Preserve the existing additive `structured_result.language` emitted by S3 and
+  make deterministic S4 framing consume it, with content-based fallback for
+  older payloads where the field is absent.
+- Localize deterministic S4 engineering framing for Chinese while preserving the
+  existing English wording for English evidence.
+
+This changes deterministic claim text and rendered answer wording. It does not
+change schemas, chain order, API routes, provider defaults, replay request shape,
+or V2/V4 final-answer authority. LLM paths remain default-off.
+
+Rollback: restore newline-delimited S3 sentence splitting and the English-only
+deterministic S4 framing. Existing stored chunks do not require re-ingestion.
+
+### R1 Wave B - retrieval scope and paper-reference compatibility (2026-06-22)
+
+Post-freeze local-iteration compatibility record.
+
+- Expanded deterministic query aliases for steam turbines, torsional vibration,
+  order analysis, and shaft trains while excluding bare English `turbine` from
+  the steam-turbine group to avoid gas-turbine query pollution.
+- Gave standard-scope cues precedence over generic definition intent.
+- Limited deterministic standard-scope synthesis to explicit applicability
+  statements when such evidence is available, including common Chinese wording
+  and English `This document/standard specifies...` clauses.
+- Ignored numeric paper bibliography markers such as `[29]` and hyphenated
+  ranges such as `[29-31]` when V2 parses Agent-visible chunk references.
+  Non-bibliography invisible references remain blocked.
+- Added labeled retrieval targets for the GB/T scope miss and order-analysis
+  paper introduction, plus a V2 calibration case for numeric bibliography
+  markers.
+
+This changes deterministic retrieval expansion, intent labels, scope-claim
+selection, and V2 parsing of numeric bibliography markers. It does not change
+schemas, chain order, API routes, provider defaults, database data, or final
+answer authority. No re-ingestion is required.
+
+Rollback: remove the four alias groups and scope-intent precedence, restore
+generic S3 ranking for scope queries, restore numeric bibliography parsing in V2,
+and remove the associated retrieval/calibration fixtures and tests.
+
+### R1 Wave A.2 - layout-aware deterministic claim extraction (2026-06-22)
+
+Post-freeze local-iteration compatibility record.
+
+- Added optional chunk `metadata.text_segments` containing page, character
+  offsets, and paragraph block type without duplicating chunk text.
+- Made S3 consume typed spans and skip explicit title segments.
+- Preserved legacy blank-line layout boundaries while allowing bounded body
+  continuation for visual block splits and the observed punctuated CJK word
+  continuation.
+- Added bounded legacy label detection for cover labels, revision identifiers,
+  and bullet-separated taglines.
+- Added page-relative font classification for native PDFs: one primary elevated
+  title plus non-section `label` roles, preventing title-driven chunk explosion.
+- Added bibliography layout roles and reference-section exclusion.
+- Added alias-backed claim focus so a specific detected domain phrase outranks
+  broad cross-document vibration vocabulary.
+
+This is an additive ingestion metadata change and a deterministic synthesis
+behavior change. It does not alter top-level schemas, chain order, API routes,
+providers, database contracts, or final-answer authority. Existing chunks do
+not require migration. The active manual, paper, and standard documents were
+re-ingested to activate typed spans; external legacy chunks remain supported.
+
+Rollback: remove font title/label and bibliography roles, remove text-segment
+metadata emission, restore text-wide S3 reflow and ungated claim ranking, and
+remove the A.2 regression tests.
+
+Test-infrastructure follow-up: pytest startup no longer clears every child of
+the shared safe temp root. PID-scoped basetemps remain isolated and each session
+removes only its own path at shutdown. This resolves the concurrent-run race
+observed during A.2 verification and does not change runtime behavior.
+
+### R1 Wave C - direct UTF-8 CLI JSON output (2026-06-22)
+
+Post-freeze local-iteration compatibility record.
+
+- Added optional `--output PATH` to `ingest`, `parse-pages`, and `ask`.
+- The CLI writes JSON directly as UTF-8 and suppresses stdout when an output
+  path is supplied, avoiding Windows PowerShell 5.1 native-pipeline mojibake.
+- The CLI best-effort reconfigures default stdout to UTF-8 at process start so
+  redirected JSON does not crash on Windows non-UTF-8 code pages.
+- Exit codes remain unchanged.
+
+This is an additive CLI option plus a default stdout encoding hardening. It does
+not alter JSON payloads, ingestion data, schemas, API routes, chain order,
+providers, databases, or final-answer authority.
+
+Rollback: remove stdout reconfiguration, remove the output arguments and
+direct-file branch from `_print_json`, then remove the UTF-8 CLI tests.
+
+### R1 storage persistence - ingest runtime stores (2026-06-23)
+
+Post-freeze local-iteration storage contract record.
+
+- Added `src/vibration_agent/storage/ingestion.py` as the runtime persistence
+  layer for structured ingestion exports.
+- `chunk_documents()` now attaches a top-level `storage` summary and extends
+  `warnings` with storage warnings after structured export.
+- When `POSTGRES_ENABLED=true`, ingest writes each manifest/chunk batch to
+  Postgres. Re-ingesting the same document hash refreshes sections, chunks, and
+  figure/table rows instead of failing on `documents.hash`.
+- When `QDRANT_ENABLED=true`, ingest embeds chunk text and upserts only chunks
+  with non-empty vectors. If embeddings are disabled or only empty fallback
+  vectors are produced, Qdrant indexing is reported as `skipped` with a warning.
+- `ApiIngestionResult` gained additive `storage: dict[str, Any]`, mirroring CLI
+  JSON output.
+- Qdrant point ids changed from SHA1 hex strings to stable UUIDv5 strings so the
+  live Qdrant HTTP API accepts writes.
+- The Postgres live integration fallback now matches the local compose default:
+  `postgresql://vib:vib@localhost:5432/vibration`.
+
+This changes ingestion result shape by adding `storage`, adds opt-in live
+Postgres/Qdrant write side effects, and changes the Qdrant point-id contract.
+Defaults remain local/offline-first: Postgres and Qdrant are disabled unless
+explicitly configured, and CI/offline tests do not require live services.
+
+Migration note: any Qdrant collection populated with the former SHA1-hex point
+ids must be reindexed. The same chunk ids now map to UUIDv5 point ids, so old
+points are not overwritten by the new writer.
+
+Rollback: remove the storage persistence call from `chunk_documents()`, remove
+`ApiIngestionResult.storage`, restore SHA1-based `stable_point_id()`, and remove
+the storage runtime/integration tests. If Qdrant had already been populated with
+UUIDv5 ids, reindex again after rollback to avoid mixed point-id generations.

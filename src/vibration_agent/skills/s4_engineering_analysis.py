@@ -14,6 +14,7 @@ from typing import Any
 from vibration_agent.agent import ModelRegistry, route_task
 from vibration_agent.config import Settings, load
 from vibration_agent.schemas import Citation, S3LlmClaim, S4LlmResponse, SkillInput, SkillOutput
+from vibration_agent.text import dominant_language
 
 from .base import Skill
 
@@ -359,8 +360,12 @@ class EngineeringAnalysisSkill(Skill):
             )
 
         first_claim = str(claims[0]["text"]).strip()
-        chunk_ids = [str(claim["chunk_id"]) for claim in claims]
+        chunk_ids = list(dict.fromkeys(str(claim["chunk_id"]) for claim in claims))
         answer = str(structured.get("answer") or source.get("summary") or first_claim).strip()
+        language = str(
+            structured.get("language")
+            or dominant_language([answer, *(str(claim.get("text") or "") for claim in claims)])
+        )
 
         active_settings = self._settings or load()
         llm_warnings: list[str] = []
@@ -413,14 +418,21 @@ class EngineeringAnalysisSkill(Skill):
                     )
                 llm_warnings.append("S4 LLM returned insufficient; using deterministic fallback.")
 
-        engineering_meaning = f"Engineering implication is limited to the cited evidence: {first_claim}"
-        premises = f"Apply this only to the retrieved evidence chunks: {', '.join(chunk_ids)}."
-        failure_modes = "Do not extrapolate beyond the cited operating condition, units, or numeric values."
-        next_action = "Inspect the cited chunks before applying thresholds, maintenance actions, or model assumptions."
+        if language == "zh":
+            engineering_meaning = f"工程意义仅限于所引证据：{first_claim}"
+            premises = f"仅适用于检索到的证据块：{', '.join(chunk_ids)}。"
+            failure_modes = "请勿超出所引工况、单位或数值范围进行外推。"
+            next_action = "在应用阈值、维护措施或模型假设前，请先核对所引证据块。"
+        else:
+            engineering_meaning = f"Engineering implication is limited to the cited evidence: {first_claim}"
+            premises = f"Apply this only to the retrieved evidence chunks: {', '.join(chunk_ids)}."
+            failure_modes = "Do not extrapolate beyond the cited operating condition, units, or numeric values."
+            next_action = "Inspect the cited chunks before applying thresholds, maintenance actions, or model assumptions."
         result = {
             **dict(structured),
             "task_id": payload.task_id,
             "mode": "engineering_analysis",
+            "language": language,
             "answer": answer,
             "engineering_meaning": engineering_meaning,
             "premises": premises,
