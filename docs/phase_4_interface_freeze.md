@@ -211,6 +211,62 @@ which requires reindexing any collection previously populated with SHA1-hex
 point ids. Details and rollback are recorded in `docs/phase_4_migrations.md`
 and `docs/refinements/r1_wave_c_storage_persistence.md`.
 
+### Post-freeze local iteration R2 - critical-speed answer quality
+
+The 2026-06-23 R2 refinement changes deterministic retrieval and S3 synthesis
+behavior for a real operator miss: critical-speed outcome questions must be
+supported by outcome evidence, not definition-only evidence. BM25 CJK
+tokenization now avoids single-character noise for multi-character Chinese
+segments, and critical-speed outcome queries add response/amplitude expansion
+terms. The change does not alter schemas, API routes, chain order, provider
+defaults, database contracts, or final-answer authority. Details and rollback
+are recorded in `docs/phase_4_migrations.md` and
+`docs/refinements/r2_critical_speed_answer_quality.md`.
+
+### Post-freeze local iteration R2 - ingestion trial operations
+
+The 2026-06-23 R2 ingestion runbook adds a manual, log-to-file trial procedure
+for validating Postgres/Qdrant ingestion on a small batch before full-corpus
+ingestion. It also adds local support scripts for resetting regenerated runtime
+stores and for persisting existing file-based ingestion exports through the
+existing storage path, enabling resumable OCR workflows without changing
+ingestion schemas, API routes, chain order, provider defaults, database schemas,
+retrieval behavior, or final-answer authority. Qdrant ingestion summaries gain
+the additive `embeddable_chunks` field so full-run validation compares vector
+points with chunks that contain non-empty text. Details and rollback are
+recorded in `docs/phase_4_migrations.md`.
+
+### Post-freeze local iteration R2 - page-level visual recovery
+
+The 2026-06-25 R2 refinement is authorized to change native-PDF ingestion
+behavior from per-image-block handling to deterministic page-level visual
+analysis. The approved boundary is:
+
+- scanned-page classification has precedence and uses one full-page
+  PaddleOCR/Tesseract recovery path;
+- native/mixed pages preserve native body text and may recover fragmented
+  engineering figures through bounded spatial clustering and region rendering;
+- microscopic blocks are never exported individually;
+- region OCR is optional additive asset metadata, not a retention gate;
+- VLM description remains out of scope.
+
+This refinement may change page metadata, assets, chunk text and boundaries,
+chunk ids, embeddings, citations, and persisted figure/table rows. It does not
+change top-level schemas, API routes, orchestration chain order, database table
+schemas, provider defaults, or final-answer authority.
+
+Full ingestion is temporarily gated. Implementation must first pass the labeled
+visual-decision calibration set, deterministic clustering tests, scanned-page
+route tests, real-corpus regressions, storage parity checks, and representative
+asset inspection defined in
+`docs/refinements/r2_page_level_visual_recovery.md`. After acceptance, all
+generated local artifacts, Postgres ingestion rows, and Qdrant points must be
+cleared and rebuilt. Emergency-guard-only and visual-recovery outputs must not be
+mixed as the stable knowledge-base baseline.
+
+Details, re-ingestion requirements, residual risk, and rollback are recorded in
+`docs/phase_4_migrations.md`.
+
 Any post-freeze change to schemas, API routes or response shapes, chain order,
 retrieval replacement behavior, provider request shape, replay/eval fixture
 layout, ingestion output shape, operator UI contract, observability contract, or

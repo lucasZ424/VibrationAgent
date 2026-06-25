@@ -87,3 +87,35 @@ def run(
         blocks=[block] if block else [],
         needs_review=not bool(normalized),
     )
+
+
+def run_image(
+    image_path: str | Path,
+    *,
+    doc_id: str,
+    page_no: int,
+    langs: str = "chi_sim+eng+osd",
+) -> OcrPage:
+    try:
+        import pytesseract  # type: ignore
+        from PIL import Image  # type: ignore
+    except ModuleNotFoundError as exc:
+        return _empty_page(doc_id, page_no, f"tesseract dependency missing: {exc}")
+    try:
+        with Image.open(Path(image_path)) as image:
+            raw_text = pytesseract.image_to_string(image, lang=langs)
+    except Exception as exc:
+        return _empty_page(doc_id, page_no, f"tesseract failed: {exc}")
+    normalized = normalize_text(raw_text)
+    return OcrPage(
+        doc_id=doc_id,
+        page_no=page_no,
+        primary_engine="tesseract",
+        fallback_used=True,
+        ocr_confidence=None,
+        layout_quality="ok" if normalized else "empty",
+        raw_text=raw_text,
+        normalized_text=normalized,
+        blocks=[],
+        needs_review=not bool(normalized),
+    )

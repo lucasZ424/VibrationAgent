@@ -58,6 +58,22 @@ class ChunkingSettings(BaseModel):
     preserve_anchors: bool = True
 
 
+class VisualRecoverySettings(BaseModel):
+    enabled: bool = True
+    direct_image_min_dimension: float = Field(default=4.0, gt=0.0)
+    grid_cell_size: float = Field(default=4.0, gt=0.0)
+    min_cluster_blocks: int = Field(default=20, ge=1)
+    min_cluster_dimension: float = Field(default=40.0, gt=0.0)
+    min_cluster_area_ratio: float = Field(default=0.01, gt=0.0, le=1.0)
+    scanned_text_ceiling: int = Field(default=100, ge=0)
+    scanned_largest_region_ratio: float = Field(default=0.50, ge=0.0, le=1.0)
+    scanned_occupancy_ratio: float = Field(default=0.65, ge=0.0, le=1.0)
+    retained_cluster_limit: int = Field(default=16, ge=1)
+    hard_cluster_limit: int = Field(default=24, ge=1)
+    region_ocr_limit: int = Field(default=4, ge=0)
+    direct_asset_limit: int = Field(default=100, ge=1)
+
+
 class RoutingSettings(BaseModel):
     default_owner: str = "gpt"
     opus_difficulties: list[str] = Field(default_factory=lambda: ["extreme"])
@@ -186,6 +202,7 @@ class Settings(BaseModel):
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     ocr: OcrSettings = Field(default_factory=OcrSettings)
     chunking: ChunkingSettings = Field(default_factory=ChunkingSettings)
+    visual_recovery: VisualRecoverySettings = Field(default_factory=VisualRecoverySettings)
     retrieval: RetrievalSettings = Field(default_factory=RetrievalSettings)
     embeddings: EmbeddingSettings = Field(default_factory=EmbeddingSettings)
     routing: RoutingSettings = Field(default_factory=RoutingSettings)
@@ -304,6 +321,7 @@ def load(workspace: Path | None = None) -> Settings:
     classify_section = ingestion_yaml.get("classify", {})
     ocr_section = ingestion_yaml.get("ocr", {})
     chunking_section = ingestion_yaml.get("chunking", {})
+    visual_section = ingestion_yaml.get("visual_recovery", {})
     routing_section = app_yaml.get("routing", {})
     retrieval_top_k = retrieval_yaml.get("top_k", {})
     retrieval_fusion = retrieval_yaml.get("fusion", {})
@@ -373,6 +391,21 @@ def load(workspace: Path | None = None) -> Settings:
             target_tokens=int(_env("CHUNK_TARGET_TOKENS", chunking_section.get("target_tokens", 600))),
             overlap_tokens=int(_env("CHUNK_OVERLAP_TOKENS", chunking_section.get("overlap_tokens", 60))),
             preserve_anchors=bool(chunking_section.get("preserve_anchors", True)),
+        ),
+        visual_recovery=VisualRecoverySettings(
+            enabled=bool(visual_section.get("enabled", True)),
+            direct_image_min_dimension=float(visual_section.get("direct_image_min_dimension", 4.0)),
+            grid_cell_size=float(visual_section.get("grid_cell_size", 4.0)),
+            min_cluster_blocks=int(visual_section.get("min_cluster_blocks", 20)),
+            min_cluster_dimension=float(visual_section.get("min_cluster_dimension", 40.0)),
+            min_cluster_area_ratio=float(visual_section.get("min_cluster_area_ratio", 0.01)),
+            scanned_text_ceiling=int(visual_section.get("scanned_text_ceiling", 100)),
+            scanned_largest_region_ratio=float(visual_section.get("scanned_largest_region_ratio", 0.50)),
+            scanned_occupancy_ratio=float(visual_section.get("scanned_occupancy_ratio", 0.65)),
+            retained_cluster_limit=int(visual_section.get("retained_cluster_limit", 16)),
+            hard_cluster_limit=int(visual_section.get("hard_cluster_limit", 24)),
+            region_ocr_limit=int(visual_section.get("region_ocr_limit", 4)),
+            direct_asset_limit=int(visual_section.get("direct_asset_limit", 100)),
         ),
         retrieval=RetrievalSettings(
             mode=str(_env("RETRIEVAL_MODE", retrieval_yaml.get("mode", "hybrid"))),

@@ -1,0 +1,125 @@
+{
+  "schema_version": "2",
+  "cases": [
+    {
+      "id": "fragmented_single_plot",
+      "page_size": [600, 800],
+      "text_blocks": [[40, 80, 560, 130, "Rotor spectrum discussion with sufficient native body text."]],
+      "fragment_regions": [[100, 180, 420, 360, 3]],
+      "expected_route": "native",
+      "expected_clusters": 1,
+      "expected_cluster_bboxes": [[100, 180, 418.5, 357.5]],
+      "bbox_tolerance": 0.1,
+      "baseline_must_fail": true
+    },
+    {
+      "id": "fragmented_multi_panel",
+      "page_size": [600, 800],
+      "text_blocks": [[40, 80, 560, 130, "Four order-analysis panels are compared below."]],
+      "fragment_regions": [[60, 180, 250, 340, 3], [350, 180, 540, 340, 3]],
+      "expected_route": "native",
+      "expected_clusters": 2,
+      "expected_cluster_bboxes": [[60, 180, 249.5, 339.5], [350, 180, 539.5, 339.5]],
+      "bbox_tolerance": 0.1,
+      "baseline_must_fail": true
+    },
+    {
+      "id": "large_direct_figure",
+      "page_size": [600, 800],
+      "text_blocks": [[40, 80, 560, 150, "The measured spectrum is shown in the following figure."]],
+      "direct_images": [[90, 180, 510, 600]],
+      "expected_route": "native",
+      "expected_clusters": 0,
+      "expected_cluster_bboxes": [],
+      "expected_valid_images": 1
+    },
+    {
+      "id": "native_text_with_fragmented_plot",
+      "page_size": [600, 800],
+      "text_blocks": [[40, 80, 560, 150, "Native body text remains authoritative while the fragmented plot is retained as supporting evidence."]],
+      "fragment_regions": [[120, 220, 480, 500, 3]],
+      "expected_route": "native",
+      "expected_clusters": 1,
+      "expected_cluster_bboxes": [[120, 220, 477.5, 499.5]],
+      "bbox_tolerance": 0.1,
+      "baseline_must_fail": true
+    },
+    {
+      "id": "occasional_scanned_page",
+      "page_size": [600, 800],
+      "text_blocks": [],
+      "direct_images": [[10, 10, 590, 790]],
+      "expected_route": "scanned",
+      "expected_clusters": 0,
+      "expected_cluster_bboxes": [],
+      "expected_valid_images": 1
+    },
+    {
+      "id": "sparse_cover_logo",
+      "page_size": [600, 800],
+      "text_blocks": [[220, 120, 380, 160, "Rotor Dynamics"]],
+      "direct_images": [[250, 240, 350, 340]],
+      "expected_route": "native",
+      "expected_clusters": 0,
+      "expected_cluster_bboxes": [],
+      "expected_valid_images": 1
+    },
+    {
+      "id": "isolated_tiny_marks",
+      "page_size": [600, 800],
+      "text_blocks": [[50, 100, 550, 160, "Native text remains primary evidence on this page."]],
+      "tiny_boxes": [[100, 200, 100.5, 200.5], [500, 600, 500.5, 600.5]],
+      "expected_route": "native",
+      "expected_clusters": 0,
+      "expected_cluster_bboxes": [],
+      "expected_deferred_tiny": 2
+    },
+    {
+      "id": "repeated_page_header_logo",
+      "kind": "document",
+      "page_size": [600, 800],
+      "pages": [
+        {"direct_images": [[20, 10, 80, 30]]},
+        {"direct_images": [[20, 10, 80, 30]]},
+        {"direct_images": [[20, 10, 80, 30]]},
+        {"direct_images": [[20, 10, 80, 30]]}
+      ],
+      "expected_repeated_decorations": 1,
+      "expected_retained_decorations": 0
+    },
+    {
+      "id": "repeated_footer_ornament",
+      "kind": "document",
+      "page_size": [600, 800],
+      "pages": [
+        {"direct_images": [[180, 760, 420, 780]]},
+        {"direct_images": [[180, 760, 420, 780]]},
+        {"direct_images": [[180, 760, 420, 780]]},
+        {"direct_images": [[180, 760, 420, 780]]},
+        {"direct_images": [[180, 760, 420, 780]]}
+      ],
+      "expected_repeated_decorations": 1,
+      "expected_retained_decorations": 0
+    },
+    {
+      "id": "body_watermark_fragments_deferred",
+      "page_size": [600, 800],
+      "text_blocks": [[40, 80, 560, 180, "Substantial native text overlays a faint fragmented body watermark that must not become primary evidence."]],
+      "fragment_regions": [[240, 260, 300, 340, 20]],
+      "expected_route": "native",
+      "expected_clusters": 0,
+      "expected_cluster_bboxes": [],
+      "expected_deferred_tiny": 12
+    },
+    {
+      "id": "uncertain_isolated_candidate_level_2",
+      "page_size": [600, 800],
+      "text_blocks": [[40, 80, 560, 180, "The small isolated candidate is retained only as bounded diagnostic metadata."]],
+      "fragment_regions": [[100, 260, 160, 320, 18]],
+      "expected_route": "native",
+      "expected_clusters": 0,
+      "expected_cluster_bboxes": [],
+      "expected_deferred_tiny": 16
+    }
+  ]
+}

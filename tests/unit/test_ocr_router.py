@@ -54,3 +54,36 @@ def test_router_marks_primary_for_review_when_fallback_is_not_better(monkeypatch
     assert page.primary_engine == "paddleocr"
     assert page.fallback_used is True
     assert page.needs_review is True
+
+
+def test_router_preserves_primary_when_fallback_crashes(monkeypatch):
+    # WHY: an optional recovery engine must not discard usable Paddle text or abort a long OCR batch.
+    monkeypatch.setattr(router.paddle_engine, "run", lambda *args, **kwargs: _page(text="rotor vibration", confidence=0.4))
+    monkeypatch.setattr(
+        router.tesseract_engine,
+        "run",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("render failed")),
+    )
+
+    page = router.ocr_page("dummy.pdf", 1, doc_id="doc1", low_confidence_threshold=0.6)
+
+    assert page.primary_engine == "paddleocr"
+    assert page.normalized_text == "rotor vibration"
+    assert page.fallback_used is True
+    assert page.needs_review is True
+
+
+def test_image_router_uses_tesseract_for_empty_paddle_result(monkeypatch):
+    # WHY: retained figure regions need the same recovery policy as full scanned pages.
+    monkeypatch.setattr(router.paddle_engine, "run_image", lambda *args, **kwargs: _page(text="", confidence=None))
+    monkeypatch.setattr(
+        router.tesseract_engine,
+        "run_image",
+        lambda *args, **kwargs: _page(text="axis speed amplitude", confidence=None, engine="tesseract"),
+    )
+
+    page = router.ocr_image("figure.png", doc_id="doc1", page_no=2)
+
+    assert page.primary_engine == "tesseract"
+    assert page.fallback_used is True
+    assert page.normalized_text == "axis speed amplitude"

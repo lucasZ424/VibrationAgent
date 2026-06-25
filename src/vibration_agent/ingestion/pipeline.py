@@ -16,6 +16,7 @@ from .classify import scan_inputs
 from .docx_parser import DocxParseError, parse_docx
 from .layout import enrich_page_layout
 from .ocr.router import ocr_page
+from .page_visual_analysis import VisualRecoverySettings as PageVisualRecoverySettings
 from .pymupdf_parser import parse_native_pdf
 
 
@@ -170,7 +171,33 @@ def parse_document_pages(
     pages: list[OcrPage] = []
 
     if document.processing_strategy == "native_pdf":
-        native_pages = parse_native_pdf(source, doc_id=document.doc_id, asset_dir=paths["extracted_dir"], image_dpi=cfg.ocr.render_dpi)
+        visual = cfg.visual_recovery
+        native_pages = parse_native_pdf(
+            source,
+            doc_id=document.doc_id,
+            asset_dir=paths["extracted_dir"],
+            image_dpi=cfg.ocr.render_dpi,
+            visual_settings=PageVisualRecoverySettings(
+                direct_image_min_dimension=visual.direct_image_min_dimension,
+                grid_cell_size=visual.grid_cell_size,
+                min_cluster_blocks=visual.min_cluster_blocks,
+                min_cluster_dimension=visual.min_cluster_dimension,
+                min_cluster_area_ratio=visual.min_cluster_area_ratio,
+                scanned_text_ceiling=visual.scanned_text_ceiling,
+                scanned_largest_region_ratio=visual.scanned_largest_region_ratio,
+                scanned_occupancy_ratio=visual.scanned_occupancy_ratio,
+                retained_cluster_limit=visual.retained_cluster_limit,
+                hard_cluster_limit=visual.hard_cluster_limit,
+                region_ocr_limit=visual.region_ocr_limit,
+                direct_asset_limit=visual.direct_asset_limit,
+            ),
+            page_ocr_enabled=visual.enabled,
+            region_ocr_enabled=visual.enabled,
+            workspace=cfg.paths.workspace,
+            ocr_lang=cfg.ocr.paddleocr_lang,
+            tesseract_langs=cfg.ocr.tesseract_langs,
+            low_confidence_threshold=cfg.ocr.low_confidence_threshold,
+        )
         pages = native_pages[:page_limit]
     elif document.processing_strategy == "ocr_pdf":
         for page_no in range(1, page_limit + 1):

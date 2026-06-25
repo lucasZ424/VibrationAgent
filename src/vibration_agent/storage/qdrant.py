@@ -8,7 +8,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from vibration_agent.config import Settings
 
 from .mappings import normalize_chunk_type
-from .qdrant_client import create_client, ensure_collection, search_points, upsert_points
+from .qdrant_client import create_client, delete_points_by_doc_ids, ensure_collection, search_points, upsert_points
 
 COLLECTION_CHUNKS = "chunks"
 VECTOR_DISTANCE = "Cosine"
@@ -148,6 +148,15 @@ def upsert_chunk_points(
     )
     initialize_collection(client, collection=collection, vector_size=plan.vector_size)
     return upsert_points(client, collection=collection, points=plan.points)
+
+
+def delete_chunk_points_for_documents(
+    client: Any,
+    doc_ids: Sequence[str],
+    *,
+    collection: str = COLLECTION_CHUNKS,
+) -> int:
+    return delete_points_by_doc_ids(client, collection=collection, doc_ids=doc_ids)
 
 
 def search_chunks(

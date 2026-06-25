@@ -944,3 +944,153 @@ Rollback: remove the storage persistence call from `chunk_documents()`, remove
 `ApiIngestionResult.storage`, restore SHA1-based `stable_point_id()`, and remove
 the storage runtime/integration tests. If Qdrant had already been populated with
 UUIDv5 ids, reindex again after rollback to avoid mixed point-id generations.
+
+### R2 critical-speed outcome guard - retrieval and S3 claim gating (2026-06-23)
+
+Post-freeze local-iteration answer-quality record.
+
+- Changed deterministic BM25 tokenization for CJK text so multi-character
+  Chinese segments no longer emit bare single-character tokens. Two-, three-,
+  and four-character n-grams remain indexed so domain phrases such as critical
+  speed stay searchable while broad single-character noise is reduced.
+- Added deterministic critical-speed outcome query expansion. Questions that
+  combine critical-speed terms with outcome markers now also search for
+  response/amplitude amplification wording.
+- Added deterministic S3 claim gating for critical-speed outcome questions.
+  Definition-only critical-speed evidence is no longer accepted as support for
+  "what happens" style questions. If retrieved evidence lacks response,
+  amplitude, amplification, or equivalent outcome wording, S3 returns
+  `insufficient` with a specific warning instead of synthesizing an answer from
+  a definition.
+- Added regression tests for CJK token noise, query expansion, definition-only
+  rejection, and response-evidence preference.
+
+This changes corpus-wide deterministic BM25 tokenization and narrow S3 claim
+selection for critical-speed outcome queries. It does not alter schemas, API
+routes, chain order, provider defaults, database contracts, Qdrant point ids, or
+final-answer authority. Existing chunks do not require re-ingestion, but
+operators should ingest rotor-dynamics material before expecting direct answers
+to critical-speed outcome questions.
+
+Residual design note: the outcome guard is intentionally narrow. Future
+iteration should prefer a general outcome/causal-intent claim-ranking lens only
+after multiple real misses justify it, rather than accumulating unrelated
+per-topic guards.
+
+Rollback: restore the previous CJK token emission in BM25, remove the
+critical-speed outcome expansions and S3 outcome gate, and remove the R2
+regression tests. If answers regress to definition-only critical-speed
+synthesis, restore the guard or ingest direct outcome evidence before relying on
+operator answers.
+
+### R2 ingestion trial runbook and runtime-store utilities (2026-06-23)
+
+Post-freeze local-operation support record.
+
+- Added `docs/ingestion_trial_runbook.md`, a manual runbook for small
+  Postgres/Qdrant ingestion trials before full-corpus ingestion. It records
+  storage/embedding configuration, no-parallel-OCR rules, disk checks,
+  log-to-file commands, acceptance criteria, clean baseline reset, full-ingestion
+  ordering, bounded OCR batches for `standard` and `book`, failure recovery, and
+  Qdrant vector-size constraints.
+- Added `scripts/reset_runtime_stores.py`, a dry-run-default local utility that
+  truncates regenerated Postgres ingestion tables and deletes the configured
+  Qdrant collection only when `--execute` is supplied. This lets operators reset
+  stale pre-fix Postgres/Qdrant divergence before steady full ingestion.
+- Added `scripts/persist_ingestion_exports.py`, which loads existing
+  `data/exports/<source_type>/<doc_id>/manifest.json` plus matching
+  `data/chunks/<source_type>/<doc_id>/chunks.jsonl` artifacts and persists them
+  through the existing `persist_ingestion_result(...)` storage path.
+- The utility supports resumable long-book OCR by allowing the file-based
+  `book_workflow` exports to be written to Postgres/Qdrant after OCR completes,
+  without re-running the same long OCR document through non-resumable ingestion.
+- Qdrant ingestion summaries gained additive `embeddable_chunks`. Runtime Qdrant
+  upsert now skips chunks whose `text` is empty or whitespace-only, so full-run
+  validation should compare Qdrant points with embeddable chunks rather than
+  total chunks.
+- Added unit coverage for pairing manifests with chunk files, reset SQL/Qdrant
+  deletion targeting, and blank-text Qdrant skip behavior.
+
+This adds operator-run support scripts and an additive storage summary field. It
+does not change ingestion export schemas, API routes, chain order, provider
+defaults, database table schemas, Qdrant point-id rules, retrieval behavior, or
+final-answer authority. Storage writes remain controlled by existing `.env`
+settings.
+
+Rollback: remove `scripts/reset_runtime_stores.py`, remove
+`scripts/persist_ingestion_exports.py`, remove their tests, remove
+`embeddable_chunks` from Qdrant summaries, restore embedding of all chunks, and
+delete the runbook. Existing database rows or Qdrant points written by the
+utilities should be refreshed by a normal re-ingest or removed manually if the
+operator wants to discard that trial state.
+
+### R2 page-level visual recovery and hybrid OCR (authorized 2026-06-25)
+
+Post-freeze ingestion-behavior migration record. Steps 1-6 are implemented and
+verified; the new stable knowledge-base baseline is not active until Step 7
+clears and rebuilds all generated stores.
+
+Implemented behavior:
+
+- Replace per-image-block retention judgment with deterministic page-level
+  feature analysis and bounded spatial clustering.
+- Route each page through one exclusive primary path:
+  - suspected occasional scanned page: full-page PaddleOCR with conditional
+    Tesseract fallback, then skip cluster recovery;
+  - native/mixed page: preserve native text and recover accepted direct or
+    fragmented visual regions as assets.
+- Never export microscopic image blocks individually.
+- Recover dense tiny-block clusters by rendering their combined bbox directly
+  from the source PDF page.
+- Keep region OCR additive and bounded. Empty OCR does not invalidate a
+  visually meaningful retained engineering figure.
+- Suppress repeated header/footer decoration and keep uncertain candidates in
+  bounded debug-only Level-2 metadata rather than runtime stores.
+- Calibrate thresholds against labeled must-retain and must-reject visual
+  fixtures before accepting implementation.
+
+Expected output impact:
+
+- Page metadata gains additive visual-analysis, route, filtered-fragment,
+  cluster, OCR-status, and review information.
+- Page assets may gain cluster provenance and region-OCR metadata.
+- Native/mixed page assets, chunk asset references, manifests, Postgres
+  figure/table rows, and answer-visible evidence may change.
+- Occasional scanned pages may gain OCR-derived body text, changing chunk text,
+  chunk boundaries, chunk ids, embeddings, and citations.
+- Top-level API routes, orchestration chain order, provider defaults, database
+  table schemas, and final-answer authority do not change.
+
+Re-ingestion requirement:
+
+- Existing local OCR/chunk/export/extracted artifacts are incompatible with the
+  new visual-evidence baseline.
+- Existing Postgres ingestion rows and the Qdrant `chunks` collection must be
+  cleared after implementation acceptance.
+- Full-corpus ingestion must restart from a clean baseline. Mixing
+  emergency-guard-only documents with visual-recovery documents is not an
+  accepted steady state.
+- Full ingestion remains gated until Steps 1-6 and the labeled visual-decision
+  evaluation pass.
+
+Rollback:
+
+- Remove page visual analysis, cluster recovery, page-level scanned routing,
+  region OCR enrichment, and repeated-decoration suppression.
+- Restore native text parsing plus direct non-tiny image extraction with the
+  emergency minimum-bbox and per-page asset caps.
+- Clear local generated artifacts, Postgres ingestion rows, and the Qdrant
+  collection, then re-ingest. Stored data generated under the visual-recovery
+  contract must not be mixed with rollback output.
+
+Residual risk:
+
+- Thresholds and grid size remain corpus-sensitive. They are accepted only
+  through the labeled calibration gate, not by inspection of the Zhao thesis
+  alone.
+- VLM figure description remains deferred and is not part of this migration.
+
+Verification: labeled visual-decision evaluation 5/5; unit suite 500 passed;
+full non-large-corpus suite 522 passed with 1 deselected; real Zhao and B&K PDF
+regressions passed; live Paddle image OCR passed. Detailed measurements are
+recorded in `docs/refinements/r2_page_level_visual_recovery.md`.

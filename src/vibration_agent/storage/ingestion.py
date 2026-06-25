@@ -13,7 +13,7 @@ from .postgres import prepare_ingestion_plan
 def _storage_disabled_summary() -> dict[str, Any]:
     return {
         "postgres": {"status": "disabled", "documents": 0, "chunks": 0},
-        "qdrant": {"status": "disabled", "collection": None, "points": 0, "chunks": 0},
+        "qdrant": {"status": "disabled", "collection": None, "points": 0, "chunks": 0, "embeddable_chunks": 0},
         "warnings": [],
     }
 
@@ -131,17 +131,45 @@ def _persist_postgres(documents: Sequence[Mapping[str, Any]], settings: Settings
 def _persist_qdrant(documents: Sequence[Mapping[str, Any]], settings: Settings) -> tuple[dict[str, Any], list[str]]:
     database = settings.database
     if not database.qdrant_enabled:
-        return {"status": "disabled", "collection": None, "points": 0, "chunks": 0}, []
+        return {"status": "disabled", "collection": None, "points": 0, "chunks": 0, "embeddable_chunks": 0}, []
 
     chunks = [chunk for document in documents for chunk in document.get("chunks", []) or []]
+    doc_ids = sorted(
+        {
+            str(manifest.get("doc_id"))
+            for document in documents
+            if isinstance((manifest := document.get("manifest")), Mapping) and manifest.get("doc_id")
+        }
+    )
+    client = qdrant.runtime_client(settings)
+    qdrant.delete_chunk_points_for_documents(
+        client,
+        doc_ids,
+        collection=database.qdrant_collection,
+    )
+    embeddable_chunks = [chunk for chunk in chunks if str(chunk.get("text") or "").strip()]
     if not chunks:
-        return {"status": "skipped", "collection": database.qdrant_collection, "points": 0, "chunks": 0}, []
+        return {
+            "status": "skipped",
+            "collection": database.qdrant_collection,
+            "points": 0,
+            "chunks": 0,
+            "embeddable_chunks": 0,
+        }, []
+    if not embeddable_chunks:
+        return {
+            "status": "skipped",
+            "collection": database.qdrant_collection,
+            "points": 0,
+            "chunks": len(chunks),
+            "embeddable_chunks": 0,
+        }, ["Qdrant enabled but no chunks with non-empty text were available; vector upsert skipped."]
 
-    records = embed_texts([str(chunk.get("text") or "") for chunk in chunks], settings=settings)
+    records = embed_texts([str(chunk.get("text") or "") for chunk in embeddable_chunks], settings=settings)
     warnings = list(dict.fromkeys(warning for record in records for warning in record.warnings))
     embeddings = {
         str(chunk["chunk_id"]): record.vector
-        for chunk, record in zip(chunks, records, strict=True)
+        for chunk, record in zip(embeddable_chunks, records, strict=True)
         if chunk.get("chunk_id") and record.vector
     }
     if not embeddings:
@@ -151,9 +179,9 @@ def _persist_qdrant(documents: Sequence[Mapping[str, Any]], settings: Settings) 
             "collection": database.qdrant_collection,
             "points": 0,
             "chunks": len(chunks),
+            "embeddable_chunks": len(embeddable_chunks),
         }, warnings
 
-    client = qdrant.runtime_client(settings)
     point_count = qdrant.upsert_chunk_points(
         client,
         chunks,
@@ -167,6 +195,7 @@ def _persist_qdrant(documents: Sequence[Mapping[str, Any]], settings: Settings) 
         "collection": database.qdrant_collection,
         "points": point_count,
         "chunks": len(chunks),
+        "embeddable_chunks": len(embeddable_chunks),
     }, warnings
 
 

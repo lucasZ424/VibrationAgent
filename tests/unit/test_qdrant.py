@@ -61,6 +61,21 @@ def test_qdrant_upsert_initializes_collection_with_vector_dimension(monkeypatch)
     assert calls[1][0] == "upsert"
 
 
+def test_qdrant_document_refresh_deletes_stale_points_before_reinsert(monkeypatch):
+    # WHY: changed chunk boundaries must not leave orphan vectors after repeat ingestion.
+    calls = {}
+    monkeypatch.setattr(
+        qdrant,
+        "delete_points_by_doc_ids",
+        lambda client, *, collection, doc_ids: calls.update({"collection": collection, "doc_ids": doc_ids}) or len(doc_ids),
+    )
+
+    count = qdrant.delete_chunk_points_for_documents(object(), ["doc1"], collection="test_chunks")
+
+    assert count == 1
+    assert calls == {"collection": "test_chunks", "doc_ids": ["doc1"]}
+
+
 def test_qdrant_dry_run_reports_actual_vector_dimension():
     plan = qdrant.prepare_chunk_points(
         [{"chunk_id": "c1"}],

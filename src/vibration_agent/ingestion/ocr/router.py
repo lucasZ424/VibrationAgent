@@ -82,13 +82,57 @@ def ocr_page(
     if not _should_fallback(primary, threshold=low_confidence_threshold, key_evidence_page=key_evidence_page):
         return primary
 
-    fallback = tesseract_engine.run(
-        pdf_path,
-        page_no,
-        doc_id=doc_id,
-        langs=tesseract_langs,
-        dpi=dpi,
-        image_dir=image_dir,
-        keep_image=keep_images,
-    )
+    try:
+        fallback = tesseract_engine.run(
+            pdf_path,
+            page_no,
+            doc_id=doc_id,
+            langs=tesseract_langs,
+            dpi=dpi,
+            image_dir=image_dir,
+            keep_image=keep_images,
+        )
+    except Exception:
+        return primary.model_copy(update={"fallback_used": True, "needs_review": True})
+    return _merge_fallback(primary, fallback)
+
+
+def ocr_image(
+    image_path: str | Path,
+    *,
+    doc_id: str,
+    page_no: int,
+    lang: str = "ch",
+    tesseract_langs: str = "chi_sim+eng+osd",
+    low_confidence_threshold: float = 0.6,
+    workspace: str | Path | None = None,
+) -> OcrPage:
+    try:
+        primary = paddle_engine.run_image(
+            image_path,
+            doc_id=doc_id,
+            page_no=page_no,
+            lang=lang,
+            workspace=workspace,
+            review_threshold=low_confidence_threshold,
+        )
+    except Exception as exc:
+        primary = OcrPage(
+            doc_id=doc_id,
+            page_no=page_no,
+            primary_engine="paddleocr",
+            raw_text=f"paddleocr failed: {exc}",
+            needs_review=True,
+        )
+    if not _should_fallback(primary, threshold=low_confidence_threshold):
+        return primary
+    try:
+        fallback = tesseract_engine.run_image(
+            image_path,
+            doc_id=doc_id,
+            page_no=page_no,
+            langs=tesseract_langs,
+        )
+    except Exception:
+        return primary.model_copy(update={"fallback_used": True, "needs_review": True})
     return _merge_fallback(primary, fallback)

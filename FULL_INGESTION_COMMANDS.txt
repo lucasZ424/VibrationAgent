@@ -1,0 +1,393 @@
+# Run from Windows PowerShell 5.1 in C:\Challenge\Viberation\Agent.
+# This script DELETES all generated ingestion artifacts and runtime DB content.
+# It preserves data\raw, model caches, database schema, and schema_migrations.
+# Run the complete file from top to bottom. Do not run ingestion in parallel.
+# Execute this TXT file with:
+# Invoke-Expression ([System.IO.File]::ReadAllText((Resolve-Path "FULL_INGESTION_COMMANDS.txt"), [System.Text.Encoding]::UTF8))
+# To preserve completed work and resume from one source type:
+# $env:INGESTION_RESUME_FROM="standard"
+# Invoke-Expression ([System.IO.File]::ReadAllText((Resolve-Path "FULL_INGESTION_COMMANDS.txt"), [System.Text.Encoding]::UTF8))
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
+[Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+$OutputEncoding = New-Object System.Text.UTF8Encoding($false)
+
+$Root = (Get-Location).Path
+$Python = Join-Path $Root ".venv\Scripts\python.exe"
+$OcrScript = Join-Path $Root "scripts\ocr_raw_books_with_paddle.py"
+$PersistScript = Join-Path $Root "scripts\persist_ingestion_exports.py"
+$ResetScript = Join-Path $Root "scripts\reset_runtime_stores.py"
+$DataRoot = [System.IO.Path]::GetFullPath((Join-Path $Root "data"))
+$LogDir = Join-Path $DataRoot "run_logs"
+$StagingRoot = Join-Path $DataRoot "tmp\ingestion_staging"
+$ResumeFrom = [string]$env:INGESTION_RESUME_FROM
+$ValidResumePoints = @("", "manual", "standard", "paper", "book")
+
+if (-not (Test-Path -LiteralPath $Python)) { throw "Python not found: $Python" }
+if (-not (Test-Path -LiteralPath $OcrScript)) { throw "OCR script not found: $OcrScript" }
+if (-not (Test-Path -LiteralPath $PersistScript)) { throw "Persist script not found: $PersistScript" }
+if (-not (Test-Path -LiteralPath $ResetScript)) { throw "Reset script not found: $ResetScript" }
+if ($ValidResumePoints -notcontains $ResumeFrom) {
+    throw "Invalid INGESTION_RESUME_FROM '$ResumeFrom'. Use manual, standard, paper, book, or leave it empty."
+}
+
+$env:PYTHONUTF8 = "1"
+$env:PYTHONIOENCODING = "utf-8"
+$env:OMP_NUM_THREADS = "4"
+$env:MKL_NUM_THREADS = "4"
+
+function Assert-ExitCode {
+    param(
+        [Parameter(Mandatory = $true)][int]$Code,
+        [Parameter(Mandatory = $true)][string]$Step,
+        [Parameter(Mandatory = $true)][string]$Log
+    )
+    if ($Code -ne 0) {
+        throw "$Step failed with exit code $Code. See $Log"
+    }
+}
+
+function Invoke-ExternalLogged {
+    param(
+        [Parameter(Mandatory = $true)][string]$Executable,
+        [Parameter(Mandatory = $true)][object[]]$ArgumentList,
+        [Parameter(Mandatory = $true)][string]$Log
+    )
+    $previousErrorAction = $ErrorActionPreference
+    try {
+        # Windows PowerShell 5.1 wraps native stderr as NativeCommandError.
+        # Record stderr and trust the process exit code instead.
+        $ErrorActionPreference = "Continue"
+        & $Executable @ArgumentList 2>&1 | Out-File -FilePath $Log -Encoding utf8
+        return $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $previousErrorAction
+    }
+}
+
+function Read-Utf8Json {
+    param([Parameter(Mandatory = $true)][string]$Path)
+    $full = (Resolve-Path -LiteralPath $Path).Path
+    return ([System.IO.File]::ReadAllText($full, [System.Text.Encoding]::UTF8) | ConvertFrom-Json)
+}
+
+function Assert-JsonOk {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Step
+    )
+    $payload = Read-Utf8Json -Path $Path
+    if ($payload.status -ne "ok") {
+        throw "$Step returned status '$($payload.status)'. See $Path"
+    }
+    return $payload
+}
+
+function Clear-GeneratedDirectory {
+    param([Parameter(Mandatory = $true)][string]$RelativePath)
+    $full = [System.IO.Path]::GetFullPath((Join-Path $Root $RelativePath))
+    $prefix = $DataRoot + [System.IO.Path]::DirectorySeparatorChar
+    if (-not $full.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Unsafe cleanup target: $full"
+    }
+    if (-not (Test-Path -LiteralPath $full)) {
+        New-Item -ItemType Directory -Path $full -Force | Out-Null
+        return
+    }
+    $children = @(Get-ChildItem -LiteralPath $full -Force | Where-Object { $_.Name -ne ".gitkeep" })
+    foreach ($child in $children) {
+        if (-not $child.FullName.StartsWith($full + [System.IO.Path]::DirectorySeparatorChar, [System.StringComparison]::OrdinalIgnoreCase)) {
+            throw "Unsafe cleanup child: $($child.FullName)"
+        }
+        Remove-Item -LiteralPath $child.FullName -Recurse -Force
+    }
+}
+
+function Invoke-NativeDocument {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourceType,
+        [Parameter(Mandatory = $true)][object]$Document,
+        [Parameter(Mandatory = $true)][int]$Index
+    )
+    $sourcePath = [string]$Document.source_path
+    if (-not (Test-Path -LiteralPath $sourcePath)) {
+        throw "Native source path does not exist: $sourcePath"
+    }
+    $tag = "{0}_native_{1:D3}" -f $SourceType, $Index
+    $output = Join-Path $LogDir ($tag + ".json")
+    $diagnostic = Join-Path $LogDir ($tag + ".diagnostic.txt")
+    Write-Host "[$SourceType] native $Index`: $([System.IO.Path]::GetFileName($sourcePath))"
+    $arguments = @("-m", "apps.cli.main", "ingest", $sourcePath, "--source-type", $SourceType, "--output", $output)
+    $code = Invoke-ExternalLogged -Executable $Python -ArgumentList $arguments -Log $diagnostic
+    Assert-ExitCode -Code $code -Step "$SourceType native item $Index" -Log $diagnostic
+    $null = Assert-JsonOk -Path $output -Step "$SourceType native item $Index"
+}
+
+function Invoke-OcrCheckpoint {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourceType,
+        [Parameter(Mandatory = $true)][string]$StagingDirectory,
+        [Parameter(Mandatory = $true)][string]$Tag,
+        [object]$MaxPages = $null
+    )
+    $suffix = if ($null -eq $MaxPages) { "full" } else { "{0:D4}" -f [int]$MaxPages }
+    $log = Join-Path $LogDir ($Tag + "_" + $suffix + ".txt")
+    $ocrArgs = @(
+        $OcrScript,
+        "--raw-dir", $StagingDirectory,
+        "--source-type", $SourceType,
+        "--doc-id-mode", "content"
+    )
+    if ($null -ne $MaxPages) {
+        $ocrArgs += @("--max-pages", [string][int]$MaxPages)
+    }
+    $code = Invoke-ExternalLogged -Executable $Python -ArgumentList $ocrArgs -Log $log
+    Assert-ExitCode -Code $code -Step "$Tag checkpoint $suffix" -Log $log
+}
+
+function Invoke-OcrDocument {
+    param(
+        [Parameter(Mandatory = $true)][string]$SourceType,
+        [Parameter(Mandatory = $true)][object]$Document,
+        [Parameter(Mandatory = $true)][int]$Index
+    )
+    $sourcePath = [string]$Document.source_path
+    if (-not (Test-Path -LiteralPath $sourcePath)) {
+        throw "OCR source path does not exist: $sourcePath"
+    }
+
+    $staging = Join-Path $StagingRoot $SourceType
+    Clear-GeneratedDirectory -RelativePath ("data\tmp\ingestion_staging\" + $SourceType)
+    Copy-Item -LiteralPath $sourcePath -Destination $staging -Force
+
+    $pageCount = 0
+    if ($null -ne $Document.page_count) {
+        $pageCount = [int]$Document.page_count
+    }
+    $tag = "{0}_ocr_{1:D3}" -f $SourceType, $Index
+    Write-Host "[$SourceType] OCR $Index ($pageCount pages): $([System.IO.Path]::GetFileName($sourcePath))"
+
+    foreach ($checkpoint in @(25, 50, 100, 200, 400, 800)) {
+        if ($pageCount -gt $checkpoint) {
+            Invoke-OcrCheckpoint -SourceType $SourceType -StagingDirectory $staging -Tag $tag -MaxPages $checkpoint
+        }
+    }
+    Invoke-OcrCheckpoint -SourceType $SourceType -StagingDirectory $staging -Tag $tag -MaxPages $null
+
+    $docId = [string]$Document.doc_id
+    $manifest = Join-Path $DataRoot ("exports\" + $SourceType + "\" + $docId + "\manifest.json")
+    if (-not (Test-Path -LiteralPath $manifest)) {
+        throw "OCR completed but manifest is missing: $manifest"
+    }
+    $manifestPayload = Read-Utf8Json -Path $manifest
+    if ($manifestPayload.status -ne "ok") {
+        throw "OCR manifest status is '$($manifestPayload.status)': $manifest"
+    }
+}
+
+function Write-StoreCounts {
+    param([Parameter(Mandatory = $true)][string]$Tag)
+    $pgLog = Join-Path $LogDir ($Tag + "_postgres.txt")
+    $qdrantLog = Join-Path $LogDir ($Tag + "_qdrant.json")
+    $pgCountLog = Join-Path $LogDir ($Tag + "_postgres_embeddable_count.txt")
+
+    $sql = "select count(*) as documents from documents; select count(*) as chunks from chunks; select count(*) as embeddable_chunks from chunks where btrim(coalesce(normalized_text,text,'')) <> ''; select type,count(*) from documents group by type order by type;"
+    $arguments = @("compose", "exec", "-T", "postgres", "psql", "-U", "vib", "-d", "vibration", "-c", $sql)
+    $code = Invoke-ExternalLogged -Executable "docker" -ArgumentList $arguments -Log $pgLog
+    Assert-ExitCode -Code $code -Step "$Tag Postgres validation" -Log $pgLog
+
+    $qdrant = Invoke-RestMethod -Method Post -Uri "http://localhost:6333/collections/chunks/points/count" -ContentType "application/json" -Body '{"exact":true}'
+    $qdrant | ConvertTo-Json -Depth 10 | Out-File -FilePath $qdrantLog -Encoding utf8
+
+    $countSql = "select count(*) from chunks where btrim(coalesce(normalized_text,text,'')) <> '';"
+    $countArguments = @("compose", "exec", "-T", "postgres", "psql", "-U", "vib", "-d", "vibration", "-At", "-c", $countSql)
+    $code = Invoke-ExternalLogged -Executable "docker" -ArgumentList $countArguments -Log $pgCountLog
+    Assert-ExitCode -Code $code -Step "$Tag embeddable chunk count" -Log $pgCountLog
+    $pgCountLines = @([System.IO.File]::ReadAllLines($pgCountLog, [System.Text.Encoding]::UTF8) | Where-Object { $_.Trim() })
+    if ($pgCountLines.Count -eq 0) { throw "$Tag embeddable chunk count returned no output. See $pgCountLog" }
+    $pgCount = [int64]$pgCountLines[-1].Trim()
+    $qdrantCount = [int64]$qdrant.result.count
+    if ($pgCount -ne $qdrantCount) {
+        throw "$Tag storage mismatch: Postgres embeddable_chunks=$pgCount, Qdrant points=$qdrantCount"
+    }
+}
+
+function Invoke-SourceType {
+    param([Parameter(Mandatory = $true)][string]$SourceType)
+    $rawDirectory = Join-Path $DataRoot ("raw\" + $SourceType)
+    if (-not (Test-Path -LiteralPath $rawDirectory)) {
+        throw "Raw directory does not exist: $rawDirectory"
+    }
+
+    $plan = Join-Path $LogDir ($SourceType + "_plan.json")
+    $diagnostic = Join-Path $LogDir ($SourceType + "_plan.diagnostic.txt")
+    Write-Host "[$SourceType] planning"
+    $arguments = @("-m", "apps.cli.main", "ingest", $rawDirectory, "--plan-only", "--output", $plan)
+    $code = Invoke-ExternalLogged -Executable $Python -ArgumentList $arguments -Log $diagnostic
+    Assert-ExitCode -Code $code -Step "$SourceType plan" -Log $diagnostic
+    $planPayload = Assert-JsonOk -Path $plan -Step "$SourceType plan"
+
+    $documents = @($planPayload.documents | Sort-Object source_path)
+    if ($documents.Count -eq 0) {
+        throw "$SourceType plan contains no documents."
+    }
+    $missing = @($documents | Where-Object { -not (Test-Path -LiteralPath ([string]$_.source_path)) })
+    if ($missing.Count -gt 0) {
+        $missing | Select-Object source_path, processing_strategy |
+            ConvertTo-Json -Depth 5 |
+            Out-File -FilePath (Join-Path $LogDir ($SourceType + "_missing_paths.json")) -Encoding utf8
+        throw "$SourceType plan contains missing source paths."
+    }
+
+    $nativeDocuments = @($documents | Where-Object { $_.processing_strategy -ne "ocr_pdf" })
+    $ocrDocuments = @($documents | Where-Object { $_.processing_strategy -eq "ocr_pdf" })
+    [pscustomobject]@{
+        source_type = $SourceType
+        total = $documents.Count
+        native = $nativeDocuments.Count
+        ocr = $ocrDocuments.Count
+        pages = [int64](($documents | Measure-Object -Property page_count -Sum).Sum)
+    } | ConvertTo-Json | Out-File -FilePath (Join-Path $LogDir ($SourceType + "_plan_summary.json")) -Encoding utf8
+
+    $index = 0
+    foreach ($document in $nativeDocuments) {
+        $index += 1
+        Invoke-NativeDocument -SourceType $SourceType -Document $document -Index $index
+    }
+
+    $index = 0
+    foreach ($document in $ocrDocuments) {
+        $index += 1
+        Invoke-OcrDocument -SourceType $SourceType -Document $document -Index $index
+    }
+
+    $persistOutput = Join-Path $LogDir ($SourceType + "_persist.json")
+    $persistDiagnostic = Join-Path $LogDir ($SourceType + "_persist.diagnostic.txt")
+    $arguments = @($PersistScript, "--source-type", $SourceType, "--output", $persistOutput)
+    $code = Invoke-ExternalLogged -Executable $Python -ArgumentList $arguments -Log $persistDiagnostic
+    Assert-ExitCode -Code $code -Step "$SourceType export persistence" -Log $persistDiagnostic
+    $null = Assert-JsonOk -Path $persistOutput -Step "$SourceType export persistence"
+
+    Write-StoreCounts -Tag ($SourceType + "_after")
+    Write-Host "[$SourceType] complete"
+}
+
+# ---------------------------------------------------------------------------
+# BLOCK 0 - Clean generated local artifacts
+# ---------------------------------------------------------------------------
+
+if ([string]::IsNullOrWhiteSpace($ResumeFrom)) {
+    foreach ($relative in @(
+        "data\chunks",
+        "data\exports",
+        "data\extracted",
+        "data\ocr",
+        "data\embeddings",
+        "data\run_logs",
+        "data\tmp"
+    )) {
+        Clear-GeneratedDirectory -RelativePath $relative
+    }
+}
+New-Item -ItemType Directory -Path $LogDir -Force | Out-Null
+
+# ---------------------------------------------------------------------------
+# BLOCK 1 - Start and verify Docker services
+# ---------------------------------------------------------------------------
+
+$dockerStartLog = Join-Path $LogDir "00_docker_start.txt"
+$code = Invoke-ExternalLogged -Executable "docker" -ArgumentList @("compose", "up", "-d") -Log $dockerStartLog
+Assert-ExitCode -Code $code -Step "Docker Compose startup" -Log $dockerStartLog
+
+$postgresReady = $false
+$postgresReadyLog = Join-Path $LogDir "00_postgres_ready.txt"
+for ($attempt = 1; $attempt -le 60; $attempt += 1) {
+    $code = Invoke-ExternalLogged -Executable "docker" -ArgumentList @("compose", "exec", "-T", "postgres", "pg_isready", "-U", "vib", "-d", "vibration") -Log $postgresReadyLog
+    if ($code -eq 0) {
+        $postgresReady = $true
+        break
+    }
+    Start-Sleep -Seconds 2
+}
+if (-not $postgresReady) { throw "Postgres did not become ready within 120 seconds." }
+
+$qdrantReady = $false
+for ($attempt = 1; $attempt -le 60; $attempt += 1) {
+    try {
+        $health = Invoke-WebRequest -UseBasicParsing -Uri "http://localhost:6333/healthz" -TimeoutSec 5
+        if ($health.StatusCode -eq 200) {
+            $qdrantReady = $true
+            break
+        }
+    } catch {
+        Start-Sleep -Seconds 2
+    }
+}
+if (-not $qdrantReady) { throw "Qdrant did not become healthy within 120 seconds." }
+
+# ---------------------------------------------------------------------------
+# BLOCK 2 - Clean runtime database content
+# ---------------------------------------------------------------------------
+
+if ([string]::IsNullOrWhiteSpace($ResumeFrom)) {
+    $resetDiagnostic = Join-Path $LogDir "01_reset_runtime_stores.diagnostic.txt"
+    $resetArguments = @($ResetScript, "--execute", "--output", (Join-Path $LogDir "01_reset_runtime_stores.json"))
+    $code = Invoke-ExternalLogged -Executable $Python -ArgumentList $resetArguments -Log $resetDiagnostic
+    Assert-ExitCode -Code $code -Step "Runtime store reset" -Log $resetDiagnostic
+
+    $qaResetLog = Join-Path $LogDir "01_reset_qa_logs.txt"
+    $code = Invoke-ExternalLogged -Executable "docker" -ArgumentList @("compose", "exec", "-T", "postgres", "psql", "-U", "vib", "-d", "vibration", "-c", "TRUNCATE qa_logs RESTART IDENTITY;") -Log $qaResetLog
+    Assert-ExitCode -Code $code -Step "QA log reset" -Log $qaResetLog
+
+    $emptyPgLog = Join-Path $LogDir "01_empty_postgres.txt"
+    $emptySql = "select count(*) as documents from documents; select count(*) as chunks from chunks; select count(*) as qa_logs from qa_logs;"
+    $code = Invoke-ExternalLogged -Executable "docker" -ArgumentList @("compose", "exec", "-T", "postgres", "psql", "-U", "vib", "-d", "vibration", "-c", $emptySql) -Log $emptyPgLog
+    Assert-ExitCode -Code $code -Step "Empty Postgres validation" -Log $emptyPgLog
+} else {
+    Write-Host "RESUME MODE: preserving existing artifacts and stores; starting from $ResumeFrom."
+}
+
+# ---------------------------------------------------------------------------
+# BLOCK 3 - Sequential full ingestion
+# ---------------------------------------------------------------------------
+
+"OMP_NUM_THREADS=$env:OMP_NUM_THREADS; MKL_NUM_THREADS=$env:MKL_NUM_THREADS" |
+    Out-File -FilePath (Join-Path $LogDir "02_thread_caps.txt") -Encoding utf8
+
+$sourceOrder = @("manual", "standard", "paper", "book")
+$startIndex = 0
+if (-not [string]::IsNullOrWhiteSpace($ResumeFrom)) {
+    $startIndex = [array]::IndexOf($sourceOrder, $ResumeFrom)
+}
+for ($sourceIndex = $startIndex; $sourceIndex -lt $sourceOrder.Count; $sourceIndex += 1) {
+    Invoke-SourceType -SourceType $sourceOrder[$sourceIndex]
+}
+
+# ---------------------------------------------------------------------------
+# BLOCK 4 - Final consistency validation
+# ---------------------------------------------------------------------------
+
+Write-StoreCounts -Tag "final"
+
+$finalPgLog = Join-Path $LogDir "final_postgres_details.txt"
+$finalSql = "select type,count(*) as documents from documents group by type order by type; select parse_status,count(*) from documents group by parse_status order by parse_status; select count(*) as chunks from chunks; select count(*) as embeddable_chunks from chunks where btrim(coalesce(normalized_text,text,'')) <> ''; select count(*) as qa_logs from qa_logs;"
+$code = Invoke-ExternalLogged -Executable "docker" -ArgumentList @("compose", "exec", "-T", "postgres", "psql", "-U", "vib", "-d", "vibration", "-c", $finalSql) -Log $finalPgLog
+Assert-ExitCode -Code $code -Step "Final Postgres details" -Log $finalPgLog
+
+$collections = Invoke-RestMethod -Method Get -Uri "http://localhost:6333/collections"
+$collections | ConvertTo-Json -Depth 10 | Out-File -FilePath (Join-Path $LogDir "final_qdrant_collections.json") -Encoding utf8
+
+$disk = Get-PSDrive -Name C
+[pscustomobject]@{
+    free_gb = [math]::Round($disk.Free / 1GB, 2)
+    used_gb = [math]::Round($disk.Used / 1GB, 2)
+    completed_at = (Get-Date).ToString("o")
+} | ConvertTo-Json | Out-File -FilePath (Join-Path $LogDir "final_disk.json") -Encoding utf8
+
+if (Test-Path -LiteralPath $StagingRoot) {
+    Clear-GeneratedDirectory -RelativePath "data\tmp\ingestion_staging"
+}
+
+Write-Host "FULL INGESTION COMPLETE. Review data\run_logs\final_postgres_details.txt and final_qdrant.json."

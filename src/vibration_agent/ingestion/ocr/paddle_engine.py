@@ -205,3 +205,39 @@ def run(
                 needs_review=True,
             )
         return result_to_page(doc_id, page_no, results[0], review_threshold=review_threshold)
+
+
+def run_image(
+    image_path: str | Path,
+    *,
+    doc_id: str,
+    page_no: int,
+    lang: str = "ch",
+    workspace: str | Path | None = None,
+    review_threshold: float = 0.6,
+    ocr_version: str = "PP-OCRv4",
+    det_model_name: str | None = "PP-OCRv4_mobile_det",
+    rec_model_name: str | None = "PP-OCRv4_mobile_rec",
+    rec_score_threshold: float = 0.0,
+    use_textline_orientation: bool = False,
+) -> OcrPage:
+    configure_paddle_cache(workspace)
+    ocr = make_ocr(
+        lang=lang,
+        ocr_version=ocr_version,
+        det_model_name=det_model_name,
+        rec_model_name=rec_model_name,
+        rec_score_threshold=rec_score_threshold,
+        use_textline_orientation=use_textline_orientation,
+    )
+    results = ocr.predict(str(Path(image_path).resolve()))
+    if not results:
+        return OcrPage(
+            doc_id=doc_id,
+            page_no=page_no,
+            primary_engine="paddleocr",
+            ocr_confidence=None,
+            layout_quality="empty",
+            needs_review=True,
+        )
+    return result_to_page(doc_id, page_no, results[0], review_threshold=review_threshold)

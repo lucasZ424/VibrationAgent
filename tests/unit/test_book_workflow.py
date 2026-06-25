@@ -73,6 +73,36 @@ def test_book_workflow_uses_package_ocr_and_writes_outputs(tmp_path, monkeypatch
     assert rows[0]["schema_version"] == "0.1"
 
 
+def test_book_workflow_enables_fallback_by_default(tmp_path, monkeypatch):
+    # WHY: the resumable bulk workflow must use the same recovery policy as normal ingestion.
+    raw_pdf = tmp_path / "raw" / "book" / "book.pdf"
+    raw_pdf.parent.mkdir(parents=True)
+    _make_pdf(raw_pdf, pages=1)
+    calls = []
+
+    monkeypatch.setattr(book_workflow.paddle_engine, "make_ocr", lambda **kwargs: object())
+    monkeypatch.setattr(
+        book_workflow,
+        "routed_ocr_page",
+        lambda *args, **kwargs: calls.append(kwargs) or OcrPage(
+            doc_id=kwargs["doc_id"],
+            page_no=1,
+            primary_engine="paddleocr",
+            normalized_text="rotor vibration",
+            raw_text="rotor vibration",
+            blocks=[],
+        ),
+    )
+
+    process_pdf(
+        pdf_path=raw_pdf,
+        workspace=tmp_path,
+        options=BookWorkflowOptions(max_pages=1, resume=False),
+    )
+
+    assert len(calls) == 1
+
+
 def test_book_workflow_resume_reuses_existing_pages(tmp_path, monkeypatch):
     raw_pdf = tmp_path / "raw" / "book" / "book.pdf"
     raw_pdf.parent.mkdir(parents=True)
@@ -93,12 +123,12 @@ def test_book_workflow_resume_reuses_existing_pages(tmp_path, monkeypatch):
 
     monkeypatch.setattr(book_workflow.paddle_engine, "make_ocr", lambda **kwargs: warmup_calls.append(kwargs) or object())
     monkeypatch.setattr(book_workflow.paddle_engine, "run", fake_run)
-    options = BookWorkflowOptions(max_pages=1, resume=False)
+    options = BookWorkflowOptions(max_pages=1, resume=False, use_fallback=False)
     first = process_pdf(pdf_path=raw_pdf, workspace=tmp_path, options=options)
     second = process_pdf(
         pdf_path=raw_pdf,
         workspace=tmp_path,
-        options=BookWorkflowOptions(max_pages=1, resume=True),
+        options=BookWorkflowOptions(max_pages=1, resume=True, use_fallback=False),
     )
 
     assert len(warmup_calls) == 1

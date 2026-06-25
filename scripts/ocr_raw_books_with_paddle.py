@@ -47,11 +47,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="legacy-path",
         help="legacy-path preserves the original emergency script output paths; content uses the formal classifier doc_id.",
     )
-    parser.add_argument(
+    fallback = parser.add_mutually_exclusive_group()
+    fallback.add_argument(
         "--use-fallback",
+        dest="use_fallback",
         action="store_true",
-        help="Enable Tesseract fallback through the package OCR router. Default matches the original Paddle-only script.",
+        help="Use Tesseract for empty or low-confidence PaddleOCR pages (default).",
     )
+    fallback.add_argument(
+        "--no-fallback",
+        dest="use_fallback",
+        action="store_false",
+        help="Disable Tesseract fallback for OCR troubleshooting.",
+    )
+    parser.set_defaults(use_fallback=True)
     parser.add_argument("--low-confidence-threshold", type=float, default=0.6)
     return parser.parse_args(argv)
 

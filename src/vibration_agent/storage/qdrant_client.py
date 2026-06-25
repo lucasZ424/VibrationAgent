@@ -85,6 +85,35 @@ def upsert_points(client: Any, *, collection: str, points: Sequence[Any]) -> int
     return len(usable_points)
 
 
+def delete_points_by_doc_ids(client: Any, *, collection: str, doc_ids: Sequence[str]) -> int:
+    unique_ids = sorted({str(doc_id) for doc_id in doc_ids if str(doc_id)})
+    if not unique_ids:
+        return 0
+    if hasattr(client, "collection_exists") and not client.collection_exists(collection):
+        return 0
+    if not hasattr(client, "collection_exists"):
+        try:
+            client.get_collection(collection)
+        except Exception:
+            return 0
+    models = _models()
+    client.delete(
+        collection_name=collection,
+        points_selector=models.FilterSelector(
+            filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="doc_id",
+                        match=models.MatchAny(any=unique_ids),
+                    )
+                ]
+            )
+        ),
+        wait=True,
+    )
+    return len(unique_ids)
+
+
 def search_points(
     client: Any,
     *,

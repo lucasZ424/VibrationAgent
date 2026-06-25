@@ -76,7 +76,7 @@ def test_ingestion_pipeline_attaches_storage_summary_when_exports_are_built(tmp_
         seen["stage"] = result["stage"]
         return {
             "postgres": {"status": "disabled", "documents": 0, "chunks": 0},
-            "qdrant": {"status": "disabled", "collection": None, "points": 0, "chunks": 0},
+            "qdrant": {"status": "disabled", "collection": None, "points": 0, "chunks": 0, "embeddable_chunks": 0},
             "warnings": [],
         }
 
@@ -99,6 +99,11 @@ def test_qdrant_ingestion_upserts_only_when_embeddings_are_non_empty(tmp_path, m
 
     monkeypatch.setattr(storage_ingestion.qdrant, "runtime_client", lambda _: object())
     monkeypatch.setattr(
+        storage_ingestion.qdrant,
+        "delete_chunk_points_for_documents",
+        lambda client, doc_ids, *, collection: calls.update({"deleted_doc_ids": doc_ids}) or len(doc_ids),
+    )
+    monkeypatch.setattr(
         storage_ingestion,
         "embed_texts",
         lambda texts, **kwargs: [
@@ -117,20 +122,63 @@ def test_qdrant_ingestion_upserts_only_when_embeddings_are_non_empty(tmp_path, m
 
     assert summary["qdrant"]["status"] == "ok"
     assert summary["qdrant"]["points"] == 1
+    assert summary["qdrant"]["embeddable_chunks"] == 1
     assert calls["collection"] == "test_chunks"
     assert calls["embeddings"] == {"doc1_p0001_00001": [1.0, 0.0]}
+    assert calls["deleted_doc_ids"] == ["doc1"]
 
 
-def test_qdrant_ingestion_reports_skipped_when_embeddings_are_empty(tmp_path):
+def test_qdrant_ingestion_reports_skipped_when_embeddings_are_empty(tmp_path, monkeypatch):
     # WHY: with embeddings disabled, Qdrant cannot receive usable points even if
     # the Docker service is healthy; the ingest result must say that explicitly.
     settings = load()
     settings.database.qdrant_enabled = True
     settings.database.postgres_enabled = False
     settings.embeddings.enabled = False
+    calls = {}
+    monkeypatch.setattr(storage_ingestion.qdrant, "runtime_client", lambda _: object())
+    monkeypatch.setattr(
+        storage_ingestion.qdrant,
+        "delete_chunk_points_for_documents",
+        lambda client, doc_ids, *, collection: calls.update({"deleted_doc_ids": doc_ids}) or len(doc_ids),
+    )
 
     summary = storage_ingestion.persist_ingestion_result(_result(tmp_path), settings=settings)
 
     assert summary["qdrant"]["status"] == "skipped"
     assert summary["qdrant"]["points"] == 0
+    assert summary["qdrant"]["embeddable_chunks"] == 1
     assert "no non-empty embeddings" in summary["warnings"][0]
+    assert calls["deleted_doc_ids"] == ["doc1"]
+
+
+def test_qdrant_ingestion_skips_blank_text_chunks_before_embedding(tmp_path, monkeypatch):
+    # WHY: full-corpus validation should compare Qdrant points with chunks that
+    # can actually produce meaningful vectors, not figure/table placeholders.
+    settings = load()
+    settings.database.qdrant_enabled = True
+    settings.database.postgres_enabled = False
+    settings.embeddings.enabled = True
+    result = _result(tmp_path)
+    result["documents"][0]["chunks"] = [{**_chunk(), "text": "   "}]
+    calls = {"embed": 0}
+
+    def fake_embed(*args, **kwargs):
+        calls["embed"] += 1
+        return []
+
+    monkeypatch.setattr(storage_ingestion, "embed_texts", fake_embed)
+    monkeypatch.setattr(storage_ingestion.qdrant, "runtime_client", lambda _: object())
+    monkeypatch.setattr(
+        storage_ingestion.qdrant,
+        "delete_chunk_points_for_documents",
+        lambda client, doc_ids, *, collection: len(doc_ids),
+    )
+
+    summary = storage_ingestion.persist_ingestion_result(result, settings=settings)
+
+    assert calls["embed"] == 0
+    assert summary["qdrant"]["status"] == "skipped"
+    assert summary["qdrant"]["chunks"] == 1
+    assert summary["qdrant"]["embeddable_chunks"] == 0
+    assert "no chunks with non-empty text" in summary["warnings"][0]

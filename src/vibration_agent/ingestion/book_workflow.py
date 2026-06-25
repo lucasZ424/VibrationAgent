@@ -45,7 +45,7 @@ class BookWorkflowOptions:
     resume: bool = True
     keep_images: bool = False
     doc_id_mode: DocIdMode = "legacy-path"
-    use_fallback: bool = False
+    use_fallback: bool = True
     low_confidence_threshold: float = 0.6
 
 
