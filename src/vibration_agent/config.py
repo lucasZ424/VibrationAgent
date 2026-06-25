@@ -60,12 +60,14 @@ class ChunkingSettings(BaseModel):
 
 class VisualRecoverySettings(BaseModel):
     enabled: bool = True
+    region_ocr_enabled: bool = False
     direct_image_min_dimension: float = Field(default=4.0, gt=0.0)
     grid_cell_size: float = Field(default=4.0, gt=0.0)
     min_cluster_blocks: int = Field(default=20, ge=1)
     min_cluster_dimension: float = Field(default=40.0, gt=0.0)
     min_cluster_area_ratio: float = Field(default=0.01, gt=0.0, le=1.0)
-    scanned_text_ceiling: int = Field(default=100, ge=0)
+    scanned_text_ceiling: int = Field(default=15, ge=0)
+    scanned_meaningful_block_ceiling: int = Field(default=8, ge=0)
     scanned_largest_region_ratio: float = Field(default=0.50, ge=0.0, le=1.0)
     scanned_occupancy_ratio: float = Field(default=0.65, ge=0.0, le=1.0)
     retained_cluster_limit: int = Field(default=16, ge=1)
@@ -394,12 +396,14 @@ def load(workspace: Path | None = None) -> Settings:
         ),
         visual_recovery=VisualRecoverySettings(
             enabled=bool(visual_section.get("enabled", True)),
+            region_ocr_enabled=bool(visual_section.get("region_ocr_enabled", False)),
             direct_image_min_dimension=float(visual_section.get("direct_image_min_dimension", 4.0)),
             grid_cell_size=float(visual_section.get("grid_cell_size", 4.0)),
             min_cluster_blocks=int(visual_section.get("min_cluster_blocks", 20)),
             min_cluster_dimension=float(visual_section.get("min_cluster_dimension", 40.0)),
             min_cluster_area_ratio=float(visual_section.get("min_cluster_area_ratio", 0.01)),
-            scanned_text_ceiling=int(visual_section.get("scanned_text_ceiling", 100)),
+            scanned_text_ceiling=int(visual_section.get("scanned_text_ceiling", 15)),
+            scanned_meaningful_block_ceiling=int(visual_section.get("scanned_meaningful_block_ceiling", 8)),
             scanned_largest_region_ratio=float(visual_section.get("scanned_largest_region_ratio", 0.50)),
             scanned_occupancy_ratio=float(visual_section.get("scanned_occupancy_ratio", 0.65)),
             retained_cluster_limit=int(visual_section.get("retained_cluster_limit", 16)),

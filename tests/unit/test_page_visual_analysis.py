@@ -6,6 +6,7 @@ from vibration_agent.ingestion.page_visual_analysis import (
     cluster_tiny_blocks,
     derive_body_region,
     edge_signature,
+    is_page_backing_image,
     repeated_edge_signatures,
 )
 
@@ -84,6 +85,20 @@ def test_scanned_route_requires_low_text_and_dominant_visual_region():
 
     assert scanned.suspected_scanned_page is True
     assert cover.suspected_scanned_page is False
+
+
+def test_page_backing_image_requires_dominant_area_and_page_edges():
+    # WHY: scanned-page rasters are page carriers, while body figures remain evidence assets.
+    assert is_page_backing_image(
+        (0, 0, 560, 880),
+        page_width=573,
+        page_height=908,
+    )
+    assert not is_page_backing_image(
+        (70, 95, 506, 279),
+        page_width=573,
+        page_height=908,
+    )
 
 
 def test_repeated_edge_signature_requires_three_and_half_of_pages():

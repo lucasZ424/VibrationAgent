@@ -17,7 +17,8 @@ class VisualRecoverySettings:
     min_cluster_blocks: int = 20
     min_cluster_dimension: float = 40.0
     min_cluster_area_ratio: float = 0.01
-    scanned_text_ceiling: int = 100
+    scanned_text_ceiling: int = 15
+    scanned_meaningful_block_ceiling: int = 8
     scanned_largest_region_ratio: float = 0.50
     scanned_occupancy_ratio: float = 0.65
     retained_cluster_limit: int = 16
@@ -99,6 +100,35 @@ def _intersection_area(left: BBox, right: BBox) -> float:
     return max(0.0, min(left[2], right[2]) - max(left[0], right[0])) * max(
         0.0, min(left[3], right[3]) - max(left[1], right[1])
     )
+
+
+def meaningful_text_length(text: str) -> int:
+    return sum(1 for char in text if char.isprintable() and not char.isspace())
+
+
+def is_page_backing_image(
+    box: BBox,
+    *,
+    page_width: float,
+    page_height: float,
+    min_area_ratio: float = 0.80,
+    edge_tolerance_ratio: float = 0.05,
+) -> bool:
+    """Identify a scan/background raster that carries most of the PDF page."""
+    page_area = max(page_width * page_height, 1.0)
+    if _area(box) / page_area < min_area_ratio:
+        return False
+    x_tolerance = page_width * edge_tolerance_ratio
+    y_tolerance = page_height * edge_tolerance_ratio
+    edge_hits = sum(
+        (
+            box[0] <= x_tolerance,
+            box[1] <= y_tolerance,
+            box[2] >= page_width - x_tolerance,
+            box[3] >= page_height - y_tolerance,
+        )
+    )
+    return edge_hits >= 2
 
 
 def derive_body_region(
@@ -274,9 +304,15 @@ def analyze_page(
     occupancy_area = len(occupied_cells) * cfg.grid_cell_size * cfg.grid_cell_size
     occupancy_ratio = min(1.0, occupancy_area / safe_region_area)
     native_text_chars = sum(len(text.strip()) for _, text in text_blocks)
-    suspected_scanned = native_text_chars < cfg.scanned_text_ceiling and (
+    meaningful_lengths = [meaningful_text_length(text) for _, text in text_blocks]
+    meaningful_chars = sum(meaningful_lengths)
+    suspected_scanned = (
+        meaningful_chars < cfg.scanned_text_ceiling
+        and max(meaningful_lengths, default=0) <= cfg.scanned_meaningful_block_ceiling
+        and (
         largest_region_ratio >= cfg.scanned_largest_region_ratio
         or occupancy_ratio >= cfg.scanned_occupancy_ratio
+        )
     )
     retained = clusters[: cfg.retained_cluster_limit]
     return PageVisualAnalysis(
@@ -338,6 +374,8 @@ __all__ = [
     "cluster_tiny_blocks",
     "derive_body_region",
     "edge_signature",
+    "is_page_backing_image",
+    "meaningful_text_length",
     "normalized_bbox",
     "repeated_edge_signatures",
 ]

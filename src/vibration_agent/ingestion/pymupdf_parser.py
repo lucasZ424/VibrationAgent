@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import re
+import statistics
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
@@ -19,6 +20,8 @@ from vibration_agent.ingestion.page_visual_analysis import (
     VisualRecoverySettings,
     analyze_page,
     edge_signature,
+    is_page_backing_image,
+    meaningful_text_length,
     normalized_bbox,
     repeated_edge_signatures,
 )
@@ -313,69 +316,56 @@ def parse_native_pdf(
     with fitz.open(source) as doc:
         signatures_by_page: list[list[str]] = []
         pending_by_page: list[list[_PendingEdgeAsset]] = []
+        native_analyses: list[PageVisualAnalysis] = []
+        scan_analyses: list[PageVisualAnalysis] = []
+        meaningful_chars_by_page: list[int] = []
+        backing_image_pages = 0
         for page_index, page in enumerate(doc, start=1):
             page_dict = _page_dict(page)
             text_blocks, image_boxes = _analysis_inputs(page_dict)
+            meaningful_chars = sum(meaningful_text_length(text) for _, text in text_blocks)
+            meaningful_chars_by_page.append(meaningful_chars)
+            backing_image_boxes = {
+                box
+                for box in image_boxes
+                if is_page_backing_image(
+                    box,
+                    page_width=float(page.rect.width),
+                    page_height=float(page.rect.height),
+                )
+            }
+            if backing_image_boxes:
+                backing_image_pages += 1
+            analysis_image_boxes = [box for box in image_boxes if box not in backing_image_boxes]
             analysis = analyze_page(
                 page_width=float(page.rect.width),
                 page_height=float(page.rect.height),
                 text_blocks=text_blocks,
-                image_boxes=image_boxes,
+                image_boxes=analysis_image_boxes,
                 settings=visual_cfg,
+            )
+            native_analyses.append(analysis)
+            scan_analyses.append(
+                analyze_page(
+                    page_width=float(page.rect.width),
+                    page_height=float(page.rect.height),
+                    text_blocks=text_blocks,
+                    image_boxes=image_boxes,
+                    settings=visual_cfg,
+                )
             )
             signatures_by_page.append(
                 _visual_signatures(
                     analysis,
                     page_width=float(page.rect.width),
                     page_height=float(page.rect.height),
-                    image_boxes=image_boxes,
+                    image_boxes=analysis_image_boxes,
                     settings=visual_cfg,
                 )
             )
             pending_edge_assets: list[_PendingEdgeAsset] = []
             pending_by_page.append(pending_edge_assets)
             source_blocks = list(page_dict.get("blocks", []))
-            if analysis.suspected_scanned_page and page_ocr_enabled:
-                image_dir = resolved_asset_dir / "scanned_pages" if resolved_asset_dir else None
-                recovered = page_ocr_runner(
-                    source,
-                    page_index,
-                    doc_id=doc_id,
-                    lang=ocr_lang,
-                    tesseract_langs=tesseract_langs,
-                    dpi=image_dpi,
-                    low_confidence_threshold=low_confidence_threshold,
-                    workspace=workspace,
-                    image_dir=image_dir,
-                    keep_images=bool(image_dir),
-                )
-                metadata = dict(recovered.metadata)
-                metadata.update(
-                    {
-                        "visual_analysis": analysis.to_dict(),
-                        "visual_route": "scanned_page_ocr",
-                        "cluster_recovery_skipped": True,
-                    }
-                )
-                if image_dir:
-                    image_path = image_dir / f"page_{page_index:04d}.png"
-                    if image_path.exists():
-                        asset_id = make_asset_id(doc_id, page_index, 1, "page_image")
-                        page_asset = DocumentAsset(
-                            asset_id=asset_id,
-                            doc_id=doc_id,
-                            page_no=page_index,
-                            object_type="page_image",
-                            asset_path=str(image_path),
-                            bbox=[0.0, 0.0, float(page.rect.width), float(page.rect.height)],
-                            text=recovered.normalized_text,
-                            confidence=recovered.ocr_confidence,
-                            metadata={"source": "scanned_page_recovery"},
-                        )
-                        recovered = recovered.model_copy(update={"assets": [page_asset]})
-                pages.append(recovered.model_copy(update={"metadata": metadata}))
-                continue
-
             blocks: list[PageBlock] = []
             assets: list[DocumentAsset] = []
             raw_parts: list[str] = []
@@ -393,6 +383,11 @@ def parse_native_pdf(
                     bbox_skip_reason = _image_bbox_skip_reason(bbox)
                     if bbox_skip_reason is not None:
                         skipped_image_blocks[bbox_skip_reason] += 1
+                        continue
+                    if tuple(bbox) in backing_image_boxes:
+                        skipped_image_blocks["page_backing_image"] = (
+                            skipped_image_blocks.get("page_backing_image", 0) + 1
+                        )
                         continue
                     direct_signature = edge_signature(
                         tuple(bbox),  # type: ignore[arg-type]
@@ -573,6 +568,15 @@ def parse_native_pdf(
                 )
             )
         repeated_signatures = repeated_edge_signatures(signatures_by_page)
+        page_count = max(len(pages), 1)
+        text_layered_document = (
+            sum(chars >= 50 for chars in meaningful_chars_by_page) / page_count >= 0.70
+            or statistics.median(meaningful_chars_by_page or [0]) >= 150
+        )
+        recurring_backing_images = (
+            backing_image_pages >= 3
+            and backing_image_pages / page_count >= 0.50
+        )
         finalized_pages: list[OcrPage] = []
         for page_index, parsed_page in enumerate(pages, start=1):
             pending = pending_by_page[page_index - 1]
@@ -662,6 +666,73 @@ def parse_native_pdf(
                     "metadata": metadata,
                 }
             )
+            scan_analysis = (
+                native_analyses[page_index - 1]
+                if recurring_backing_images
+                else scan_analyses[page_index - 1]
+            )
+            scanned_candidate = (
+                page_ocr_enabled
+                and scan_analysis.suspected_scanned_page
+                and (
+                    not text_layered_document
+                    or meaningful_chars_by_page[page_index - 1] == 0
+                )
+            )
+            if scanned_candidate:
+                image_dir = resolved_asset_dir / "scanned_pages" if resolved_asset_dir else None
+                recovered = page_ocr_runner(
+                    source,
+                    page_index,
+                    doc_id=doc_id,
+                    lang=ocr_lang,
+                    tesseract_langs=tesseract_langs,
+                    dpi=image_dpi,
+                    low_confidence_threshold=low_confidence_threshold,
+                    workspace=workspace,
+                    image_dir=image_dir,
+                    keep_images=bool(image_dir),
+                )
+                recovered_metadata = dict(recovered.metadata)
+                recovered_metadata.update(
+                    {
+                        "visual_analysis": scan_analysis.to_dict(),
+                        "visual_route": "scanned_page_ocr",
+                        "cluster_recovery_skipped": True,
+                        "document_text_layered": text_layered_document,
+                        "recurring_page_backing_images": recurring_backing_images,
+                    }
+                )
+                if image_dir:
+                    image_path = image_dir / f"page_{page_index:04d}.png"
+                    if image_path.exists():
+                        asset_id = make_asset_id(doc_id, page_index, 1, "page_image")
+                        recovered = recovered.model_copy(
+                            update={
+                                "assets": [
+                                    DocumentAsset(
+                                        asset_id=asset_id,
+                                        doc_id=doc_id,
+                                        page_no=page_index,
+                                        object_type="page_image",
+                                        asset_path=str(image_path),
+                                        bbox=[
+                                            0.0,
+                                            0.0,
+                                            float(doc[page_index - 1].rect.width),
+                                            float(doc[page_index - 1].rect.height),
+                                        ],
+                                        text=recovered.normalized_text,
+                                        confidence=recovered.ocr_confidence,
+                                        metadata={"source": "scanned_page_recovery"},
+                                    )
+                                ]
+                            }
+                        )
+                finalized_pages.append(
+                    recovered.model_copy(update={"metadata": recovered_metadata})
+                )
+                continue
             finalized_pages.append(
                 _apply_region_ocr(
                     finalized,

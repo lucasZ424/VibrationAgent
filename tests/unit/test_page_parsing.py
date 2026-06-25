@@ -6,6 +6,7 @@ from docx import Document
 
 from vibration_agent.config import load
 from vibration_agent.ingestion.classify import classify_document
+from vibration_agent.ingestion import pipeline
 from vibration_agent.ingestion.ocr import router
 from vibration_agent.ingestion.pipeline import chunk_document_pages, chunk_documents, parse_document_pages
 from vibration_agent.ingestion.pymupdf_parser import parse_native_pdf
@@ -55,6 +56,30 @@ def test_parse_document_pages_writes_jsonl(tmp_path):
     assert output_path.exists()
     assert rows[0]["doc_id"] == doc.doc_id
     assert rows[0]["primary_engine"] == "pymupdf"
+
+
+def test_bulk_native_ingestion_keeps_optional_region_ocr_disabled(tmp_path, monkeypatch):
+    # WHY: retaining figures must not implicitly launch expensive PaddleOCR for every image.
+    pdf = tmp_path / "native.pdf"
+    _make_text_pdf(pdf)
+    doc = classify_document(pdf)
+    settings = load()
+    settings.paths.ocr_dir = tmp_path / "ocr"
+    settings.paths.extracted_dir = tmp_path / "extracted"
+    captured = {}
+
+    monkeypatch.setattr(
+        pipeline,
+        "parse_native_pdf",
+        lambda *args, **kwargs: captured.update(kwargs) or [],
+    )
+
+    parse_document_pages(doc, settings=settings, write_output=False)
+
+    assert settings.visual_recovery.enabled is True
+    assert settings.visual_recovery.region_ocr_enabled is False
+    assert captured["page_ocr_enabled"] is True
+    assert captured["region_ocr_enabled"] is False
 
 
 def test_ocr_router_returns_review_page_when_paddle_fails(tmp_path, monkeypatch):

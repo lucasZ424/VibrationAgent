@@ -176,15 +176,26 @@ Apply exactly one primary page route:
 
 ### 5.2 Occasional scanned page
 
-Initial candidate rule:
+Current candidate rule:
 
 ```text
-native_text_chars < 100
+meaningful_text_chars < 15
+AND longest meaningful text block <= 8 chars
 AND (
   largest visual region covers >= 50% of the page
   OR aggregate visual occupancy covers >= 65% of the page-safe region
 )
 ```
+
+After all pages are parsed once:
+
+- a document is text-layered when at least 70% of pages contain 50 meaningful
+  characters, or median page text is at least 150 meaningful characters;
+- in a text-layered document, only a page with zero meaningful characters may
+  enter full-page OCR;
+- recurring page-backing rasters on at least three and at least 50% of pages are
+  excluded from scanned-page evidence;
+- OCR fills an empty page body and never replaces usable native text.
 
 This rule must remain configurable only through existing ingestion settings,
 not through a new general-purpose rule engine.
@@ -413,7 +424,8 @@ to preserve readable native text.
 | Minimum cluster blocks | 20 | Tune retain/reject fixture precision |
 | Minimum cluster width/height | 40 pt | Tune against small valid plots |
 | Minimum cluster page area | 1% | Tune against ornaments and small diagrams |
-| Scanned native-text ceiling | 100 chars | Test cover/divider false positives |
+| Scanned meaningful-text ceiling | 15 chars | Near-absence gate, not sparse-page gate |
+| Longest meaningful block ceiling | 8 chars | Preserve sparse but usable native evidence |
 | Scanned region coverage | 50% | Test mixed and full-scan pages |
 | Scanned aggregate safe-region occupancy | 65% | Test fragmented scanned pages |
 | Retained clusters per page | 16 | Multi-panel fixture must retain all labeled panels |
@@ -768,6 +780,9 @@ Closed on 2026-06-25:
   when the document-level repeated-decoration filter accepts them;
 - region OCR runs after that filter, preserving its page budget and avoiding OCR
   on rejected decoration;
+- region OCR is independently configurable and disabled by default for bulk
+  native ingestion; visual assets remain retained and low-text scanned pages
+  still receive full-page OCR;
 - fragment-heavy page dictionaries are not cached across the document.
 
 Verification:
@@ -783,3 +798,58 @@ The original ORBIT 60 profiling document was not present under `data/raw` during
 this closure, so its reported 104 ms/page saving has not been independently
 re-profiled. The one-call-per-page invariant is automated; a real-corpus timing
 sample remains part of Step 7 operational acceptance.
+
+## 17. OCR-Overlay Page Raster Closure
+
+Closed on 2026-06-25 after inspecting
+`发动机变速阶段振动信号阶比跟踪研究_孔庆鹏.pdf`:
+
+- the 113-page PDF contains one scan/background raster per page plus an OCR text
+  layer; these page carriers are not 113 engineering figures;
+- page-backing images are now identified by at least 80% page coverage and
+  contact with at least two page edges;
+- when the native/OCR text layer is sufficient, the backing raster is excluded
+  from visual analysis, asset rendering, persistence, and region OCR;
+- when text is insufficient, the raster remains available to trigger the
+  exclusive full-page OCR route;
+- local body figures remain retained independently.
+
+Real-document calibration:
+
+- page-backing rasters detected: 113/113;
+- local image blocks retained as candidates: 18;
+- low-text pages previously misrouted to full-page OCR: 5;
+- no-OCR structural parse: approximately 10.1 seconds for 113 pages;
+- default region OCR calls during bulk native ingestion: 0.
+
+Verification:
+
+- focused parser/config/visual tests: 33 passed;
+- labeled visual decision evaluation: 11/11 passed;
+- full non-large-corpus suite: 529 passed.
+
+## 18. Scanned-Page Misroute Closure
+
+Closed on 2026-06-25:
+
+- replaced the 100-character sparsity gate with near-absence and meaningful
+  text-block gates;
+- added a document-level text-layer profile without restoring a second
+  `get_text()` pass;
+- recurring sandwich/page-backing rasters no longer count as scanned evidence;
+- full-page OCR is decided after the single native parsing pass;
+- usable native blocks are never replaced by OCR output;
+- a unique zero-text scan inside a text-layered native document still receives
+  full-page OCR.
+
+Real-document calibration for the 113-page Kong Qingpeng paper:
+
+- native routes: 113;
+- scanned-page OCR routes: 0;
+- OCR calls: 0;
+- structural parse time: approximately 8.36 seconds.
+
+Verification:
+
+- focused parser/config/visual tests: 36 passed;
+- labeled visual decision evaluation: 12/12 passed.

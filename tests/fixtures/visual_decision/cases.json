@@ -65,6 +65,16 @@
       "expected_valid_images": 1
     },
     {
+      "id": "sandwich_page_with_sparse_usable_text",
+      "page_size": [600, 800],
+      "text_blocks": [[50, 100, 300, 130, "Figure page"]],
+      "direct_images": [[0, 0, 590, 790]],
+      "expected_route": "native",
+      "expected_clusters": 0,
+      "expected_cluster_bboxes": [],
+      "expected_valid_images": 1
+    },
+    {
       "id": "isolated_tiny_marks",
       "page_size": [600, 800],
       "text_blocks": [[50, 100, 550, 160, "Native text remains primary evidence on this page."]],

@@ -158,6 +158,138 @@ def test_native_pdf_parser_scanned_page_route_skips_cluster_recovery(tmp_path):
     assert not any(asset.metadata.get("source") == "pymupdf_fragment_cluster" for asset in pages[0].assets)
 
 
+def test_native_pdf_parser_routes_only_unique_empty_scan_in_text_layered_document(tmp_path):
+    # WHY: a genuine scanned outlier must remain recoverable without re-OCRing native pages.
+    pdf = tmp_path / "mixed_native_scan.pdf"
+    doc = fitz.open()
+    for _ in range(3):
+        page = doc.new_page(width=600, height=800)
+        page.insert_text((50, 100), "Native rotor dynamics text. " * 12)
+    scanned = doc.new_page(width=600, height=800)
+    pixmap = fitz.Pixmap(fitz.csGRAY, fitz.IRect(0, 0, 60, 80), False)
+    scanned.insert_image(fitz.Rect(0, 0, 590, 790), pixmap=pixmap)
+    doc.save(pdf)
+    doc.close()
+    calls = []
+
+    pages = parse_native_pdf(
+        pdf,
+        doc_id="doc1",
+        page_ocr_enabled=True,
+        page_ocr_runner=lambda *args, **kwargs: calls.append(kwargs) or OcrPage(
+            doc_id="doc1",
+            page_no=4,
+            primary_engine="paddleocr",
+            normalized_text="Recovered scanned outlier.",
+        ),
+    )
+
+    assert len(calls) == 1
+    assert [page.metadata["visual_route"] for page in pages] == [
+        "native_mixed",
+        "native_mixed",
+        "native_mixed",
+        "scanned_page_ocr",
+    ]
+
+
+def test_native_pdf_parser_ignores_recurring_sandwich_page_rasters(tmp_path):
+    # WHY: recurring scan carriers provide no evidence that sparse OCR-layer pages need re-OCR.
+    pdf = tmp_path / "sandwich.pdf"
+    doc = fitz.open()
+    pixmap = fitz.Pixmap(fitz.csGRAY, fitz.IRect(0, 0, 60, 80), False)
+    for _ in range(4):
+        page = doc.new_page(width=600, height=800)
+        page.insert_text((50, 100), "\x01")
+        page.insert_image(fitz.Rect(0, 0, 590, 790), pixmap=pixmap)
+    doc.save(pdf)
+    doc.close()
+    calls = []
+
+    pages = parse_native_pdf(
+        pdf,
+        doc_id="doc1",
+        page_ocr_enabled=True,
+        page_ocr_runner=lambda *args, **kwargs: calls.append(kwargs) or OcrPage(
+            doc_id="doc1",
+            page_no=1,
+            primary_engine="paddleocr",
+            normalized_text="unexpected",
+        ),
+    )
+
+    assert not calls
+    assert all(page.metadata["visual_route"] == "native_mixed" for page in pages)
+    assert all(not page.assets for page in pages)
+
+
+def test_native_pdf_parser_never_overwrites_sparse_usable_native_text(tmp_path):
+    # WHY: OCR may fill an empty page body, but must not replace existing usable native evidence.
+    pdf = tmp_path / "sparse_native.pdf"
+    doc = fitz.open()
+    for _ in range(3):
+        page = doc.new_page(width=600, height=800)
+        page.insert_text((50, 100), "Native rotor dynamics text. " * 12)
+    sparse = doc.new_page(width=600, height=800)
+    sparse.insert_text((50, 100), "Figure 1")
+    pixmap = fitz.Pixmap(fitz.csGRAY, fitz.IRect(0, 0, 60, 80), False)
+    sparse.insert_image(fitz.Rect(0, 0, 590, 790), pixmap=pixmap)
+    doc.save(pdf)
+    doc.close()
+    calls = []
+
+    pages = parse_native_pdf(
+        pdf,
+        doc_id="doc1",
+        page_ocr_enabled=True,
+        page_ocr_runner=lambda *args, **kwargs: calls.append(kwargs) or OcrPage(
+            doc_id="doc1",
+            page_no=4,
+            primary_engine="paddleocr",
+            normalized_text="replacement",
+        ),
+    )
+
+    assert not calls
+    assert any(block.text == "Figure 1" for block in pages[3].blocks)
+    assert pages[3].metadata["visual_route"] == "native_mixed"
+
+
+def test_native_pdf_parser_drops_page_backing_raster_but_keeps_body_figure(tmp_path):
+    # WHY: OCR-overlay PDFs expose each scanned page as a giant image block that is not a figure.
+    pdf = tmp_path / "ocr_overlay.pdf"
+    asset_dir = tmp_path / "assets"
+    doc = fitz.open()
+    page = doc.new_page(width=600, height=800)
+    page.insert_text((50, 100), "Native OCR text remains usable. " * 8)
+    backing = fitz.Pixmap(fitz.csGRAY, fitz.IRect(0, 0, 60, 80), False)
+    figure = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 20, 10), False)
+    page.insert_image(fitz.Rect(0, 0, 590, 790), pixmap=backing)
+    page.insert_image(fitz.Rect(80, 180, 420, 360), pixmap=figure)
+    doc.save(pdf)
+    doc.close()
+    ocr_calls = []
+
+    pages = parse_native_pdf(
+        pdf,
+        doc_id="doc1",
+        asset_dir=asset_dir,
+        region_ocr_enabled=True,
+        image_ocr_runner=lambda *args, **kwargs: ocr_calls.append(args[0]) or OcrPage(
+            doc_id="doc1",
+            page_no=1,
+            primary_engine="paddleocr",
+            normalized_text="figure",
+        ),
+    )
+
+    assert len(pages[0].assets) == 1
+    assert pages[0].assets[0].bbox == [80.0, 185.0, 420.0, 355.0]
+    assert len(ocr_calls) == 1
+    assert pages[0].metadata["skipped_image_blocks"]["page_backing_image"] == 1
+    assert len(list(asset_dir.glob("*.png"))) == 1
+
+
 def test_native_pdf_parser_suppresses_repeated_header_images(tmp_path):
     # WHY: repeated page furniture must not become one retained asset per page.
     pdf = tmp_path / "repeated_header.pdf"
