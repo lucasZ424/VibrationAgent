@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import math
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable
 
@@ -27,6 +28,17 @@ from vibration_agent.schemas import DocumentAsset, OcrPage, PageBlock
 MIN_IMAGE_BLOCK_DIMENSION = 4.0
 PageOcrRunner = Callable[..., OcrPage]
 ImageOcrRunner = Callable[..., OcrPage]
+
+
+@dataclass(frozen=True)
+class _PendingEdgeAsset:
+    signature: str
+    asset_id: str
+    block_id: str
+    bbox: list[float]
+    output_path: Path | None
+    source_block_count: int = 0
+    render_enabled: bool = True
 
 
 def normalize_text(text: str) -> str:
@@ -112,6 +124,10 @@ def _analysis_inputs(
     return text_blocks, image_boxes
 
 
+def _page_dict(page: Any) -> dict[str, Any]:
+    return page.get_text("dict", sort=True)
+
+
 def _visual_signatures(
     analysis: PageVisualAnalysis,
     *,
@@ -186,6 +202,82 @@ def _cluster_asset(
     return asset, block
 
 
+def _apply_region_ocr(
+    page: OcrPage,
+    *,
+    enabled: bool,
+    limit: int,
+    image_ocr_runner: ImageOcrRunner,
+    doc_id: str,
+    lang: str,
+    tesseract_langs: str,
+    low_confidence_threshold: float,
+    workspace: str | Path | None,
+) -> OcrPage:
+    if not enabled or limit <= 0:
+        return page
+    candidates = sorted(
+        [
+            asset
+            for asset in page.assets
+            if asset.asset_path
+            and Path(asset.asset_path).exists()
+            and asset.metadata.get("source") in {"pymupdf_image_block", "pymupdf_fragment_cluster"}
+        ],
+        key=lambda item: -(
+            (item.bbox[2] - item.bbox[0]) * (item.bbox[3] - item.bbox[1])  # type: ignore[index]
+        ),
+    )
+    selected_ids = {asset.asset_id for asset in candidates[:limit]}
+    updated_assets = []
+    for asset in page.assets:
+        if asset.asset_id not in selected_ids:
+            if asset.metadata.get("source") in {"pymupdf_image_block", "pymupdf_fragment_cluster"}:
+                updated_assets.append(
+                    asset.model_copy(update={"metadata": {**asset.metadata, "ocr_status": "not_selected"}})
+                )
+            else:
+                updated_assets.append(asset)
+            continue
+        result = image_ocr_runner(
+            asset.asset_path,
+            doc_id=doc_id,
+            page_no=page.page_no,
+            lang=lang,
+            tesseract_langs=tesseract_langs,
+            low_confidence_threshold=low_confidence_threshold,
+            workspace=workspace,
+        )
+        status = "ok" if result.normalized_text else ("failed" if result.raw_text else "empty")
+        updated_assets.append(
+            asset.model_copy(
+                update={
+                    "text": result.normalized_text,
+                    "confidence": result.ocr_confidence,
+                    "metadata": {
+                        **asset.metadata,
+                        "ocr_status": status,
+                        "ocr_engine": result.primary_engine,
+                        "fallback_used": result.fallback_used,
+                    },
+                }
+            )
+        )
+    assets_by_id = {asset.asset_id: asset for asset in updated_assets}
+    blocks = [
+        block.model_copy(
+            update={
+                "text": assets_by_id[block.asset_id].text,
+                "metadata": assets_by_id[block.asset_id].metadata,
+            }
+        )
+        if block.asset_id in assets_by_id
+        else block
+        for block in page.blocks
+    ]
+    return page.model_copy(update={"assets": updated_assets, "blocks": blocks})
+
+
 def parse_native_pdf(
     pdf_path: str | Path,
     *,
@@ -219,11 +311,10 @@ def parse_native_pdf(
     visual_cfg = visual_settings or VisualRecoverySettings()
     pages: list[OcrPage] = []
     with fitz.open(source) as doc:
-        analyses: list[PageVisualAnalysis] = []
-        image_boxes_by_page: list[list[tuple[float, float, float, float]]] = []
         signatures_by_page: list[list[str]] = []
-        for page in doc:
-            page_dict = page.get_text("dict", sort=True)
+        pending_by_page: list[list[_PendingEdgeAsset]] = []
+        for page_index, page in enumerate(doc, start=1):
+            page_dict = _page_dict(page)
             text_blocks, image_boxes = _analysis_inputs(page_dict)
             analysis = analyze_page(
                 page_width=float(page.rect.width),
@@ -232,8 +323,6 @@ def parse_native_pdf(
                 image_boxes=image_boxes,
                 settings=visual_cfg,
             )
-            analyses.append(analysis)
-            image_boxes_by_page.append(image_boxes)
             signatures_by_page.append(
                 _visual_signatures(
                     analysis,
@@ -243,12 +332,9 @@ def parse_native_pdf(
                     settings=visual_cfg,
                 )
             )
-        repeated_signatures = repeated_edge_signatures(signatures_by_page)
-
-        for page_index, page in enumerate(doc, start=1):
-            page_dict = page.get_text("dict", sort=True)
+            pending_edge_assets: list[_PendingEdgeAsset] = []
+            pending_by_page.append(pending_edge_assets)
             source_blocks = list(page_dict.get("blocks", []))
-            analysis = analyses[page_index - 1]
             if analysis.suspected_scanned_page and page_ocr_enabled:
                 image_dir = resolved_asset_dir / "scanned_pages" if resolved_asset_dir else None
                 recovered = page_ocr_runner(
@@ -297,7 +383,6 @@ def parse_native_pdf(
             asset_export_warnings: list[dict[str, str]] = []
             skipped_image_blocks = {"invalid_bbox": 0, "tiny_bbox": 0, "page_limit": 0}
             image_asset_count = 0
-            level2_repeated_cover = 0
 
             for block_index, block in enumerate(source_blocks, start=1):
                 block_id = f"p{page_index:04d}_b{block_index:04d}"
@@ -315,14 +400,6 @@ def parse_native_pdf(
                         page_height=float(page.rect.height),
                         origin="direct",
                     )
-                    if direct_signature in repeated_signatures:
-                        if page_index == 1:
-                            level2_repeated_cover += 1
-                        else:
-                            skipped_image_blocks["repeated_decoration"] = (
-                                skipped_image_blocks.get("repeated_decoration", 0) + 1
-                            )
-                        continue
                     if image_asset_count >= visual_cfg.direct_asset_limit:
                         skipped_image_blocks["page_limit"] += 1
                         continue
@@ -331,7 +408,18 @@ def parse_native_pdf(
                     output_path = _image_asset_path(resolved_asset_dir, asset_id)
                     asset_path = logical_asset_path(doc_id, page_index, block_id)
                     asset_metadata = {"block_id": block_id, "source": "pymupdf_image_block"}
-                    if extract_image_assets and output_path is not None:
+                    if direct_signature:
+                        pending_edge_assets.append(
+                            _PendingEdgeAsset(
+                                signature=direct_signature,
+                                asset_id=asset_id,
+                                block_id=block_id,
+                                bbox=bbox,
+                                output_path=output_path,
+                                render_enabled=extract_image_assets,
+                            )
+                        )
+                    elif extract_image_assets and output_path is not None:
                         try:
                             asset_path = str(_save_block_clip(page, bbox, output_path, dpi=image_dpi))  # type: ignore[arg-type]
                         except Exception as exc:
@@ -414,7 +502,6 @@ def parse_native_pdf(
                 )
 
             clustered_source_blocks = 0
-            cluster_assets: list[DocumentAsset] = []
             for cluster_index, cluster in enumerate(analysis.clusters, start=1):
                 cluster_signature = edge_signature(
                     cluster.bbox,
@@ -422,8 +509,6 @@ def parse_native_pdf(
                     page_height=float(page.rect.height),
                     origin="cluster",
                 )
-                if cluster_signature in repeated_signatures:
-                    continue
                 try:
                     asset, block = _cluster_asset(
                         page=page,
@@ -431,7 +516,7 @@ def parse_native_pdf(
                         page_no=page_index,
                         index=len(assets) + 1,
                         cluster=cluster,
-                        asset_dir=resolved_asset_dir,
+                        asset_dir=None if cluster_signature else resolved_asset_dir,
                         image_dpi=image_dpi,
                     )
                 except Exception as exc:
@@ -439,71 +524,20 @@ def parse_native_pdf(
                         {"block_id": f"cluster_{cluster_index}", "reason": f"{type(exc).__name__}: {exc}"}
                     )
                     continue
-                cluster_assets.append(asset)
+                if cluster_signature:
+                    pending_edge_assets.append(
+                        _PendingEdgeAsset(
+                            signature=cluster_signature,
+                            asset_id=asset.asset_id,
+                            block_id=block.block_id,
+                            bbox=list(cluster.bbox),
+                            output_path=_image_asset_path(resolved_asset_dir, asset.asset_id),
+                            source_block_count=cluster.source_block_count,
+                        )
+                    )
                 assets.append(asset)
                 blocks.append(block)
                 clustered_source_blocks += cluster.source_block_count
-
-            if region_ocr_enabled and visual_cfg.region_ocr_limit > 0:
-                ocr_candidates = sorted(
-                    [
-                        asset
-                        for asset in assets
-                        if asset.asset_path and Path(asset.asset_path).exists()
-                        and asset.metadata.get("source") in {"pymupdf_image_block", "pymupdf_fragment_cluster"}
-                    ],
-                    key=lambda item: -(
-                        (item.bbox[2] - item.bbox[0]) * (item.bbox[3] - item.bbox[1])  # type: ignore[index]
-                    ),
-                )
-                selected_ids = {asset.asset_id for asset in ocr_candidates[: visual_cfg.region_ocr_limit]}
-                updated_assets = []
-                for asset in assets:
-                    if asset.asset_id not in selected_ids:
-                        if asset.metadata.get("source") in {"pymupdf_image_block", "pymupdf_fragment_cluster"}:
-                            updated_assets.append(
-                                asset.model_copy(update={"metadata": {**asset.metadata, "ocr_status": "not_selected"}})
-                            )
-                        else:
-                            updated_assets.append(asset)
-                        continue
-                    result = image_ocr_runner(
-                        asset.asset_path,
-                        doc_id=doc_id,
-                        page_no=page_index,
-                        lang=ocr_lang,
-                        tesseract_langs=tesseract_langs,
-                        low_confidence_threshold=low_confidence_threshold,
-                        workspace=workspace,
-                    )
-                    status = "ok" if result.normalized_text else ("failed" if result.raw_text else "empty")
-                    updated_assets.append(
-                        asset.model_copy(
-                            update={
-                                "text": result.normalized_text,
-                                "confidence": result.ocr_confidence,
-                                "metadata": {
-                                    **asset.metadata,
-                                    "ocr_status": status,
-                                    "ocr_engine": result.primary_engine,
-                                    "fallback_used": result.fallback_used,
-                                },
-                            }
-                        )
-                    )
-                assets = updated_assets
-                assets_by_id = {asset.asset_id: asset for asset in assets}
-                blocks = [
-                    block.model_copy(
-                        update={
-                            "text": assets_by_id[block.asset_id].text,
-                            "metadata": assets_by_id[block.asset_id].metadata,
-                        }
-                    )
-                    if block.asset_id in assets_by_id
-                    else block
-                    for block in blocks
-                ]
 
             blocks = promote_font_titles(blocks)
             raw_text = "\n".join(raw_parts)
@@ -520,8 +554,6 @@ def parse_native_pdf(
             deferred_tiny = max(0, analysis.tiny_image_block_count - clustered_source_blocks)
             if deferred_tiny:
                 page_metadata["level2_deferred_tiny_blocks"] = deferred_tiny
-            if level2_repeated_cover:
-                page_metadata["level2_repeated_cover_candidates"] = level2_repeated_cover
             if analysis.overflow_cluster_count:
                 page_metadata["cluster_overflow_count"] = analysis.overflow_cluster_count
             pages.append(
@@ -540,6 +572,110 @@ def parse_native_pdf(
                     metadata=page_metadata,
                 )
             )
+        repeated_signatures = repeated_edge_signatures(signatures_by_page)
+        finalized_pages: list[OcrPage] = []
+        for page_index, parsed_page in enumerate(pages, start=1):
+            pending = pending_by_page[page_index - 1]
+            assets_by_id = {asset.asset_id: asset for asset in parsed_page.assets}
+            blocks_by_asset_id = {
+                block.asset_id: block for block in parsed_page.blocks if block.asset_id
+            }
+            removed_ids: set[str] = set()
+            metadata = dict(parsed_page.metadata)
+            warnings = list(metadata.get("asset_export_warnings", []))
+            skipped = dict(metadata.get("skipped_image_blocks", {}))
+            clustered_source_blocks = int(metadata.get("clustered_tiny_block_count", 0))
+            repeated_cover_count = int(metadata.get("level2_repeated_cover_candidates", 0))
+
+            for candidate in pending:
+                if candidate.signature in repeated_signatures:
+                    removed_ids.add(candidate.asset_id)
+                    clustered_source_blocks -= candidate.source_block_count
+                    if page_index == 1:
+                        repeated_cover_count += 1
+                    else:
+                        skipped["repeated_decoration"] = skipped.get("repeated_decoration", 0) + 1
+                    continue
+                asset = assets_by_id[candidate.asset_id]
+                block = blocks_by_asset_id[candidate.asset_id]
+                asset_path = asset.asset_path
+                asset_metadata = dict(asset.metadata)
+                if candidate.render_enabled and candidate.output_path is not None:
+                    try:
+                        asset_path = str(
+                            _save_block_clip(
+                                doc[page_index - 1],
+                                candidate.bbox,
+                                candidate.output_path,
+                                dpi=image_dpi,
+                            )
+                        )
+                    except Exception as exc:
+                        reason = f"{type(exc).__name__}: {exc}"
+                        asset_metadata["image_export_skipped"] = reason
+                        warnings.append({"block_id": candidate.block_id, "reason": reason})
+                assets_by_id[candidate.asset_id] = asset.model_copy(
+                    update={"asset_path": asset_path, "metadata": asset_metadata}
+                )
+                blocks_by_asset_id[candidate.asset_id] = block.model_copy(
+                    update={"asset_path": asset_path, "metadata": asset_metadata}
+                )
+
+            assets = [
+                assets_by_id[asset.asset_id]
+                for asset in parsed_page.assets
+                if asset.asset_id not in removed_ids
+            ]
+            blocks = [
+                blocks_by_asset_id[block.asset_id]
+                if block.asset_id in blocks_by_asset_id and block.asset_id not in removed_ids
+                else block
+                for block in parsed_page.blocks
+                if block.asset_id not in removed_ids
+            ]
+            metadata["clustered_tiny_block_count"] = max(0, clustered_source_blocks)
+            tiny_count = int(metadata.get("visual_analysis", {}).get("tiny_image_block_count", 0))
+            deferred_tiny = max(0, tiny_count - max(0, clustered_source_blocks))
+            if deferred_tiny:
+                metadata["level2_deferred_tiny_blocks"] = deferred_tiny
+            else:
+                metadata.pop("level2_deferred_tiny_blocks", None)
+            if repeated_cover_count:
+                metadata["level2_repeated_cover_candidates"] = repeated_cover_count
+            else:
+                metadata.pop("level2_repeated_cover_candidates", None)
+            if skipped:
+                metadata["skipped_image_blocks"] = skipped
+            else:
+                metadata.pop("skipped_image_blocks", None)
+            if warnings:
+                metadata["asset_export_warnings"] = warnings
+            else:
+                metadata.pop("asset_export_warnings", None)
+
+            finalized = parsed_page.model_copy(
+                update={
+                    "assets": assets,
+                    "blocks": blocks,
+                    "ocr_confidence": 1.0 if parsed_page.normalized_text or assets else None,
+                    "layout_quality": "ok" if parsed_page.normalized_text else ("low" if assets else "empty"),
+                    "metadata": metadata,
+                }
+            )
+            finalized_pages.append(
+                _apply_region_ocr(
+                    finalized,
+                    enabled=region_ocr_enabled,
+                    limit=visual_cfg.region_ocr_limit,
+                    image_ocr_runner=image_ocr_runner,
+                    doc_id=doc_id,
+                    lang=ocr_lang,
+                    tesseract_langs=tesseract_langs,
+                    low_confidence_threshold=low_confidence_threshold,
+                    workspace=workspace,
+                )
+            )
+        pages = finalized_pages
     return pages
 
 

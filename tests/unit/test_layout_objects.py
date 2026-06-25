@@ -173,8 +173,54 @@ def test_native_pdf_parser_suppresses_repeated_header_images(tmp_path):
     pages = parse_native_pdf(pdf, doc_id="doc1", asset_dir=tmp_path / "assets")
 
     assert all(not page.assets for page in pages)
+    assert not list((tmp_path / "assets").glob("*.png"))
     assert pages[0].metadata["level2_repeated_cover_candidates"] == 1
     assert all(page.metadata["skipped_image_blocks"]["repeated_decoration"] == 1 for page in pages[1:])
+
+
+def test_native_pdf_parser_renders_unique_edge_image_after_document_filter(tmp_path):
+    # WHY: deferring edge rendering must suppress repeated furniture without dropping a unique figure.
+    pdf = tmp_path / "unique_header.pdf"
+    asset_dir = tmp_path / "assets"
+    doc = fitz.open()
+    page = doc.new_page(width=600, height=800)
+    page.insert_text((50, 120), "Rotor dynamics body text " * 8)
+    pixmap = fitz.Pixmap(fitz.csRGB, fitz.IRect(0, 0, 10, 10), False)
+    page.insert_image(fitz.Rect(20, 10, 80, 30), pixmap=pixmap)
+    doc.save(pdf)
+    doc.close()
+
+    pages = parse_native_pdf(pdf, doc_id="doc1", asset_dir=asset_dir)
+
+    assert len(pages[0].assets) == 1
+    assert Path(pages[0].assets[0].asset_path).exists()
+    assert len(list(asset_dir.glob("*.png"))) == 1
+
+
+def test_native_pdf_parser_extracts_each_page_dictionary_once(tmp_path, monkeypatch):
+    # WHY: visual recovery must not double the dominant native text extraction cost.
+    pdf = tmp_path / "two_pages.pdf"
+    doc = fitz.open()
+    for index in range(2):
+        page = doc.new_page()
+        page.insert_text((72, 72), f"Native page {index + 1}")
+    doc.save(pdf)
+    doc.close()
+    calls = []
+
+    from vibration_agent.ingestion import pymupdf_parser
+
+    original = pymupdf_parser._page_dict
+    monkeypatch.setattr(
+        pymupdf_parser,
+        "_page_dict",
+        lambda page: calls.append(page.number) or original(page),
+    )
+
+    pages = parse_native_pdf(pdf, doc_id="doc1")
+
+    assert len(pages) == 2
+    assert calls == [0, 1]
 
 
 def test_native_pdf_parser_bounds_region_ocr_calls(tmp_path):

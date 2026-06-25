@@ -754,3 +754,32 @@ Closed on 2026-06-25:
 
 The implementation-review blockers are closed. Step 7 clean re-ingestion and
 the database/vector parity checks remain operational acceptance work.
+
+## 16. Native Ingestion Performance Closure
+
+Closed on 2026-06-25:
+
+- confirmed page visual analysis was not the dominant regression;
+- removed the R2 analysis pre-pass that called
+  `page.get_text("dict", sort=True)` twice per page;
+- each page dictionary is now extracted once and reused for feature analysis
+  and block processing;
+- edge-band assets are held as bounded metadata candidates, then rendered only
+  when the document-level repeated-decoration filter accepts them;
+- region OCR runs after that filter, preserving its page budget and avoiding OCR
+  on rejected decoration;
+- fragment-heavy page dictionaries are not cached across the document.
+
+Verification:
+
+- parser regression explicitly asserts one dictionary extraction per page;
+- unique edge images remain rendered, while repeated header images create no
+  PNG files or retained assets;
+- focused visual/parser suite: 21 passed;
+- labeled visual decision evaluation: 11/11 passed;
+- full non-large-corpus suite: 526 passed.
+
+The original ORBIT 60 profiling document was not present under `data/raw` during
+this closure, so its reported 104 ms/page saving has not been independently
+re-profiled. The one-call-per-page invariant is automated; a real-corpus timing
+sample remains part of Step 7 operational acceptance.
