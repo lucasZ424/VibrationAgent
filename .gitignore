@@ -39,3 +39,7 @@ graphify-out/
 # Local issue review logs
 docs/issues
 docs/issue_log_p4
+
+# Ingestion Scripts
+FULL_INGESTION_COMMANDS.txt
+INCREMENTAL_INGESTION_COMMANDS.txt
