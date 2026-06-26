@@ -39,6 +39,8 @@ graphify-out/
 # Local issue review logs
 docs/issues
 docs/issue_log_p4
+docs/*handoff*
+docs/**/*handoff*
 
 # Ingestion Scripts
 FULL_INGESTION_COMMANDS.txt
