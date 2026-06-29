@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Vibration Agent Operator</title>
-    <link rel="stylesheet" href="/operator/assets/styles.css" />
+    <link rel="stylesheet" href="/operator/assets/styles.css?v=r3" />
   </head>
   <body>
     <main class="shell">
@@ -30,7 +30,7 @@
             </label>
             <label>
               Chunks Dir
-              <input id="chunksDir" name="chunksDir" type="text" value="data/chunks" />
+              <input id="chunksDir" name="chunksDir" type="text" placeholder="optional: data/chunks" />
             </label>
             <label>
               Top K
@@ -76,40 +76,45 @@
           </div>
           <span id="taskId"></span>
         </div>
+        <div id="answerMeta" class="meta-row"></div>
         <article id="answer" class="answer empty">Results appear here after a local query.</article>
       </section>
 
-      <section class="inspect-grid">
-        <section>
-          <h2>Chain</h2>
-          <div id="chain" class="list empty">No chain steps.</div>
-        </section>
-        <section>
-          <h2>Citations</h2>
-          <div id="citations" class="list empty">No citations.</div>
-        </section>
-        <section>
-          <h2>Warnings</h2>
-          <div id="warnings" class="list empty">No warnings.</div>
-        </section>
-        <section>
-          <h2>Supervisor</h2>
-          <dl id="supervisor" class="facts empty"></dl>
-        </section>
-        <section>
-          <h2>Cost</h2>
-          <dl id="cost" class="facts empty"></dl>
-        </section>
-        <section>
-          <h2>Diagnostics</h2>
-          <dl id="diagnostics" class="facts empty"></dl>
-        </section>
-        <section>
-          <h2>Raw Output</h2>
-          <pre id="rawOutput" class="raw empty">{}</pre>
-        </section>
+      <section class="evidence-pane" aria-labelledby="evidence-title">
+        <h2 id="evidence-title">Evidence</h2>
+        <div id="citations" class="list empty">No citations.</div>
       </section>
+
+      <details class="inspect">
+        <summary>Diagnostics &amp; chain</summary>
+        <div class="inspect-grid">
+          <section>
+            <h2>Chain</h2>
+            <div id="chain" class="list empty">No chain steps.</div>
+          </section>
+          <section>
+            <h2>Warnings</h2>
+            <div id="warnings" class="list empty">No warnings.</div>
+          </section>
+          <section>
+            <h2>Supervisor</h2>
+            <dl id="supervisor" class="facts empty"></dl>
+          </section>
+          <section>
+            <h2>Cost</h2>
+            <dl id="cost" class="facts empty"></dl>
+          </section>
+          <section>
+            <h2>Health</h2>
+            <dl id="diagnostics" class="facts empty"></dl>
+          </section>
+          <section>
+            <h2>Raw output</h2>
+            <pre id="rawOutput" class="raw empty">{}</pre>
+          </section>
+        </div>
+      </details>
     </main>
-    <script src="/operator/assets/operator.js"></script>
+    <script src="/operator/assets/operator.js?v=r3"></script>
   </body>
 </html>

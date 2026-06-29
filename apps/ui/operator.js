@@ -2,6 +2,7 @@ const form = document.querySelector("#queryForm");
 const clearButton = document.querySelector("#clearButton");
 const statusBadge = document.querySelector("#apiStatus");
 const answerStatus = document.querySelector("#answerStatus");
+const answerMeta = document.querySelector("#answerMeta");
 const answer = document.querySelector("#answer");
 const taskId = document.querySelector("#taskId");
 const chain = document.querySelector("#chain");
@@ -58,6 +59,32 @@ function addText(parent, tag, value) {
   node.textContent = value;
   parent.appendChild(node);
   return node;
+}
+
+function addChip(parent, value, state = "") {
+  const node = document.createElement("span");
+  node.className = `chip ${state}`.trim();
+  node.textContent = value;
+  parent.appendChild(node);
+  return node;
+}
+
+function renderAnswerMeta(structured, output) {
+  answerMeta.innerHTML = "";
+  const quality = structured.answer_quality || {};
+  if (typeof quality.score === "number") {
+    addChip(answerMeta, `heuristic ${quality.score.toFixed(2)}`);
+  }
+  if (quality.faithfulness_status) {
+    addChip(answerMeta, `faithful ${quality.faithfulness_status}`, quality.faithfulness_status === "ok" ? "ok" : "warn");
+  }
+  addChip(answerMeta, `${asArray(output.citations).length} citations`);
+  const source = structured.retrieval_source;
+  if (source) {
+    const hits = structured.retrieval_hits;
+    const label = typeof hits === "number" && hits > 0 ? `source: ${source} · ${hits} hits` : `source: ${source}`;
+    addChip(answerMeta, label, source === "runtime_qdrant_ann" ? "ok" : "warn");
+  }
 }
 
 function renderAnswerText(element, value) {
@@ -131,6 +158,7 @@ function renderPayload(payload) {
   const structured = output.structured_result || {};
   const answerText = structured.answer || output.summary || "";
   answerStatus.textContent = `${payload.status || output.status || "unknown"}`;
+  renderAnswerMeta(structured, output);
   renderAnswerText(answer, answerText);
   answer.classList.toggle("empty", !answerText);
   taskId.textContent = payload.task_id ? `task: ${payload.task_id}` : "";
@@ -141,8 +169,35 @@ function renderPayload(payload) {
   });
 
   renderList(citations, asArray(output.citations), "No citations.", (item, row) => {
-    addText(item, "strong", `${text(row.chunk_id, "unknown chunk")} / ${text(row.doc_id, "unknown doc")}`);
-    addText(item, "p", `pages: ${asArray(row.pages).join(", ") || "unknown"}; evidence: ${text(row.evidence_type, "documented")}`);
+    const head = document.createElement("div");
+    head.className = "evidence-head";
+    const name = document.createElement("span");
+    name.className = "evidence-name";
+    name.textContent = text(row.source_filename || row.source_title || row.doc_id, "unknown source");
+    head.appendChild(name);
+    const pages = asArray(row.pages).join(", ");
+    if (pages) {
+      const pageEl = document.createElement("span");
+      pageEl.className = "evidence-page";
+      pageEl.textContent = `p. ${pages}`;
+      head.appendChild(pageEl);
+    }
+    if (typeof row.confidence === "number") {
+      const rel = document.createElement("span");
+      rel.className = "evidence-rel";
+      rel.textContent = row.confidence.toFixed(2);
+      head.appendChild(rel);
+    }
+    item.appendChild(head);
+    if (row.snippet) {
+      const snip = document.createElement("p");
+      snip.className = "evidence-snippet";
+      snip.textContent = row.snippet;
+      item.appendChild(snip);
+    }
+    if (row.source_filename && row.source_title && row.source_title !== row.source_filename) {
+      addText(item, "p", row.source_title).className = "evidence-sub";
+    }
   });
 
   renderList(warnings, asArray(output.warnings), "No warnings.", (item, row) => {
@@ -258,6 +313,7 @@ clearButton.addEventListener("click", () => {
   answer.textContent = "Results appear here after a local query.";
   answer.classList.add("empty");
   taskId.textContent = "";
+  answerMeta.innerHTML = "";
   clearElement(chain, "No chain steps.");
   clearElement(citations, "No citations.");
   clearElement(warnings, "No warnings.");

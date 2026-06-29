@@ -336,7 +336,7 @@ def _local_diagnostics(settings: Settings, *, probe_dependencies: bool) -> dict[
 
 @app.get("/operator", response_class=FileResponse)
 def operator_ui() -> FileResponse:
-    return FileResponse(UI_DIR / "index.html")
+    return FileResponse(UI_DIR / "index.html", headers={"Cache-Control": "no-store"})
 
 
 @app.get("/health", response_model=ApiHealthResponse)

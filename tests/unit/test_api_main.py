@@ -84,6 +84,8 @@ def test_api_serves_read_only_operator_ui():
     assert "Vibration Agent" in response.text
     assert "Run Query" in response.text
     assert "Diagnostics" in response.text
+    assert 'id="answerMeta"' in response.text
+    assert 'name="chunksDir" type="text" placeholder="optional: data/chunks"' in response.text
     assert "/operator/assets/operator.js" in response.text
     assert "/operator/assets/styles.css" in response.text
     assert "/ingest" not in response.text
