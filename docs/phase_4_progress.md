@@ -1,6 +1,6 @@
 # Phase 4 Progress
 
-Updated: 2026-06-18
+Updated: 2026-06-29
 
 ## Execution Model
 
@@ -40,6 +40,10 @@ or edit them unless explicitly asked.
 15. Local-first observability essentials: complete
 16. Remote/shared hardening decision: complete
 17. Phase-4 final interface freeze: complete
+18. Post-freeze R1-R3 local iteration closure: complete
+
+Phase 4 is formally closed. No additional feature objectives should be added to
+this ledger.
 
 ## Obj0 Notes
 
@@ -1388,3 +1392,25 @@ rg -n "Phase 4 is fully frozen|Relative to the Obj13 backend freeze|Obj14 added 
 ```
 
 Result: updated freeze summary and API-surface delta are present.
+
+## Post-Freeze R3 Closure
+
+Date: 2026-06-29
+
+- Closed the R1-R3 local iteration ledger. Phase 4 accepts no further feature
+  objectives.
+- Added runtime Qdrant ANN retrieval over the re-embedded 4436-point
+  multilingual corpus, source-aware citations, answer-first operator rendering,
+  and diagnostic answer-quality telemetry.
+- Reclassified `answer_quality` as an uncalibrated heuristic after an adversarial
+  keyword-repetition non-answer scored 1.0. It is not an acceptance gate.
+- Confirmed the default API orchestrator does not construct live GPT/Opus
+  clients; production answer generation and supervisor reliability move to the
+  successor phase.
+- Aligned configured LLM limits to GPT max output 8192, Opus max output 4096,
+  60000 tokens per task, and 180000 per session. Live Opus no longer fails the
+  local budget reservation; malformed correction output remains a known gap.
+
+Verification: 541 tests passed with 1 deselected; replay LLM eval 7/7; offline
+retrieval fixture recall@5 and recall@10 both 1.0 with embeddings explicitly
+disabled for the deterministic gate.

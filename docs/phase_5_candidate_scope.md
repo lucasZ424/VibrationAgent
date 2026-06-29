@@ -1,11 +1,12 @@
 # Phase 5 Candidate Scope
 
-Date: 2026-06-18
+Date: 2026-06-29
 
 ## Status
 
-Phase 5 is not active. This document is a durable home for candidates that
-should not be treated as current Phase-4 work.
+Phase 5 is not active. Phase 4 and its R1-R3 local iterations are formally
+closed. This document is the durable home for candidates that must not be
+treated as Phase-4 completion work.
 
 The current product posture remains local-first and single-user. Before any
 remote/shared expansion, the project should spend a local iteration cycle on
@@ -28,6 +29,16 @@ deployment target has changed. The higher-value next work is local validation:
 
 These candidates require a new objective and explicit acceptance criteria before
 implementation:
+
+- RAG answer reliability: a labeled real-question set spanning definition,
+  mechanism, comparison, diagnosis, workflow, standards, and formulas;
+- independent lexical and ANN retrieval with measured recall, rather than BM25
+  limited to the ANN candidate set;
+- evidence selection, adjacent-passage expansion, and reranking before S3;
+- controlled API construction of GPT answer and Opus supervisor clients, with
+  provider/model/usage/cost traces and budgets that permit the selected loop;
+- answer-quality calibration against human usable/unusable labels, with V2
+  faithfulness as a hard gate rather than an unweighted display field;
 
 - multi-user identity and authorization;
 - tenant/data isolation for documents, chunks, logs, cache, and model outputs;

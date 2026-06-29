@@ -1094,3 +1094,155 @@ Verification: labeled visual-decision evaluation 5/5; unit suite 500 passed;
 full non-large-corpus suite 522 passed with 1 deselected; real Zhao and B&K PDF
 regressions passed; live Paddle image OCR passed. Detailed measurements are
 recorded in `docs/refinements/r2_page_level_visual_recovery.md`.
+
+### R3 answer usability additive runtime fields (authorized 2026-06-26)
+
+Post-freeze operator-usability migration record. This change is additive and
+does not alter chain order, provider defaults, database table schemas, final
+answer authority, or V2 faithfulness policy.
+
+Implemented behavior:
+
+- `Citation` gains optional `source_filename` and `source_title` fields.
+- `Citation` gains optional `snippet` (a single-line, length-bounded preview of
+  the cited chunk text) for file-named evidence rows in the operator UI.
+- `_source_filename` (evidence and hybrid) resolves the basename of
+  `source_path` when no explicit `*_filename` field exists, so file-backed
+  chunks surface the original document filename instead of falling back to the
+  title or `doc_id`.
+- S2 `retrieval_context` carries optional `source_filename` and `source_title`
+  when present in chunk payloads or metadata.
+- Qdrant chunk payload mapping preserves the same optional source fields for
+  future runtime-store reads.
+- Final `/query` structured output gains additive
+  `structured_result.answer_quality` with schema
+  `r3.answer_quality.v1`, a bounded score, deterministic sub-scores, V2
+  faithfulness status, and citation count.
+- Final `/query` structured output gains additive
+  `structured_result.retrieval_source` (`file_chunks`,
+  `runtime_qdrant_payloads`, or `runtime_qdrant_ann`) and
+  `structured_result.retrieval_hits` so the operator can see whether semantic
+  (ANN) or lexical retrieval served the answer.
+- `answer_quality`, `retrieval_source`, and `retrieval_hits` are attached on the
+  degraded early-return path (insufficient/failed S2 or S3) as well, with
+  `faithfulness_status: "not_run"`. The telemetry remains visible when retrieval
+  is weakest; previously `_early_return` omitted it exactly on degraded answers.
+- Operator UI renders answer quality, retrieval-source provenance, and
+  file-named evidence (filename · pages · relevance · snippet) first, while
+  chain, warnings, supervisor, cost, health, and raw JSON collapse into a single
+  demoted diagnostics disclosure.
+
+Rollback:
+
+- Remove the optional `Citation` source/snippet fields and their propagation in
+  evidence, S2, S3, V4, and Qdrant payload mapping.
+- Remove the `source_path` basename fallback in `_source_filename`.
+- Remove `structured_result.answer_quality`, `retrieval_source`, and
+  `retrieval_hits` generation from the orchestrator.
+- Restore the previous operator UI citation/debug layout.
+
+Residual risk:
+
+- Existing Qdrant points only contain filename/title if they were previously
+  stored in chunk payloads; otherwise the UI falls back to title or `doc_id`.
+  The `source_path` basename fallback only fires on the file-backed chunk path
+  (file chunks carry `source_path`); legacy Qdrant payloads still require a
+  re-ingest to carry filename/title/source_path.
+- `retrieval_source` reports `runtime_qdrant_ann` only when both
+  `database.qdrant_enabled` and `embeddings.enabled` are true and the query
+  embeds against matching-dimension ingested vectors; otherwise it reports a
+  lexical source. The semantic lane stays default-off pending the R3
+  real-question promotion gate.
+- `answer_quality` is deterministic telemetry, not an authority gate. Promotion
+  to acceptance gating still requires the R3 real-question scorecard.
+- The current heuristic is not calibrated against usable/unusable labels. A
+  2026-06-29 adversarial audit produced `score=1.0` for a keyword-repeating
+  non-answer with `faithfulness_status="insufficient"`. The operator therefore
+  labels the value `heuristic` and gives it no pass/fail color. Question-intent
+  coverage, cited-hit relevance, completeness rubrics, and faithfulness gating
+  are successor-phase work.
+
+### R3 multilingual embedding model swap + corpus re-embed (authorized 2026-06-26)
+
+Resolves the RAG plan [D7] embedding-model decision. Measured root cause of
+"insufficient / unusable" answers once ANN retrieval was live: the dense model
+`sentence-transformers/all-MiniLM-L6-v2` is English-monolingual and could not
+rank the Chinese-majority corpus. Diagnostic: 64 critical-speed-outcome chunks
+exist and are all in Qdrant (parity 4436=4436), yet ANN returned 0 of them in
+top-50 for BOTH English and Chinese queries, so S3's faithfulness gate correctly
+returned insufficient.
+
+Implemented behavior:
+
+- Embedding model changed `all-MiniLM-L6-v2` -> `paraphrase-multilingual-MiniLM-L12-v2`
+  in `configs/embeddings.yaml` and `.env` (`EMBEDDING_MODEL`). Both are 384-dim,
+  so `QDRANT_VECTOR_SIZE` and the existing collection are unchanged (no collection
+  recreate).
+- Corpus re-embedded: all 4436 chunks re-encoded with the multilingual model and
+  re-upserted to Qdrant (same UUIDv5 point ids, overwrite-in-place). Final count
+  4436 = chunk corpus (parity preserved). Postgres untouched during the re-embed.
+- `chunk_payload` now also stores `source_path`, so the `_source_filename`
+  basename fallback resolves a filename on the runtime Qdrant ANN path (not only
+  the file-backed path).
+- `answer_quality` scoring made language-aware so cross-lingual answers score
+  truthfully (no schema change; same `r3.answer_quality.v1` shape):
+  `question_coverage` now credits bilingual domain-term families
+  (`critical speed` <-> `临界转速`/`共振`) via `query_normalize.alias_family_coverage`
+  instead of raw token overlap, and `readability` strips the trailing
+  `(evidence: ...)` / `(证据: ...)` tag before the sentence-completion check. The
+  English critical-speed answer's composite rose 0.49 -> 0.93 with no change to the
+  underlying answer.
+
+Verification:
+
+- Cross-lingual sanity: cos(EN query, ZH critical-speed outcome chunk) = 0.62 vs
+  0.06 for unrelated text (was effectively non-discriminating under MiniLM).
+- "What happens near critical speed" EN: status ok, 2 citations, outcome chunks
+  6/10, Bently book at rank 0 (was insufficient / 0). ZH: ok, 3 citations.
+- Full suite green (539 passed).
+
+Rollback:
+
+- Restore `EMBEDDING_MODEL` / `model_name` to `all-MiniLM-L6-v2` and re-embed.
+
+Residual risk:
+
+- The operator API process caches the embedding model at startup; it MUST be
+  restarted after a model swap or it embeds queries with the stale model against
+  the new vectors. (Server restart required.)
+- `paraphrase-multilingual-MiniLM-L12-v2` is a lightweight multilingual model; if
+  recall on the real-question set is still short, the next [D7] step is a stronger
+  multilingual model (e5 / bge-m3), which is higher-dim and DOES require a Qdrant
+  collection recreate.
+
+### R3 live-model token budget alignment (authorized 2026-06-29)
+
+The provider output cap and Agent chain budget are separate controls. High
+reasoning/verbosity does not override either control.
+
+Implemented behavior:
+
+- GPT-5.5 `max_tokens`: 1024 -> 8192.
+- Claude Opus 4.8 `max_tokens`: 1024 -> 4096.
+- Per-task chain budget: 4000 -> 60000.
+- Per-session chain budget: 30000 -> 180000.
+- Live/capture remain opt-in; this changes capacity, not provider activation.
+
+Verification:
+
+- Provider/config/budget tests: 30 passed.
+- A manual Opus extreme-task run completed two provider calls totaling 17667
+  tokens without `BudgetDeniedError`.
+
+Residual risk:
+
+- The same live run fell back because the model correction omitted the required
+  `answer` or `structured_result`, causing response validation to fail. More
+  tokens do not fix this contract problem; it belongs to successor-phase prompt,
+  validation, and retry work.
+- Larger limits raise the potential per-request cost. Usage/cost telemetry and
+  an explicit USD budget should be configured before unattended live operation.
+
+Rollback:
+
+- Restore provider max output to 1024 and chain budgets to 4000/30000.

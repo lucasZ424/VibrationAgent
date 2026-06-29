@@ -2,10 +2,18 @@
 
 Date: 2026-06-18
 
+Closure confirmed: 2026-06-29
+
 ## Freeze Decision
 
 Phase 4 is frozen as the local-first, single-user engineering assistant
 baseline for real local iteration.
+
+Phase 4 and its post-freeze R1-R3 local iterations are formally closed. This is
+an interface/framework closure, not an engineering-answer usability claim. Real
+question audits show that retrieval and deterministic answer synthesis still
+require a successor reliability phase before the product can be described as
+engineering-usable.
 
 This freeze is additive on top of:
 
@@ -266,6 +274,44 @@ mixed as the stable knowledge-base baseline.
 
 Details, re-ingestion requirements, residual risk, and rollback are recorded in
 `docs/phase_4_migrations.md`.
+
+### Post-freeze local iteration R3 - answer usability telemetry
+
+The 2026-06-26 R3 refinement may add optional source-display metadata to
+citations and deterministic answer-quality telemetry to final structured
+results. These fields are additive operator-usability signals. They do not
+change top-level API routes, orchestration chain order, database table schemas,
+provider defaults, V2 faithfulness authority, or final-answer authority.
+
+Details and rollback are recorded in `docs/phase_4_migrations.md`.
+
+### Formal closure after R3
+
+R3 closes the Phase-4 local iteration ledger with additive runtime ANN
+retrieval, source-aware citations, heuristic answer telemetry, and an
+answer-first operator surface. The closure preserves these boundaries:
+
+- `answer_quality` is diagnostic telemetry only and has no acceptance threshold;
+- V2 remains the faithfulness authority;
+- live GPT/Opus clients are not wired into the default API orchestrator;
+- fixture and unit success does not establish real-question usability;
+- retrieval/synthesis reliability work moves to the Phase-5 candidate scope.
+
+No further feature iteration should be recorded against Phase 4. Corrections to
+the frozen contracts require a migration; new answer-reliability capability
+requires activation of a successor phase with its own acceptance gates.
+
+Closure verification on 2026-06-29:
+
+- non-large-corpus suite: 541 passed, 1 deselected;
+- replay LLM eval: 7/7 passed, citation faithfulness 1.0, unsupported numeric
+  block rate 1.0;
+- deterministic retrieval fixture eval with `EMBEDDING_ENABLED=false`: 6 cases,
+  recall@5 1.0, recall@10 1.0, no missing evidence cases;
+- live GPT-5.5 S3 completed with provider usage/cost metadata;
+- live Opus calls were reachable and no longer budget-denied after token-budget
+  alignment, but correction-response validation still fell back. This is an
+  explicit successor-phase reliability gap, not a Phase-4 closure blocker.
 
 Any post-freeze change to schemas, API routes or response shapes, chain order,
 retrieval replacement behavior, provider request shape, replay/eval fixture
