@@ -60,8 +60,9 @@ def test_openai_settings_load_from_llm_yaml():
     assert settings.openai.cached_input_usd_per_million_tokens == 0.5
     assert settings.openai.reasoning_effort == "high"
     assert settings.openai.text_verbosity == "high"
-    assert settings.token_budget_per_task == 4000
-    assert settings.token_budget_per_session == 30000
+    assert settings.openai.max_tokens == 8192
+    assert settings.token_budget_per_task == 60000
+    assert settings.token_budget_per_session == 180000
 
 
 def test_openai_request_omits_deprecated_sampling_parameter_for_all_models():

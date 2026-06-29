@@ -4,13 +4,13 @@ llm:
   s5_enabled: false
   capture_enabled: false
   live_enabled: false
-  token_budget_per_task: 4000
-  token_budget_per_session: 30000
+  token_budget_per_task: 60000
+  token_budget_per_session: 180000
   usd_budget_per_task: null
   openai:
     model: gpt-5.5
     api_key_env: OPENAI_API_KEY
-    max_tokens: 1024
+    max_tokens: 8192
     timeout: 30.0
     reasoning_effort: high
     text_verbosity: high
@@ -20,7 +20,7 @@ llm:
   anthropic:
     model: claude-opus-4-8
     api_key_env: ANTHROPIC_API_KEY
-    max_tokens: 1024
+    max_tokens: 4096
     timeout: 30.0
     input_usd_per_million_tokens: 5.0
     output_usd_per_million_tokens: 25.0

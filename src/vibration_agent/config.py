@@ -138,14 +138,15 @@ class LlmSettings(BaseModel):
     replay_dir: Path = Path("tests/fixtures/llm")
     capture_enabled: bool = False
     live_enabled: bool = False
-    token_budget_per_task: int = Field(default=4000, ge=1)
-    token_budget_per_session: int = Field(default=30000, ge=1)
+    token_budget_per_task: int = Field(default=60000, ge=1)
+    token_budget_per_session: int = Field(default=180000, ge=1)
     usd_budget_per_task: float | None = Field(default=None, ge=0.0)
     openai: LlmProviderSettings = Field(
         default_factory=lambda: LlmProviderSettings(
             provider="openai",
             model="gpt-5.5",
             api_key_env="OPENAI_API_KEY",
+            max_tokens=8192,
             reasoning_effort="high",
             text_verbosity="high",
             input_usd_per_million_tokens=5.0,
@@ -158,7 +159,7 @@ class LlmSettings(BaseModel):
             provider="anthropic",
             model="claude-opus-4-8",
             api_key_env="ANTHROPIC_API_KEY",
-            max_tokens=1024,
+            max_tokens=4096,
             input_usd_per_million_tokens=5.0,
             output_usd_per_million_tokens=25.0,
             cached_input_usd_per_million_tokens=0.5,
@@ -459,10 +460,10 @@ def load(workspace: Path | None = None) -> Settings:
             capture_enabled=_env_bool("LLM_CAPTURE_ENABLED", bool(llm_section.get("capture_enabled", False))),
             live_enabled=_env_bool("LLM_LIVE_ENABLED", bool(llm_section.get("live_enabled", False))),
             token_budget_per_task=int(
-                _env("LLM_TOKEN_BUDGET_PER_TASK", llm_section.get("token_budget_per_task", 4000))
+                _env("LLM_TOKEN_BUDGET_PER_TASK", llm_section.get("token_budget_per_task", 60000))
             ),
             token_budget_per_session=int(
-                _env("LLM_TOKEN_BUDGET_PER_SESSION", llm_section.get("token_budget_per_session", 30000))
+                _env("LLM_TOKEN_BUDGET_PER_SESSION", llm_section.get("token_budget_per_session", 180000))
             ),
             usd_budget_per_task=_optional_float(
                 _env("LLM_USD_BUDGET_PER_TASK", llm_section.get("usd_budget_per_task"))
@@ -475,7 +476,7 @@ def load(workspace: Path | None = None) -> Settings:
                 api_key_env=str(
                     _env("OPENAI_API_KEY_ENV", llm_section.get("openai", {}).get("api_key_env", "OPENAI_API_KEY"))
                 ),
-                max_tokens=int(_env("OPENAI_MAX_TOKENS", llm_section.get("openai", {}).get("max_tokens", 1024))),
+                max_tokens=int(_env("OPENAI_MAX_TOKENS", llm_section.get("openai", {}).get("max_tokens", 8192))),
                 timeout=float(_env("OPENAI_TIMEOUT", llm_section.get("openai", {}).get("timeout", 30.0))),
                 reasoning_effort=str(
                     _env("OPENAI_REASONING_EFFORT", llm_section.get("openai", {}).get("reasoning_effort", "high"))
@@ -514,7 +515,7 @@ def load(workspace: Path | None = None) -> Settings:
                     )
                 ),
                 max_tokens=int(
-                    _env("ANTHROPIC_MAX_TOKENS", llm_section.get("anthropic", {}).get("max_tokens", 1024))
+                    _env("ANTHROPIC_MAX_TOKENS", llm_section.get("anthropic", {}).get("max_tokens", 4096))
                 ),
                 timeout=float(_env("ANTHROPIC_TIMEOUT", llm_section.get("anthropic", {}).get("timeout", 30.0))),
                 reasoning_effort=llm_section.get("anthropic", {}).get("reasoning_effort"),
