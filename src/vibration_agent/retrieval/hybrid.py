@@ -14,8 +14,10 @@ from typing import Any
 
 from vibration_agent.config import Settings, load
 from vibration_agent.schemas import RetrievalHit, RetrievalOutput
+from vibration_agent.storage import qdrant
 
 from . import bm25, dense, query_normalize, rerank
+from .embeddings import embed_texts
 
 RRF_K = 60
 SOURCE_PRIORITY_BOOST = 0.0001
@@ -30,6 +32,7 @@ SOURCE_PRIORITY = {
     "webpage": 1,
     "note": 1,
 }
+_MOJIBAKE_MARKERS = set("ÃÂ�¤¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿çåèéã")
 
 
 @lru_cache(maxsize=1)
@@ -86,6 +89,46 @@ def load_chunks(
     return _dedupe_chunks(loaded)
 
 
+def load_runtime_chunks(settings: Settings) -> list[dict[str, Any]]:
+    if not settings.database.qdrant_enabled:
+        return []
+    return _dedupe_chunks(
+        qdrant.load_chunk_payloads(
+            qdrant.runtime_client(settings),
+            collection=settings.database.qdrant_collection,
+        )
+    )
+
+
+def _runtime_qdrant_ann_results(
+    query: str,
+    *,
+    settings: Settings,
+    top_k: int,
+    warnings: list[str],
+) -> list[dict[str, Any]]:
+    if not settings.database.qdrant_enabled or not settings.embeddings.enabled:
+        return []
+    query_records = embed_texts([query], settings=settings)
+    query_warnings = list(dict.fromkeys(warning for record in query_records for warning in record.warnings))
+    warnings.extend(warning for warning in query_warnings if warning not in warnings)
+    query_record = query_records[0] if query_records else None
+    if not query_record or not query_record.vector or query_record.provider == "fallback_token_features":
+        return []
+    try:
+        return qdrant.search_chunks(
+            qdrant.runtime_client(settings),
+            query_record.vector,
+            top_k=top_k,
+            collection=settings.database.qdrant_collection,
+        )
+    except Exception as exc:
+        warning = f"Runtime Qdrant ANN unavailable; using payload fallback: {type(exc).__name__}: {exc}"
+        if warning not in warnings:
+            warnings.append(warning)
+        return []
+
+
 def _dedupe_chunks(chunks: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
     by_id: dict[str, dict[str, Any]] = {}
     for chunk in chunks:
@@ -98,6 +141,91 @@ def _dedupe_chunks(chunks: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
 def _source_priority(chunk: Mapping[str, Any], configured: Mapping[str, int]) -> int:
     source_type = str(chunk.get("source_type") or "").lower()
     return int(configured.get(source_type, SOURCE_PRIORITY.get(source_type, 0)))
+
+
+def _chunk_search_text(chunk: Mapping[str, Any]) -> str:
+    metadata = chunk.get("metadata") if isinstance(chunk.get("metadata"), Mapping) else {}
+    return "\n".join(
+        [
+            str(chunk.get("title") or ""),
+            str(chunk.get("topic") or ""),
+            str(metadata.get("section_title") or ""),
+            str(chunk.get("text") or ""),
+        ]
+    )
+
+
+def _source_metadata(chunk: Mapping[str, Any]) -> Mapping[str, Any]:
+    metadata = chunk.get("metadata")
+    return metadata if isinstance(metadata, Mapping) else {}
+
+
+def _first_text(*values: Any) -> str | None:
+    for value in values:
+        if value not in (None, ""):
+            return str(value)
+    return None
+
+
+def _basename(value: Any) -> str | None:
+    text = _first_text(value)
+    if text is None:
+        return None
+    name = text.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+    return name or None
+
+
+def _source_filename(chunk: Mapping[str, Any]) -> str | None:
+    metadata = _source_metadata(chunk)
+    explicit = _first_text(
+        chunk.get("source_filename"),
+        chunk.get("input_filename"),
+        chunk.get("filename"),
+        metadata.get("source_filename"),
+        metadata.get("input_filename"),
+        metadata.get("filename"),
+    )
+    if explicit is not None:
+        return explicit
+    return _basename(chunk.get("source_path")) or _basename(metadata.get("source_path"))
+
+
+def _source_title(chunk: Mapping[str, Any]) -> str | None:
+    metadata = _source_metadata(chunk)
+    return _first_text(chunk.get("source_title"), chunk.get("title"), metadata.get("source_title"), metadata.get("title"))
+
+
+def _looks_mojibake(text: str) -> bool:
+    if not text:
+        return False
+    cjk = sum(1 for char in text if "\u4e00" <= char <= "\u9fff")
+    marker_count = sum(1 for char in text if char in _MOJIBAKE_MARKERS or 0x80 <= ord(char) <= 0x9F)
+    return cjk == 0 and marker_count >= 6 and marker_count / max(len(text), 1) >= 0.02
+
+
+def _readable_chunk(chunk: Mapping[str, Any]) -> bool:
+    text = str(chunk.get("text") or chunk.get("api_context") or "")
+    return bool(text.strip()) and not _looks_mojibake(text)
+
+
+def _quality_filter_candidates(
+    candidates: Sequence[Mapping[str, Any]],
+    *,
+    normalized_query: str,
+) -> tuple[list[dict[str, Any]], list[str]]:
+    del normalized_query
+    kept: list[dict[str, Any]] = []
+    dropped_unreadable = 0
+    for candidate in candidates:
+        chunk = candidate.get("chunk", {}) if isinstance(candidate.get("chunk"), Mapping) else {}
+        if not _readable_chunk(chunk):
+            dropped_unreadable += 1
+            continue
+        kept.append(dict(candidate))
+    warnings: list[str] = []
+    if dropped_unreadable:
+        warnings.append(f"Readable-answer filter dropped {dropped_unreadable} unreadable or garbled retrieval candidate(s).")
+    return kept, warnings
 
 
 def _order_lane_results(
@@ -199,6 +327,8 @@ def _context_from_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "doc_id": chunk.get("doc_id"),
         "pages": chunk.get("pages"),
         "source_type": chunk.get("source_type"),
+        "source_filename": _source_filename(chunk),
+        "source_title": _source_title(chunk),
         "topic": chunk.get("topic"),
         "score": round(float(candidate.get("score") or 0.0), 6),
         "reason": _reason(candidate),
@@ -228,6 +358,25 @@ def search(
     warnings: list[str] = []
 
     corpus = load_chunks(chunks=chunks, chunk_paths=chunk_paths, chunks_dir=chunks_dir)
+    runtime_dense_results: list[dict[str, Any]] = []
+    retrieval_source = "file_chunks"
+    if not corpus and chunks is None and not chunk_paths and chunks_dir is None:
+        runtime_dense_results = _runtime_qdrant_ann_results(
+            normalized_query,
+            settings=active_settings,
+            top_k=active_settings.retrieval.dense_top_k,
+            warnings=warnings,
+        )
+        if runtime_dense_results:
+            corpus = _dedupe_chunks(result["chunk"] for result in runtime_dense_results if isinstance(result.get("chunk"), Mapping))
+            retrieval_source = "runtime_qdrant_ann"
+        else:
+            retrieval_source = "runtime_qdrant_payloads"
+        try:
+            if not corpus:
+                corpus = load_runtime_chunks(active_settings)
+        except Exception as exc:
+            warnings.append(f"Runtime Qdrant corpus unavailable: {type(exc).__name__}: {exc}")
     if not normalized_query:
         output = RetrievalOutput(
             normalized_query="",
@@ -254,7 +403,7 @@ def search(
         return {**output.model_dump(mode="json"), "retrieval_context": []}
 
     bm25_results = bm25.search(normalized_query, chunks=corpus, top_k=active_settings.retrieval.bm25_top_k)
-    dense_results = dense.search(
+    dense_results = runtime_dense_results or dense.search(
         normalized_query,
         chunks=corpus,
         top_k=active_settings.retrieval.dense_top_k,
@@ -266,6 +415,8 @@ def search(
         dense_results=dense_results,
         source_priority=active_settings.retrieval.source_priority,
     )
+    candidates, filter_warnings = _quality_filter_candidates(candidates, normalized_query=normalized_query)
+    warnings.extend(filter_warnings)
     if active_settings.retrieval.rerank_enabled:
         candidates = rerank.run(normalized_query, candidates, top_k=final_top_k)
     else:
@@ -283,6 +434,7 @@ def search(
     )
     return {
         **output.model_dump(mode="json"),
+        "retrieval_source": retrieval_source,
         "detected_terms": normalized.get("detected_terms", []),
         "detected_symbols": normalized.get("detected_symbols", []),
         "retrieval_context": [_context_from_candidate(candidate) for candidate in candidates],

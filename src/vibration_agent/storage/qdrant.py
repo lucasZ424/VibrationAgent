@@ -8,7 +8,7 @@ from typing import Any, Iterable, Mapping, Sequence
 from vibration_agent.config import Settings
 
 from .mappings import normalize_chunk_type
-from .qdrant_client import create_client, delete_points_by_doc_ids, ensure_collection, search_points, upsert_points
+from .qdrant_client import create_client, delete_points_by_doc_ids, ensure_collection, scroll_payloads, search_points, upsert_points
 
 COLLECTION_CHUNKS = "chunks"
 VECTOR_DISTANCE = "Cosine"
@@ -60,6 +60,16 @@ def chunk_payload(
         "chunk_id": chunk.get("chunk_id"),
         "doc_id": chunk.get("doc_id"),
         "source_type": chunk.get("source_type"),
+        "source_filename": (
+            chunk.get("source_filename")
+            or chunk.get("input_filename")
+            or chunk.get("filename")
+            or metadata.get("source_filename")
+            or metadata.get("input_filename")
+            or metadata.get("filename")
+        ),
+        "source_title": chunk.get("source_title") or chunk.get("title") or metadata.get("source_title") or metadata.get("title"),
+        "source_path": chunk.get("source_path") or metadata.get("source_path"),
         "page_start": chunk.get("page_start"),
         "page_end": chunk.get("page_end"),
         "pages": chunk.get("pages", []),
@@ -173,6 +183,18 @@ def search_chunks(
             continue
         results.append({"chunk": payload, "score": hit.score, "lane": "dense_qdrant"})
     return results
+
+
+def load_chunk_payloads(
+    client: Any,
+    *,
+    collection: str = COLLECTION_CHUNKS,
+) -> list[dict[str, Any]]:
+    return [
+        payload
+        for payload in scroll_payloads(client, collection=collection)
+        if payload.get("chunk_id") and str(payload.get("text") or "").strip()
+    ]
 
 
 def client(url: str, api_key: str | None = None):

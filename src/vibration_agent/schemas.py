@@ -64,6 +64,9 @@ class Citation(BaseModel):
     pages: list[int] | None = None
     evidence_type: EvidenceType = "documented"
     confidence: float = Field(default=1.0, ge=0.0, le=1.0)
+    source_filename: str | None = None
+    source_title: str | None = None
+    snippet: str | None = None
 
 
 class SkillInput(BaseModel):

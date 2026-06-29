@@ -148,3 +148,40 @@ def search_points(
         )
         for hit in raw_hits
     ]
+
+
+def scroll_payloads(
+    client: Any,
+    *,
+    collection: str,
+    limit: int = 256,
+) -> list[dict[str, Any]]:
+    """Return all point payloads from a collection.
+
+    WHY: the operator default path should read the populated runtime vector store
+    instead of requiring file-backed chunks. The corpus is currently small enough
+    for a deterministic local BM25 pass over payloads.
+    """
+    if hasattr(client, "collection_exists") and not client.collection_exists(collection):
+        return []
+    if not hasattr(client, "scroll"):
+        return []
+
+    payloads: list[dict[str, Any]] = []
+    offset = None
+    while True:
+        points, next_offset = client.scroll(
+            collection_name=collection,
+            limit=limit,
+            offset=offset,
+            with_payload=True,
+            with_vectors=False,
+        )
+        for point in points:
+            payload = getattr(point, "payload", None)
+            if isinstance(payload, dict):
+                payloads.append(dict(payload))
+        if next_offset is None:
+            break
+        offset = next_offset
+    return payloads

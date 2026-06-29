@@ -18,11 +18,13 @@ def _chunk(
     source_type: str = "book",
     pages: list[int] | None = None,
     topic: str | None = None,
+    source_filename: str | None = None,
 ) -> dict:
     return {
         "chunk_id": chunk_id,
         "doc_id": doc_id,
         "title": "Rotor Dynamics",
+        "source_filename": source_filename,
         "source_type": source_type,
         "chunk_index": 1,
         "page_start": (pages or [1])[0],
@@ -149,6 +151,15 @@ def test_hybrid_search_returns_retrieval_output_with_reasons():
     assert set(result["retrieval_context"][0]["lane_scores"]) == {"bm25", "dense"}
 
 
+def test_hybrid_search_propagates_source_filename_to_context():
+    chunks = [_chunk("c1", "Critical speed amplifies rotor response.", source_filename="rotor-handbook.pdf")]
+
+    result = search("critical speed", chunks=chunks, top_k=1)
+
+    assert result["retrieval_context"][0]["source_filename"] == "rotor-handbook.pdf"
+    assert result["retrieval_context"][0]["source_title"] == "Rotor Dynamics"
+
+
 def test_hybrid_search_returns_insufficient_when_recall_is_weak():
     result = search("完全无关的热处理材料问题", chunks=[_chunk("c1", "转子不平衡同步响应。")])
 
@@ -162,6 +173,72 @@ def test_hybrid_search_returns_insufficient_for_empty_query():
 
     assert result["status"] == "insufficient"
     assert result["warnings"] == ["Empty query."]
+
+
+def test_hybrid_search_uses_runtime_qdrant_corpus_when_no_file_chunks(monkeypatch):
+    from vibration_agent.config import load
+    from vibration_agent.retrieval import hybrid
+
+    settings = load()
+    settings.database.qdrant_enabled = True
+    settings.database.qdrant_collection = "test_chunks"
+    settings.embeddings.enabled = False
+    monkeypatch.setattr(hybrid.qdrant, "runtime_client", lambda _: object())
+    monkeypatch.setattr(
+        hybrid.qdrant,
+        "load_chunk_payloads",
+        lambda client, *, collection: [_chunk("c1", "critical speed amplifies rotor vibration response")],
+    )
+
+    result = search("critical speed", top_k=1, settings=settings)
+
+    assert result["status"] == "ok"
+    assert result["retrieval_source"] == "runtime_qdrant_payloads"
+    assert result["hits"][0]["chunk_id"] == "c1"
+
+
+def test_hybrid_search_uses_runtime_qdrant_ann_before_payload_scroll(monkeypatch):
+    from vibration_agent.config import load
+    from vibration_agent.retrieval import hybrid
+    from vibration_agent.schemas import EmbeddingRecord
+
+    settings = load()
+    settings.database.qdrant_enabled = True
+    settings.database.qdrant_collection = "test_chunks"
+    settings.embeddings.enabled = True
+    monkeypatch.setattr(hybrid.qdrant, "runtime_client", lambda _: object())
+    monkeypatch.setattr(
+        hybrid,
+        "embed_texts",
+        lambda texts, *, settings: [
+            EmbeddingRecord(
+                text_hash="query",
+                vector=[1.0, 0.0],
+                dimension=2,
+                model_name="same-as-index",
+                provider="sentence_transformers",
+            )
+        ],
+    )
+    monkeypatch.setattr(
+        hybrid.qdrant,
+        "search_chunks",
+        lambda client, vector, *, top_k, collection: [
+            {"chunk": _chunk("c1", "resonance response amplification without query keyword"), "score": 0.8, "lane": "dense_qdrant"}
+        ],
+    )
+    monkeypatch.setattr(
+        hybrid.qdrant,
+        "load_chunk_payloads",
+        lambda client, *, collection: (_ for _ in ()).throw(AssertionError("payload scroll should not run")),
+    )
+
+    result = search("critical speed", top_k=1, settings=settings)
+
+    assert result["status"] == "ok"
+    assert result["retrieval_source"] == "runtime_qdrant_ann"
+    assert result["hits"][0]["chunk_id"] == "c1"
+    assert "dense" in result["retrieval_context"][0]["retrieval_lanes"]
 
 
 def test_hybrid_search_uses_source_priority_as_tie_boost():
@@ -226,6 +303,20 @@ def test_retrieval_skill_reads_chunks_jsonl_and_returns_relative_citations(tmp_p
     assert output.citations[0].confidence == 1.0
 
 
+def test_retrieval_skill_citations_use_readable_source_metadata(tmp_path):
+    chunks_path = _write_jsonl(
+        tmp_path / "chunks.jsonl",
+        [_chunk("c1", "Critical speed amplifies rotor response.", source_filename="rotor-handbook.pdf")],
+    )
+    payload = SkillInput(task_id="t1", user_query="critical speed", constraints={"chunks_jsonl": str(chunks_path)})
+
+    output = RetrievalSkill().run(payload)
+
+    assert output.citations[0].source_filename == "rotor-handbook.pdf"
+    assert output.citations[0].source_title == "Rotor Dynamics"
+
+
+
 def test_retrieval_skill_accepts_s1_document_context(tmp_path):
     chunks_path = _write_jsonl(tmp_path / "chunks.jsonl", [_chunk("c1", "临界转速附近振幅会显著增大。")])
     payload = SkillInput(
@@ -286,7 +377,11 @@ def test_retrieval_skill_missing_chunk_path_is_insufficient(tmp_path):
 
 
 def test_retrieval_skill_requires_corpus():
-    output = RetrievalSkill().run(SkillInput(task_id="t1", user_query="临界转速"))
+    from vibration_agent.config import load
+
+    settings = load()
+    settings.database.qdrant_enabled = False
+    output = RetrievalSkill(settings=settings).run(SkillInput(task_id="t1", user_query="临界转速"))
 
     assert output.status == "insufficient"
     assert output.structured_result["task_id"] == "t1"

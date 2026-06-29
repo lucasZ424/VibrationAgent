@@ -99,6 +99,29 @@ def test_qdrant_search_maps_hits_to_dense_lane(monkeypatch):
     assert results == [{"chunk": {"chunk_id": "c1", "text": "rotor"}, "score": 0.9, "lane": "dense_qdrant"}]
 
 
+def test_qdrant_load_chunk_payloads_scrolls_runtime_collection(monkeypatch):
+    class Point:
+        def __init__(self, payload):
+            self.payload = payload
+
+    class Client:
+        def __init__(self):
+            self.calls = 0
+
+        def collection_exists(self, collection):
+            return collection == "test_chunks"
+
+        def scroll(self, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return [Point({"chunk_id": "c1", "text": "rotor damping"}), Point({"text": "no id"})], "next"
+            return [Point({"chunk_id": "c2", "text": ""})], None
+
+    payloads = qdrant.load_chunk_payloads(Client(), collection="test_chunks")
+
+    assert payloads == [{"chunk_id": "c1", "text": "rotor damping"}]
+
+
 def test_dense_search_uses_qdrant_when_enabled(monkeypatch):
     settings = load()
     settings.database.qdrant_enabled = True

@@ -37,6 +37,56 @@ def _chunk_confidence(chunk: Mapping[str, Any]) -> float:
     return 1.0
 
 
+def _source_metadata(chunk: Mapping[str, Any]) -> Mapping[str, Any]:
+    metadata = chunk.get("metadata")
+    return metadata if isinstance(metadata, Mapping) else {}
+
+
+def _first_text(*values: Any) -> str | None:
+    for value in values:
+        if value not in (None, ""):
+            return str(value)
+    return None
+
+
+def _basename(value: Any) -> str | None:
+    text = _first_text(value)
+    if text is None:
+        return None
+    name = text.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
+    return name or None
+
+
+def _source_filename(chunk: Mapping[str, Any]) -> str | None:
+    metadata = _source_metadata(chunk)
+    explicit = _first_text(
+        chunk.get("source_filename"),
+        chunk.get("input_filename"),
+        chunk.get("filename"),
+        metadata.get("source_filename"),
+        metadata.get("input_filename"),
+        metadata.get("filename"),
+    )
+    if explicit is not None:
+        return explicit
+    return _basename(chunk.get("source_path")) or _basename(metadata.get("source_path"))
+
+
+def snippet_text(value: Any, *, limit: int = 180) -> str | None:
+    """Return a single-line, length-bounded preview of evidence text."""
+    text = " ".join(str(value or "").split())
+    if not text:
+        return None
+    if len(text) <= limit:
+        return text
+    return text[:limit].rstrip() + "…"
+
+
+def _source_title(chunk: Mapping[str, Any]) -> str | None:
+    metadata = _source_metadata(chunk)
+    return _first_text(chunk.get("source_title"), chunk.get("title"), metadata.get("source_title"), metadata.get("title"))
+
+
 def asset_evidence_row(
     asset: DocumentAsset | dict[str, Any],
     *,
@@ -68,6 +118,8 @@ def chunk_text_evidence_row(chunk: dict[str, Any]) -> dict[str, Any]:
         "chunk_id": chunk["chunk_id"],
         "doc_id": chunk["doc_id"],
         "pages": _pages_from_chunk(chunk),
+        "source_filename": _source_filename(chunk),
+        "source_title": _source_title(chunk),
         "object_type": "body",
         "asset_path": f"chunk://{chunk['doc_id']}/{chunk['chunk_id']}/body",
         "bbox": None,
@@ -96,13 +148,15 @@ def retrieval_evidence_row(item: Mapping[str, Any]) -> dict[str, Any] | None:
         "doc_id": str(doc_id),
         "pages": _pages_from_chunk(source),
         "source_type": source.get("source_type"),
+        "source_filename": _source_filename(source),
+        "source_title": _source_title(source),
         "topic": source.get("topic"),
         "language": source.get("language") or source.get("doc_language") or source.get("source_language"),
         "text": text,
         "reason": source.get("reason") or item.get("reason", ""),
         "evidence_type": "documented",
         "confidence": _chunk_confidence(source),
-        "metadata": source.get("metadata", {}) if isinstance(source.get("metadata"), Mapping) else {},
+        "metadata": dict(_source_metadata(source)),
         "assets": source.get("assets", []) if isinstance(source.get("assets"), list) else [],
     }
 
@@ -140,6 +194,9 @@ def citation_from_chunk(chunk: Mapping[str, Any], *, evidence_type: str = "docum
         pages=_pages_from_chunk(chunk),
         evidence_type=evidence_type,  # type: ignore[arg-type]
         confidence=max(0.0, min(_chunk_confidence(chunk), 1.0)),
+        source_filename=_source_filename(chunk),
+        source_title=_source_title(chunk),
+        snippet=snippet_text(chunk.get("text") or chunk.get("api_context")),
     )
 
 

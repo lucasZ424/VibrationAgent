@@ -1,7 +1,7 @@
 embeddings:
   enabled: false
   provider: sentence_transformers
-  model_name: sentence-transformers/all-MiniLM-L6-v2
+  model_name: sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2
   model_version:
   batch_size: 32
   local_files_only: true

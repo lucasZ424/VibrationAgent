@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 from vibration_agent.config import Settings
+from vibration_agent.knowledge.evidence import snippet_text
 from vibration_agent.retrieval.hybrid import default_retrieval_settings, search as hybrid_search
 from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 
@@ -92,7 +93,11 @@ def _top_k(payload: SkillInput, settings: Settings) -> int:
     return int(value)
 
 
-def _citations_from_hits(hits: list[dict[str, Any]]) -> list[Citation]:
+def _runtime_store_enabled(settings: Settings) -> bool:
+    return bool(settings.database.qdrant_enabled)
+
+
+def _citations_from_hits(hits: list[dict[str, Any]], context_rows: list[dict[str, Any]] | None = None) -> list[Citation]:
     """Create citations with result-relative confidence, not raw RRF score.
 
     Raw hybrid scores are ranking scores that usually cluster around 0.02-0.05;
@@ -100,10 +105,16 @@ def _citations_from_hits(hits: list[dict[str, Any]]) -> list[Citation]:
     quality checks do not mistake low-magnitude RRF scores for weak evidence.
     """
     max_score = max((float(hit.get("score") or 0.0) for hit in hits), default=0.0)
+    context_by_chunk = {
+        str(row["chunk_id"]): row
+        for row in context_rows or []
+        if isinstance(row, dict) and row.get("chunk_id")
+    }
     citations: list[Citation] = []
     for hit in hits:
         if not hit.get("chunk_id") or not hit.get("doc_id"):
             continue
+        context = context_by_chunk.get(str(hit["chunk_id"]), {})
         raw_score = float(hit.get("score") or 0.0)
         confidence = raw_score / max_score if max_score > 0 else 0.0
         citations.append(
@@ -113,6 +124,9 @@ def _citations_from_hits(hits: list[dict[str, Any]]) -> list[Citation]:
                 pages=list(hit.get("pages") or []),
                 evidence_type="documented",
                 confidence=max(0.0, min(confidence, 1.0)),
+                source_filename=str(context["source_filename"]) if context.get("source_filename") else None,
+                source_title=str(context["source_title"]) if context.get("source_title") else None,
+                snippet=snippet_text(context.get("text")),
             )
         )
     return citations
@@ -147,7 +161,7 @@ class RetrievalSkill(Skill):
                 warnings=[f"Missing chunks_dir: {chunks_dir}"],
                 handoff_recommendation="Run S1 ingestion first or pass a valid chunks_dir.",
             )
-        if not chunk_paths and chunks_dir is None and chunks is None:
+        if not chunk_paths and chunks_dir is None and chunks is None and not _runtime_store_enabled(self.settings):
             return SkillOutput(
                 status="insufficient",
                 summary="S2 retrieval requires chunk_paths, chunks_dir, or in-memory chunks.",
@@ -175,6 +189,7 @@ class RetrievalSkill(Skill):
             )
 
         hits = result.get("hits", []) if isinstance(result.get("hits"), list) else []
+        retrieval_context = result.get("retrieval_context", []) if isinstance(result.get("retrieval_context"), list) else []
         status = result.get("status") if result.get("status") in {"ok", "insufficient", "fail"} else "insufficient"
         return SkillOutput(
             status=status,
@@ -185,13 +200,14 @@ class RetrievalSkill(Skill):
                     key: result.get(key)
                     for key in ("normalized_query", "intent", "hits", "status", "warnings")
                 },
-                "retrieval_context": result.get("retrieval_context", []),
+                "retrieval_context": retrieval_context,
                 "detected_terms": result.get("detected_terms", []),
                 "detected_symbols": result.get("detected_symbols", []),
+                "retrieval_source": result.get("retrieval_source"),
                 "chunk_paths": [str(path) for path in chunk_paths],
                 "chunks_dir": str(chunks_dir) if chunks_dir is not None else None,
             },
-            citations=_citations_from_hits(hits),
+            citations=_citations_from_hits(hits, retrieval_context),
             warnings=list(result.get("warnings", [])),
             handoff_recommendation="Pass retrieval_context to S3." if status == "ok" else "Run S1 ingestion or broaden the query.",
         )
