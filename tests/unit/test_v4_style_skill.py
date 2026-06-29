@@ -47,7 +47,7 @@ def test_v4_renders_s3_answer_as_conclusion_and_preserves_evidence_and_assets():
     assert "## 结论" in answer
     assert "## 证据" in answer
     assert "## 工程意义" not in answer
-    assert "c1 (doc1, 第3页, 已记录): 阻尼越大，振动衰减越快。 [资产: fig1]" in answer
+    assert "doc1 (第3页, 已记录): 阻尼越大，振动衰减越快。 [资产: fig1]" in answer
     assert "confidence=" not in answer
     assert "documented" not in answer
 
@@ -129,8 +129,40 @@ def test_v4_renders_english_sections_in_fixed_order_and_omits_empty_sections():
     assert answer.index("## Premises") < answer.index("## Minimal Model / Formula") < answer.index("## Next Actions")
     assert "## Failure Conditions / Common Pitfalls" not in answer
     assert "## 结论" not in answer
-    assert "c1 (doc1, p.7, documented): Critical speed amplifies rotor response." in answer
+    assert "doc1 (p.7, documented): Critical speed amplifies rotor response." in answer
     assert output.citations[0].chunk_id == "c1"
+
+
+def test_v4_evidence_prefers_filename_over_internal_slug():
+    payload = SkillInput(
+        task_id="t1",
+        user_query="critical speed",
+        context={
+            "s3_result": {
+                "status": "ok",
+                "structured_result": {
+                    "language": "en",
+                    "answer": "Critical speed amplifies rotor response.",
+                    "claims": [
+                        {
+                            "text": "Critical speed amplifies rotor response.",
+                            "chunk_id": "doc_slug_p0001_00001",
+                            "doc_id": "doc_slug",
+                            "pages": [12],
+                            "source_filename": "rotor-handbook.pdf",
+                        }
+                    ],
+                },
+            }
+        },
+    )
+
+    output = OutputStyleSkill().run(payload)
+
+    answer = output.structured_result["answer"]
+    assert "rotor-handbook.pdf (p.12, documented)" in answer
+    assert "doc_slug_p0001_00001" not in answer
+    assert output.citations[0].source_filename == "rotor-handbook.pdf"
 
 
 def test_v4_preserves_formula_render_contract_without_rendering_markup_in_answer():
@@ -288,7 +320,7 @@ def test_v4_compacts_page_ranges_in_evidence_lines():
 
     output = OutputStyleSkill().run(payload)
 
-    assert "c1 (doc1, pp.4-17, documented)" in output.structured_result["answer"]
+    assert "doc1 (pp.4-17, documented)" in output.structured_result["answer"]
 
 
 def test_v4_accepts_direct_context_without_s3_result_key():

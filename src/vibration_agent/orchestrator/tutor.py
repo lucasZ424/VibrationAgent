@@ -15,6 +15,8 @@ from uuid import uuid4
 from ..agent.routing import AdvisoryRoutingDecision, Difficulty, RouteDecision, route_advisory_skills, route_task
 from ..agent.supervisor import SupervisorLoop
 from ..config import load
+from ..retrieval.bm25 import tokenize
+from ..retrieval.query_normalize import alias_family_coverage
 from ..schemas import SkillInput, SkillOutput, UserMode
 from ..skills import (
     CitationCheckSkill,
@@ -108,6 +110,52 @@ _OUT_OF_SCOPE = {
     "zh": "范围外：Phase-0 只处理振动、旋转机械、信号分析、状态监测和相关标准问题。",
     "en": "Out of scope: Phase-0 only handles vibration, rotating machinery, signal analysis, condition monitoring, and related standards.",
 }
+
+# Normal Chinese terms for live operator input. The legacy mojibake constants
+# above are kept only for backward compatibility with older fixtures.
+_CJK_STRONG_TERMS = (
+    *_CJK_STRONG_TERMS,
+    "振动",
+    "振动学",
+    "转子",
+    "转子动力学",
+    "旋转机械",
+    "轴承",
+    "临界转速",
+    "临界速度",
+    "阻尼",
+    "阻尼比",
+    "模态",
+    "固有频率",
+    "共振",
+    "频响",
+    "频谱",
+    "包络",
+    "阶次",
+    "阶比",
+    "轴心轨迹",
+    "动平衡",
+    "不平衡",
+    "不对中",
+    "轴系",
+    "状态监测",
+    "故障诊断",
+    "扭振",
+)
+_CJK_WEAK_TERMS = (*_CJK_WEAK_TERMS, "标准", "规范")
+_CJK_WEAK_CONTEXT_TERMS = (
+    *_CJK_WEAK_CONTEXT_TERMS,
+    "振动",
+    "转子",
+    "旋转机械",
+    "轴承",
+    "频谱",
+    "状态监测",
+    "故障诊断",
+    "临界转速",
+    "扭振",
+)
+_OUT_OF_SCOPE["zh"] = "范围外：Phase-0 只处理振动、旋转机械、信号分析、状态监测和相关标准问题。"
 
 
 def _task_id(value: str | None = None) -> str:
@@ -221,6 +269,101 @@ def _token_cost(output: SkillOutput) -> int | None:
         if value not in (None, ""):
             return int(value)
     return None
+
+
+def _bounded(value: float) -> float:
+    return round(max(0.0, min(value, 1.0)), 3)
+
+
+def _answer_text(output: SkillOutput) -> str:
+    value = output.structured_result.get("answer")
+    return value if isinstance(value, str) else output.summary
+
+
+def _query_coverage(query: str, answer: str) -> float:
+    # Prefer bilingual domain-term families so a cross-language answer (e.g. an
+    # English query answered from Chinese evidence) is not scored as zero coverage.
+    covered, total = alias_family_coverage(query, answer)
+    if total:
+        return covered / total
+    query_tokens = {token for token in tokenize(query) if len(token) >= 2}
+    if not query_tokens:
+        return 1.0 if answer.strip() else 0.0
+    answer_tokens = set(tokenize(answer))
+    return len(query_tokens & answer_tokens) / len(query_tokens)
+
+
+def _evidence_relevance(s2_output: SkillOutput, citations: list[Any]) -> float:
+    if citations:
+        return sum(float(getattr(citation, "confidence", 0.0) or 0.0) for citation in citations) / len(citations)
+    hits = s2_output.structured_result.get("retrieval_output", {}).get("hits")
+    if not isinstance(hits, list) or not hits:
+        return 0.0
+    scores = [float(hit.get("score") or 0.0) for hit in hits if isinstance(hit, Mapping)]
+    if not scores:
+        return 0.0
+    max_score = max(scores)
+    return 1.0 if max_score > 0 else 0.0
+
+
+_EVIDENCE_SUFFIX_RE = re.compile(r"\s*[（(](?:evidence|证据)\s*[:：].*?[)）]\s*$", re.IGNORECASE)
+
+
+def _complete_sentence_ratio(answer: str) -> float:
+    lines = [line.strip() for line in answer.splitlines() if line.strip() and not line.strip().startswith("## ")]
+    if not lines:
+        return 0.0
+    # Each evidence-bound claim ends with a "(evidence: ...)" tag; strip it before
+    # checking sentence-final punctuation so a complete claim is not read as a
+    # fragment.
+    complete = 0
+    for line in lines:
+        candidate = _EVIDENCE_SUFFIX_RE.sub("", line).rstrip()
+        if re.search(r"[。！？!?；;…\.][\"'”’）】》]*$", candidate):
+            complete += 1
+    return complete / len(lines)
+
+
+def _completeness(v4_output: SkillOutput, answer: str) -> float:
+    sections = set(v4_output.structured_result.get("section_keys") or [])
+    required = {"conclusion"}
+    if "engineering_meaning" in sections or "premises" in sections or "next_action" in sections:
+        required.add("engineering_meaning")
+    section_score = len(required & sections) / len(required)
+    cited = 1.0 if v4_output.citations else 0.0
+    substantive = 1.0 if len(answer.strip()) >= 40 else 0.5 if answer.strip() else 0.0
+    return (section_score + cited + substantive) / 3.0
+
+
+def _retrieval_provenance(s2_output: SkillOutput) -> tuple[str | None, int]:
+    struct = s2_output.structured_result if isinstance(s2_output.structured_result, Mapping) else {}
+    retrieval_output = struct.get("retrieval_output")
+    hits = retrieval_output.get("hits") if isinstance(retrieval_output, Mapping) else None
+    return struct.get("retrieval_source"), (len(hits) if isinstance(hits, list) else 0)
+
+
+def _answer_quality(
+    query: str,
+    *,
+    s2_output: SkillOutput,
+    answer_output: SkillOutput,
+    faithfulness_status: str,
+) -> dict[str, Any]:
+    answer = _answer_text(answer_output)
+    subscores = {
+        "question_coverage": _bounded(_query_coverage(query, answer)),
+        "evidence_relevance": _bounded(_evidence_relevance(s2_output, answer_output.citations)),
+        "completeness": _bounded(_completeness(answer_output, answer)),
+        "readability": _bounded(_complete_sentence_ratio(answer)),
+    }
+    score = _bounded(sum(subscores.values()) / len(subscores))
+    return {
+        "schema_version": "r3.answer_quality.v1",
+        "score": score,
+        "subscores": subscores,
+        "faithfulness_status": faithfulness_status,
+        "citation_count": len(answer_output.citations),
+    }
 
 
 class TutorOrchestrator:
@@ -423,13 +566,17 @@ class TutorOrchestrator:
     def _early_return(
         self,
         *,
+        query: str,
         task_id: str,
         source: SkillOutput,
         chain: list[dict[str, str]],
         warnings: list[str],
         skill_results: dict[str, dict[str, Any]],
+        s2_output: SkillOutput | None = None,
     ) -> SkillOutput:
         answer = source.structured_result.get("answer") if isinstance(source.structured_result.get("answer"), str) else source.summary
+        s2_for_quality = s2_output or source
+        retrieval_source, retrieval_hits = _retrieval_provenance(s2_for_quality)
         return SkillOutput(
             status=source.status,
             summary=source.summary,
@@ -438,6 +585,14 @@ class TutorOrchestrator:
                 "scope": "in_scope",
                 "answer": answer,
                 "chain": chain,
+                "answer_quality": _answer_quality(
+                    query,
+                    s2_output=s2_for_quality,
+                    answer_output=source,
+                    faithfulness_status="not_run",
+                ),
+                "retrieval_source": retrieval_source,
+                "retrieval_hits": retrieval_hits,
                 "skill_results": skill_results,
             },
             citations=source.citations,
@@ -534,6 +689,7 @@ class TutorOrchestrator:
         s2_chain = [_chain_step("s2_retrieval", s2_output)]
         if s2_output.status != "ok":
             return self._early_return(
+                query=query,
                 task_id=current_task_id,
                 source=s2_output,
                 chain=s2_chain,
@@ -567,11 +723,13 @@ class TutorOrchestrator:
         s3_chain = [*s2_chain, _chain_step("s3_qa_summary", s3_output)]
         if s3_output.status != "ok":
             return self._early_return(
+                query=query,
                 task_id=current_task_id,
                 source=s3_output,
                 chain=s3_chain,
                 warnings=[*v1_warnings, *_merge_warnings(s2_output, s3_output)],
                 skill_results=_skill_results(s2=s2_output, s3=s3_output),
+                s2_output=s2_output,
             )
 
         s4_warnings: list[str] = []
@@ -784,11 +942,21 @@ class TutorOrchestrator:
         else:
             final_status = v4_output.status
 
+        retrieval_source, retrieval_hits = _retrieval_provenance(s2_output)
+
         final_structured_result = {
             "task_id": current_task_id,
             "scope": "in_scope",
             "chain": chain,
             "answer": v4_output.structured_result.get("answer", ""),
+            "answer_quality": _answer_quality(
+                query,
+                s2_output=s2_output,
+                answer_output=v4_output,
+                faithfulness_status=v2_output.status,
+            ),
+            "retrieval_source": retrieval_source,
+            "retrieval_hits": retrieval_hits,
             "reviewer_notes": reviewer_notes,
             "v4": v4_output.structured_result,
             "skill_results": skill_results,

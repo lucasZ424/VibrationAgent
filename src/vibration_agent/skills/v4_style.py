@@ -48,6 +48,17 @@ _EVIDENCE_TYPE_LABELS: dict[str, dict[str, str]] = {
 }
 _STATUS_PREFIXES_TO_IGNORE = tuple(f"{prefix} " for prefix in (*[f"S{index}" for index in range(1, 9)], "V1", "V2", "V3", "V4"))
 
+_TITLES["zh"] = {
+    "conclusion": "结论",
+    "engineering_meaning": "工程意义",
+    "premises": "适用前提",
+    "failure_modes": "失效条件/常见误区",
+    "minimal_model": "最简模型/公式",
+    "next_action": "下一步建议",
+    "evidence": "证据",
+}
+_EVIDENCE_TYPE_LABELS["zh"] = {"documented": "已记录", "inferred": "推断", "heuristic": "启发式"}
+
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
     if isinstance(value, SkillOutput):
@@ -177,6 +188,8 @@ def _citation_records(source: Mapping[str, Any], structured: Mapping[str, Any]) 
                 pages=claim.get("pages") if isinstance(claim.get("pages"), list) else None,
                 evidence_type=claim.get("evidence_type") or "documented",
                 confidence=float(claim.get("confidence", 1.0) or 1.0),
+                source_filename=str(claim["source_filename"]) if claim.get("source_filename") else None,
+                source_title=str(claim["source_title"]) if claim.get("source_title") else None,
             )
         except (TypeError, ValueError, ValidationError) as exc:
             warnings.append(f"V4 dropped malformed claim citation: {exc}")
@@ -204,6 +217,10 @@ def _compact_page_runs(pages: list[int]) -> list[str]:
 
 
 def _pages_label(pages: list[int] | None, language: str) -> str:
+    if language == "zh":
+        if not pages:
+            return "页码未知"
+        return f"第{','.join(_compact_page_runs(pages))}页"
     if not pages:
         return "页码未知" if language == "zh" else "pages unknown"
     compacted = ",".join(_compact_page_runs(pages))
@@ -267,7 +284,8 @@ def _evidence_lines(citations: list[Citation], claims: list[Mapping[str, Any]], 
     lines: list[str] = []
     for citation in citations:
         evidence_type = _evidence_type_label(citation.evidence_type, language)
-        base = f"- {citation.chunk_id} ({citation.doc_id}, {_pages_label(citation.pages, language)}, {evidence_type})"
+        source_label = citation.source_filename or citation.source_title or citation.doc_id
+        base = f"- {source_label} ({_pages_label(citation.pages, language)}, {evidence_type})"
         claim_text = claim_by_chunk.get(citation.chunk_id)
         asset_ids = assets_by_chunk.get(citation.chunk_id, [])
         if claim_text:

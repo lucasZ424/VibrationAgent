@@ -765,6 +765,8 @@ def _claim_record(claim: Mapping[str, Any]) -> dict[str, Any]:
         "chunk_id": evidence["chunk_id"],
         "doc_id": evidence["doc_id"],
         "pages": evidence.get("pages"),
+        "source_filename": evidence.get("source_filename"),
+        "source_title": evidence.get("source_title"),
         "evidence_type": evidence.get("evidence_type") or "documented",
         "assets": assets,
         "asset_ids": [asset.get("asset_id") for asset in assets if isinstance(asset, Mapping) and asset.get("asset_id")],
@@ -785,6 +787,10 @@ def _dedupe_assets(claims: list[dict[str, Any]]) -> list[dict[str, Any]]:
             else:
                 anonymous.append(asset_dict)
     return [*assets_by_id.values(), *anonymous]
+
+
+def _has_cjk(text: str) -> bool:
+    return any("\u4e00" <= char <= "\u9fff" for char in text)
 
 
 class QASummarySkill(Skill):
@@ -814,7 +820,7 @@ class QASummarySkill(Skill):
                 handoff_recommendation="Run S2 retrieval first and pass retrieval_context to S3.",
             )
 
-        language = dominant_language(rows)
+        language = "zh" if _has_cjk(payload.user_query) else dominant_language(rows)
         active_settings = self._settings or load()
         llm_warnings: list[str] = []
         if _llm_enabled(payload, active_settings):

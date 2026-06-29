@@ -57,6 +57,26 @@ def _contains_any(text: str, terms: tuple[str, ...]) -> bool:
     return any(term.lower() in lowered for term in terms)
 
 
+def alias_family_coverage(query: str, answer: str) -> tuple[int, int]:
+    """Return (covered, total) domain-term families for language-agnostic coverage.
+
+    A term family present in the query (via any alias) counts as covered when any
+    alias of the same family appears in the answer. Because the alias families are
+    bilingual, this lets an English query be scored as covered by a Chinese answer
+    (and vice versa), where raw token overlap would read zero.
+    """
+    query_lower = query.lower()
+    answer_lower = answer.lower()
+    covered = 0
+    total = 0
+    for aliases in _DOMAIN_ALIASES.values():
+        if any(alias.lower() in query_lower for alias in aliases):
+            total += 1
+            if any(alias.lower() in answer_lower for alias in aliases):
+                covered += 1
+    return covered, total
+
+
 def is_standard_scope_query(query: str) -> bool:
     lowered = query.lower()
     return any(marker in lowered for marker in _STANDARD_MARKERS) and any(

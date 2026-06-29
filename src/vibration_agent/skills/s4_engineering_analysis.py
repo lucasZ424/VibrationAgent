@@ -260,6 +260,10 @@ def _token_cost(response: Mapping[str, Any]) -> int | None:
     return None
 
 
+def _has_cjk(text: str) -> bool:
+    return any("\u4e00" <= char <= "\u9fff" for char in text)
+
+
 def _cost(response: Mapping[str, Any]) -> dict[str, Any] | None:
     value = response.get("cost")
     return dict(value) if isinstance(value, Mapping) else None
@@ -364,7 +368,7 @@ class EngineeringAnalysisSkill(Skill):
         answer = str(structured.get("answer") or source.get("summary") or first_claim).strip()
         language = str(
             structured.get("language")
-            or dominant_language([answer, *(str(claim.get("text") or "") for claim in claims)])
+            or ("zh" if _has_cjk(payload.user_query) else dominant_language([answer, *(str(claim.get("text") or "") for claim in claims)]))
         )
 
         active_settings = self._settings or load()
@@ -428,6 +432,11 @@ class EngineeringAnalysisSkill(Skill):
             premises = f"Apply this only to the retrieved evidence chunks: {', '.join(chunk_ids)}."
             failure_modes = "Do not extrapolate beyond the cited operating condition, units, or numeric values."
             next_action = "Inspect the cited chunks before applying thresholds, maintenance actions, or model assumptions."
+        if language == "zh":
+            engineering_meaning = f"工程意义仅限于所引证据：{first_claim}"
+            premises = f"仅适用于检索到的证据块：{', '.join(chunk_ids)}。"
+            failure_modes = "请勿超出所引工况、单位或数值范围进行外推。"
+            next_action = "在应用阈值、维护措施或模型假设前，请先核对所引证据块。"
         result = {
             **dict(structured),
             "task_id": payload.task_id,

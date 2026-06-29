@@ -3,9 +3,14 @@ import sys
 from pathlib import Path
 
 from vibration_agent.orchestrator import TutorOrchestrator, handle_query, is_in_scope
-from vibration_agent.orchestrator.tutor import _merge_warnings, _token_cost
+from vibration_agent.orchestrator.tutor import (
+    _complete_sentence_ratio,
+    _merge_warnings,
+    _query_coverage,
+    _token_cost,
+)
 from vibration_agent.config import RoutingSettings, load
-from vibration_agent.schemas import SkillInput, SkillOutput
+from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 from vibration_agent.skills import (
     CitationCheckSkill,
     EngineeringAnalysisSkill,
@@ -112,6 +117,7 @@ def test_default_tutor_orchestrator_uses_only_phase1_active_query_skills():
 
 
 def test_scope_detection_accepts_vibration_terms_and_rejects_general_topics():
+    assert is_in_scope("旋转机械到达临界转速后会发生什么？") is True
     assert is_in_scope("阻尼比如何影响转子振动？") is True
     assert is_in_scope("How does API 684 discuss critical speed?") is True
     assert is_in_scope("bearing fault diagnosis workflow") is True
@@ -288,6 +294,94 @@ def test_tutor_orchestrator_skips_v3_for_non_extreme_query():
         "v4_style",
     ]
     assert "v3" not in output.structured_result["skill_results"]
+
+
+def test_tutor_orchestrator_exposes_answer_quality_score():
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="S2 ok",
+            structured_result={
+                "retrieval_output": {"hits": [{"chunk_id": "c1", "doc_id": "doc1", "score": 0.2}]},
+                "retrieval_context": [_chunk("c1", "Critical speed amplifies rotor response.")],
+            },
+        )
+    )
+    s3 = RecordingSkill(SkillOutput(status="ok", summary="S3 ok", structured_result={"answer": "S3 answer"}))
+    v2 = RecordingSkill(SkillOutput(status="ok", summary="V2 ok", structured_result={"answer": "V2 answer"}))
+    v4 = RecordingSkill(
+        SkillOutput(
+            status="ok",
+            summary="V4 ok",
+            structured_result={
+                "answer": "## Conclusion\nCritical speed amplifies rotor response.",
+                "section_keys": ["conclusion"],
+            },
+            citations=[Citation(chunk_id="c1", doc_id="doc1", pages=[1], confidence=0.9)],
+        )
+    )
+    orchestrator = TutorOrchestrator(
+        retrieval_skill=s2,
+        qa_summary_skill=s3,
+        citation_check_skill=v2,
+        style_skill=v4,
+    )
+
+    output = orchestrator.handle_query("critical speed", constraints={"scope": "in_scope"}, task_id="t1")
+
+    quality = output.structured_result["answer_quality"]
+    assert quality["schema_version"] == "r3.answer_quality.v1"
+    assert quality["citation_count"] == 1
+    assert quality["subscores"]["evidence_relevance"] == 0.9
+    assert 0.0 <= quality["score"] <= 1.0
+
+
+def test_tutor_orchestrator_attaches_answer_quality_on_insufficient_retrieval():
+    # WHY: the quality score must surface on the degraded (early-return) path too --
+    # a low score is the signal that the answer is unusable. _early_return previously
+    # dropped answer_quality, so the operator showed no score exactly when retrieval
+    # failed and the answer was worst.
+    s2 = RecordingSkill(
+        SkillOutput(
+            status="insufficient",
+            summary="S2 found no usable evidence.",
+            structured_result={"retrieval_output": {"hits": []}, "retrieval_source": "file_chunks"},
+            warnings=["No chunks matched the query."],
+        )
+    )
+    orchestrator = TutorOrchestrator(retrieval_skill=s2)
+
+    output = orchestrator.handle_query("critical speed", constraints={"scope": "in_scope"}, task_id="t1")
+
+    assert output.status == "insufficient"
+    quality = output.structured_result["answer_quality"]
+    assert quality["schema_version"] == "r3.answer_quality.v1"
+    assert quality["faithfulness_status"] == "not_run"
+    assert quality["citation_count"] == 0
+    assert 0.0 <= quality["score"] <= 1.0
+    assert output.structured_result["retrieval_source"] == "file_chunks"
+    assert output.structured_result["retrieval_hits"] == 0
+
+
+def test_query_coverage_counts_bilingual_term_families():
+    # WHY: an English query answered from Chinese evidence must not score zero
+    # coverage just because the surface tokens differ across languages. The bilingual
+    # alias family ("critical speed" <-> "临界转速"/"共振") is the real coverage signal;
+    # without this the quality score falsely tanks on correct cross-lingual answers.
+    en_query = "What happens near critical speed in rotor vibration?"
+    zh_answer = "达到固有频率时转子产生共振，也称为临界转速，此时振幅达到最大值。"
+    assert _query_coverage(en_query, zh_answer) == 1.0
+    assert _query_coverage(en_query, "Lubrication oil filter maintenance schedule.") < 0.5
+
+
+def test_complete_sentence_ratio_ignores_evidence_tag_suffix():
+    # WHY: every evidence-bound claim ends with a "(evidence: ...)" tag; a complete
+    # claim sentence must not be read as a fragment because of that trailing tag.
+    answer = (
+        "1. 转子在临界转速产生共振，振幅达到最大值。 (evidence: doc_p1)\n"
+        "2. 增大刚度会提高临界转速。 (evidence: doc_p2)"
+    )
+    assert _complete_sentence_ratio(answer) == 1.0
 
 
 def test_tutor_orchestrator_runs_v3_for_extreme_query_without_blocking_answer():
