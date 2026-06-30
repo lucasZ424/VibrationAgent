@@ -32,7 +32,7 @@ treated as forgotten Phase-4 implementation tasks.
   custom POSIX workspace roots.
 - Obj16 explicitly deferred remote/shared hardening and recorded the revisit
   gate required before implementation.
-- Obj16 review follow-up added `docs/phase_5_candidate_scope.md` as the durable
+- Obj16 review follow-up added `docs/phase_5_scope.md` as the durable
   home for deferred Phase-5 candidates and recommended a local real-run /
   knowledge-base / taxonomy iteration before remote/shared expansion.
 - Obj17 added the final Phase-4 interface freeze and closed Phase 4 as the
@@ -94,7 +94,7 @@ treated as forgotten Phase-4 implementation tasks.
 - Multi-user authz, durable rate limiting, remote deployment, k8s, and
   shared-service security hardening. Obj16 records these as deferred until the
   product target explicitly changes from local-first/single-user; the durable
-  candidate list is `docs/phase_5_candidate_scope.md`.
+  candidate list is `docs/phase_5_scope.md`.
 
 ## Freeze Follow-Up Notes
 

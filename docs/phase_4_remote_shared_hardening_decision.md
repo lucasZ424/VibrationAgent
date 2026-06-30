@@ -2,6 +2,13 @@
 
 Date: 2026-06-18
 
+Superseded boundary note: on 2026-06-29, the user made local single-user
+deployment a binding product discipline and deferred shared, remote, public,
+and multi-user deployment indefinitely. The revisit gate below is retained as
+historical Phase-4 context but is inactive. Reopening that scope requires an
+explicit user-directed revision of `docs/vibration_agent_design.md`; no Phase-5
+objective may satisfy or activate this gate.
+
 ## Decision
 
 Remote/shared hardening is deferred. Phase 4 remains a local-first,

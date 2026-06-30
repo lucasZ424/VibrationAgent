@@ -4,13 +4,13 @@ This project implements `vibration_agent`, a personal engineering-oriented vibra
 
 ## Product Positioning
 
-The product target is local personal deployment: one trusted user, local corpus files, localhost CLI/API access, and private engineering notes/exports. This positioning is binding for prioritization: retrieval quality, evidence traceability, bilingual engineering usability, and reproducible local workflows come before multi-user deployment hardening.
+The product target is local personal deployment: one trusted user, local corpus files, localhost CLI/API access, and private engineering notes/exports. This positioning is binding: retrieval quality, evidence traceability, bilingual engineering usability, and reproducible local workflows are the product boundary.
 
-If the product moves to shared, remote, or public access, API path safety, authentication, authorization, rate limiting, and persistence readiness become new scope rather than implicit Phase-1 requirements.
+Shared, remote, public, and multi-user deployment are deferred indefinitely. They are not Phase-5 candidates and no planned objective may activate them through a revisit gate. Reopening that scope requires an explicit user-directed revision of `docs/vibration_agent_design.md` before a new phase is designed.
 
-Phase 4 keeps that boundary. `docs/phase_4_remote_shared_hardening_decision.md`
-records remote/shared hardening as deferred until a future objective explicitly
-changes the deployment target and security model.
+Phase 4 established that boundary. The later product-discipline decision makes
+the deferral indefinite and supersedes the old future-objective revisit path in
+`docs/phase_4_remote_shared_hardening_decision.md`.
 
 ## Layer To Code Map
 
@@ -268,10 +268,10 @@ callers are updated.
 The final Phase-4 freeze includes the Obj13 backend freeze, Obj14 read-only
 operator UI, Obj15 local-first observability, and Obj16 remote/shared hardening
 defer decision. Accepted residual risks and deferred work are recorded in
-`docs/phase_4_deferred_and_polish_audit.md`; future candidates are collected in
-`docs/phase_5_candidate_scope.md`.
+`docs/phase_4_deferred_and_polish_audit.md`; the successor local reliability
+boundary is defined in `docs/phase_5_scope.md`.
 
 The default answer path remains V2/V4-bound. S6/S7/S8 are default-off advisory
 handoff skills, Obj11 formula rendering is metadata only, Obj12 keeps symbolic
-proof/CAS deferred, and Obj16 keeps remote/shared hardening deferred unless a
-future objective explicitly changes the product boundary.
+proof/CAS deferred, and remote/shared hardening remains indefinitely out of
+scope under the binding product discipline.

@@ -39,6 +39,7 @@ graphify-out/
 # Local issue review logs
 docs/issues
 docs/issue_log_p4
+docs/issue_log_p5
 docs/*handoff*
 docs/**/*handoff*
 

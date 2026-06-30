@@ -127,11 +127,10 @@ Accepted Phase-4 residual risks are recorded in
 
 ## Phase-5 And Local Iteration
 
-`docs/phase_5_candidate_scope.md` is the durable home for future candidates.
-Phase 5 is not active.
+`docs/phase_5_scope.md` defines the successor local RAG-reliability boundary.
+Phase 5 is in planning.
 
-Before any remote/shared expansion, the project should run a local iteration
-cycle:
+The successor work remains local and single-user:
 
 - ingest a representative vibration-engineering corpus;
 - expand taxonomy terms, symbols, units, aliases, and bilingual mappings from

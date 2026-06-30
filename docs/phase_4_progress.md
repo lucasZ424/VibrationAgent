@@ -1284,7 +1284,7 @@ README, architecture, migration log, and deferred/polish audit.
   limiter are retained single-user local controls, while multi-user
   authorization and durable distributed rate limiting remain deferred.
 - Fixed Obj16 `#2`: useful forward-looking polish. Added
-  `docs/phase_5_candidate_scope.md` as the durable home for Phase-5 candidates,
+  `docs/phase_5_scope.md` as the durable home for Phase-5 candidates,
   including remote/shared hardening candidates and the recommended pause for
   local backend, real-run, knowledge-base, and taxonomy iteration before any
   remote/multi-user expansion.
@@ -1292,7 +1292,7 @@ README, architecture, migration log, and deferred/polish audit.
 ## Obj16 Review Follow-Up Verification
 
 ```powershell
-rg -n "optional API token|in-process rate limiter|Phase 5 is not active|local iteration cycle" docs\phase_4_remote_shared_hardening_decision.md docs\phase_5_candidate_scope.md
+rg -n "optional API token|in-process rate limiter|Phase 5 is not active|local iteration cycle" docs\phase_4_remote_shared_hardening_decision.md docs\phase_5_scope.md
 ```
 
 Result: retained local controls and Phase-5 candidate/pause guidance are
@@ -1309,7 +1309,7 @@ documented in the expected files.
   - Obj14 read-only operator UI;
   - Obj15 local-first observability;
   - Obj16 remote/shared hardening defer decision;
-  - `docs/phase_5_candidate_scope.md` as the durable future-candidate home.
+  - `docs/phase_5_scope.md` as the durable future-candidate home.
 - Updated README and architecture to point to the Phase-4 final freeze as the
   current baseline.
 - Recorded that the next recommended work is not remote/shared expansion, but

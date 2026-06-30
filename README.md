@@ -6,11 +6,11 @@
 
 This product is designed for local, personal deployment by one engineering user. The default operating model is trusted local files, localhost API/CLI access, and a private knowledge base; it is not a multi-user SaaS or public web service.
 
-Development should prioritize corpus quality, retrieval reliability, citation traceability, Chinese/English engineering usability, and local reproducibility before production API hardening. Shared, remote, or public deployment changes the security model and must be treated as explicit hardening work.
+Development is limited to the local single-user product boundary and prioritizes corpus quality, retrieval reliability, citation traceability, Chinese/English engineering usability, and local reproducibility. Shared, remote, public, and multi-user deployment are deferred indefinitely and are not Phase-5 candidates.
 
 The Phase-4 remote/shared hardening decision is recorded in
-`docs/phase_4_remote_shared_hardening_decision.md`; remote/shared hardening is
-deferred unless product positioning explicitly changes.
+`docs/phase_4_remote_shared_hardening_decision.md`; the later binding discipline
+in `docs/vibration_agent_design.md` supersedes its objective-level revisit gate.
 
 ## Phase-4 Runtime Scope
 
@@ -378,13 +378,13 @@ in `docs/phase_4_progress.md` and `docs/phase_4_migrations.md`.
 The Obj13 backend freeze remains the backend subset of the final freeze and is
 recorded in `docs/phase_4_backend_interface_freeze.md`. Accepted residual risks
 and deferred items are recorded in `docs/phase_4_deferred_and_polish_audit.md`;
-future candidates are collected in `docs/phase_5_candidate_scope.md`.
+the Phase-5 boundary is defined in `docs/phase_5_scope.md`.
 
 The frozen Phase-4 baseline keeps final answers on the V2/V4-bound path.
 S6/S7/S8 are default-off advisory handoff skills, not final-answer renderers.
 Formula rendering metadata is structured fallback information for clients, not
-symbolic proof. CAS/symbolic proof and remote/shared hardening remain deferred
-unless a future objective satisfies the documented gates.
+symbolic proof. CAS/symbolic proof remains deferred; remote/shared hardening is
+deferred indefinitely and has no active entry gate.
 
 ## Development Start Points
 

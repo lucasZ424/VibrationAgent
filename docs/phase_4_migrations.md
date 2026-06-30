@@ -753,7 +753,7 @@ Documentation-only decision polish after senior review.
 - Clarified in `docs/phase_4_remote_shared_hardening_decision.md` that the
   optional local API token and in-process rate limiter are retained
   single-user local controls.
-- Added `docs/phase_5_candidate_scope.md` as the durable home for Phase-5
+- Added `docs/phase_5_scope.md` as the durable home for Phase-5
   candidates.
 - Recorded that Phase 5 is not active and that the recommended next work is a
   local iteration cycle focused on backend operation, real-run testing,
@@ -765,7 +765,7 @@ chain order, CI workflow, deployment default, authorization model, or
 observability contract changed.
 
 Rollback: remove the retained-local-controls clarification and delete
-`docs/phase_5_candidate_scope.md`.
+`docs/phase_5_scope.md`.
 
 ### Obj17 - Phase-4 final interface freeze (2026-06-18)
 

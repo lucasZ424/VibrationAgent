@@ -471,7 +471,7 @@ Issue log 是用户 review artifact。实现 agent 不应主动生成或编辑 i
 涉及代码/文档：
 
 - `docs/phase_4_deferred_and_polish_audit.md`
-- `docs/phase_5_candidate_scope.md`（如需要）
+- `docs/phase_5_scope.md`（如需要）
 - `apps/api/`（只有明确实施时）
 - `configs/`（只有明确实施时）
 
