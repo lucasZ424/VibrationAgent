@@ -1,0 +1,160 @@
+{
+  "schema_version": "phase5.rag_qa.questions.v1",
+  "baseline_id": "post-r3-2026-06-30",
+  "corpus": {
+    "snapshot_id": "qdrant-chunks-post-r3-2026-06-30",
+    "expected_chunk_count": 4436,
+    "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "embedding_dimension": 384
+  },
+  "retrieval_config": {
+    "mode": "hybrid",
+    "bm25_top_k": 50,
+    "dense_top_k": 50,
+    "final_top_k": 10,
+    "fusion": "rrf",
+    "rerank_enabled": false
+  },
+  "cases": [
+    {
+      "case_id": "p5_definition_zh_order_analysis",
+      "intent": "definition",
+      "language": "zh",
+      "query": "什么是阶比分析，它对变速旋转机械有什么作用？",
+      "expected_evidence": [{"evidence_id": "order_definition", "chunk_id": "document_cdd35349_p0026_00031", "doc_id": "document_cdd35349", "pages": [26], "rationale": "该段明确给出角域等角度采样定义及启停分析用途。"}],
+      "key_facts": [{"fact_id": "angular_domain", "aliases": ["角域采样", "等角度采样"]}, {"fact_id": "variable_speed", "aliases": ["启停", "变速", "升降速"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "engineering_meaning"], "human_usable_if": "说明角域/等角度采样，并解释为何适合变速过程。"},
+      "evidence_boundary": {"allowed_doc_ids": ["document_cdd35349"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_definition_en_order_analysis",
+      "intent": "definition",
+      "language": "en",
+      "query": "What is order analysis and why is it used for variable-speed rotating machinery?",
+      "expected_evidence": [{"evidence_id": "order_definition", "chunk_id": "document_cdd35349_p0026_00031", "doc_id": "document_cdd35349", "pages": [26], "rationale": "The passage defines angular-domain sampling and its start-up/coast-down use."}],
+      "key_facts": [{"fact_id": "angular_domain", "aliases": ["angular-domain", "equal-angle sampling", "角域采样", "等角度采样"]}, {"fact_id": "variable_speed", "aliases": ["variable-speed", "start-up", "启停", "变速"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "engineering_meaning"], "human_usable_if": "Defines angular sampling and connects it to variable speed."},
+      "evidence_boundary": {"allowed_doc_ids": ["document_cdd35349"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_mechanism_zh_critical_speed",
+      "intent": "mechanism",
+      "language": "zh",
+      "query": "转子接近临界转速时，为什么振动幅值会增大并出现相位变化？",
+      "expected_evidence": [{"evidence_id": "critical_response", "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052", "doc_id": "gbt_19873_1_2005_1_57afcb1a", "pages": [33], "rationale": "标准附录直接描述临界转速处幅值最大及显著相位变化。"}],
+      "key_facts": [{"fact_id": "resonance", "aliases": ["共振", "固有频率"]}, {"fact_id": "phase_change", "aliases": ["相位变化", "相位角"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "engineering_meaning"], "human_usable_if": "把激励频率接近固有频率与幅值和相位响应联系起来。"},
+      "evidence_boundary": {"allowed_doc_ids": ["gbt_19873_1_2005_1_57afcb1a"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_mechanism_en_critical_speed",
+      "intent": "mechanism",
+      "language": "en",
+      "query": "Why do rotor vibration amplitude and phase change near critical speed?",
+      "expected_evidence": [{"evidence_id": "critical_response", "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052", "doc_id": "gbt_19873_1_2005_1_57afcb1a", "pages": [33], "rationale": "The standard states the amplitude maximum and phase change at critical speed."}],
+      "key_facts": [{"fact_id": "resonance", "aliases": ["resonance", "natural frequency", "共振", "固有频率"]}, {"fact_id": "phase_change", "aliases": ["phase change", "phase angle", "相位变化"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "engineering_meaning"], "human_usable_if": "Connects excitation/natural frequency coincidence to amplitude and phase."},
+      "evidence_boundary": {"allowed_doc_ids": ["gbt_19873_1_2005_1_57afcb1a"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_comparison_zh_unbalance_misalignment",
+      "intent": "comparison",
+      "language": "zh",
+      "query": "转子不平衡与轴系不对中的振动频谱和方向特征有什么区别？",
+      "expected_evidence": [{"evidence_id": "standard_fault_table", "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052", "doc_id": "gbt_19873_1_2005_1_57afcb1a", "pages": [33], "rationale": "标准表同时列出不平衡和轴不对中的频率及方向特征。"}, {"evidence_id": "misalignment_detail", "chunk_id": "vold_kalman_e0e977fa_p0022_00029", "doc_id": "vold_kalman_e0e977fa", "pages": [22], "rationale": "该段补充平行/角不对中的径向、轴向和倍频特征。"}],
+      "key_facts": [{"fact_id": "unbalance_1x", "aliases": ["不平衡", "1x", "一倍频"]}, {"fact_id": "misalignment_harmonics", "aliases": ["2x", "二倍频", "较高阶谐波"]}, {"fact_id": "axial", "aliases": ["轴向振动", "轴向分量"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "engineering_meaning"], "human_usable_if": "分别给出不平衡1X和不对中倍频/轴向特征并提示不能单凭单一谱线定性。"},
+      "evidence_boundary": {"allowed_doc_ids": ["gbt_19873_1_2005_1_57afcb1a", "vold_kalman_e0e977fa"], "requires_multiple_docs": true}
+    },
+    {
+      "case_id": "p5_comparison_en_unbalance_misalignment",
+      "intent": "comparison",
+      "language": "en",
+      "query": "How do the spectrum and vibration direction differ between rotor unbalance and shaft misalignment?",
+      "expected_evidence": [{"evidence_id": "standard_fault_table", "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052", "doc_id": "gbt_19873_1_2005_1_57afcb1a", "pages": [33], "rationale": "The standard table compares unbalance and shaft misalignment."}, {"evidence_id": "misalignment_detail", "chunk_id": "vold_kalman_e0e977fa_p0022_00029", "doc_id": "vold_kalman_e0e977fa", "pages": [22], "rationale": "This passage adds radial, axial, 1X and 2X detail."}],
+      "key_facts": [{"fact_id": "unbalance_1x", "aliases": ["unbalance", "1x", "一倍频"]}, {"fact_id": "misalignment_harmonics", "aliases": ["2x", "harmonic", "二倍频"]}, {"fact_id": "axial", "aliases": ["axial vibration", "轴向振动"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "engineering_meaning"], "human_usable_if": "Contrasts 1X unbalance with harmonics/axial misalignment evidence."},
+      "evidence_boundary": {"allowed_doc_ids": ["gbt_19873_1_2005_1_57afcb1a", "vold_kalman_e0e977fa"], "requires_multiple_docs": true}
+    },
+    {
+      "case_id": "p5_diagnosis_zh_fault_discrimination",
+      "intent": "diagnosis",
+      "language": "zh",
+      "query": "设备出现1X径向振动时，怎样判断是转子不平衡还是不对中？",
+      "expected_evidence": [{"evidence_id": "standard_fault_table", "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052", "doc_id": "gbt_19873_1_2005_1_57afcb1a", "pages": [33], "rationale": "标准表给出两类故障的频率、轴向分量及临界转速相位线索。"}],
+      "key_facts": [{"fact_id": "phase", "aliases": ["相位", "矢量"]}, {"fact_id": "harmonics", "aliases": ["2x", "二倍频", "谐波"]}, {"fact_id": "axial", "aliases": ["轴向"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "next_action"], "human_usable_if": "要求结合相位、倍频和轴向测点复核，而不是把1X等同于不平衡。"},
+      "evidence_boundary": {"allowed_doc_ids": ["gbt_19873_1_2005_1_57afcb1a"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_diagnosis_en_fault_discrimination",
+      "intent": "diagnosis",
+      "language": "en",
+      "query": "When radial 1X vibration is high, how should unbalance be distinguished from misalignment?",
+      "expected_evidence": [{"evidence_id": "standard_fault_table", "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052", "doc_id": "gbt_19873_1_2005_1_57afcb1a", "pages": [33], "rationale": "The standard supplies phase, harmonic and axial discriminators."}],
+      "key_facts": [{"fact_id": "phase", "aliases": ["phase", "vector", "相位"]}, {"fact_id": "harmonics", "aliases": ["2x", "harmonic", "二倍频"]}, {"fact_id": "axial", "aliases": ["axial", "轴向"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "next_action"], "human_usable_if": "Requires phase, harmonics and axial checks rather than a 1X-only diagnosis."},
+      "evidence_boundary": {"allowed_doc_ids": ["gbt_19873_1_2005_1_57afcb1a"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_workflow_zh_measurement_diagnosis",
+      "intent": "workflow",
+      "language": "zh",
+      "query": "如何规划一次旋转机械振动故障诊断的测量流程？",
+      "expected_evidence": [{"evidence_id": "measurement_procedure", "chunk_id": "gbt_20471_2006_e8b906be_p0006_00005", "doc_id": "gbt_20471_2006_e8b906be", "pages": [6, 7], "rationale": "标准第5章规定可行性、运行状态及机组整体测量程序。"}],
+      "key_facts": [{"fact_id": "feasibility", "aliases": ["测量的可行性", "可行性"]}, {"fact_id": "operating_state", "aliases": ["运行状态", "工况"]}, {"fact_id": "whole_train", "aliases": ["整个机组", "整机"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "next_action"], "human_usable_if": "包含目标/可行性、稳定工况、测点采集、对比分析和复核。"},
+      "evidence_boundary": {"allowed_doc_ids": ["gbt_20471_2006_e8b906be"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_workflow_en_measurement_diagnosis",
+      "intent": "workflow",
+      "language": "en",
+      "query": "What measurement workflow should be used for vibration fault diagnosis on a rotating machine?",
+      "expected_evidence": [{"evidence_id": "measurement_procedure", "chunk_id": "gbt_20471_2006_e8b906be_p0006_00005", "doc_id": "gbt_20471_2006_e8b906be", "pages": [6, 7], "rationale": "Section 5 covers feasibility, operating state and whole-train measurement planning."}],
+      "key_facts": [{"fact_id": "feasibility", "aliases": ["feasibility", "可行性"]}, {"fact_id": "operating_state", "aliases": ["operating state", "operating condition", "运行状态"]}, {"fact_id": "whole_train", "aliases": ["whole train", "entire machine", "整个机组"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "next_action"], "human_usable_if": "Covers feasibility, controlled operating state, acquisition, comparison and confirmation."},
+      "evidence_boundary": {"allowed_doc_ids": ["gbt_20471_2006_e8b906be"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_standards_zh_gbt33199_scope",
+      "intent": "standards",
+      "language": "zh",
+      "query": "GB/T 33199.1 的适用机组范围和规定的方法是什么？",
+      "expected_evidence": [{"evidence_id": "gbt33199_scope", "chunk_id": "gb_t_33199_1_2016_1_50mw_6960b36a_p0005_00004", "doc_id": "gb_t_33199_1_2016_1_50mw_6960b36a", "pages": [5, 6], "rationale": "标准范围页给出功率、转速、机组类型及分析测量方法。"}],
+      "key_facts": [{"fact_id": "power", "aliases": ["大于50mw", "50 mw", "50mw"]}, {"fact_id": "unit", "aliases": ["透平发电机组", "燃气轮机发电机组"]}, {"fact_id": "method", "aliases": ["分析评定", "测量验证"]}],
+      "completeness_rubric": {"required_sections": ["conclusion"], "human_usable_if": "准确列出功率、转速/机组类型，并说明固有频率分析评定和测量验证。"},
+      "evidence_boundary": {"allowed_doc_ids": ["gb_t_33199_1_2016_1_50mw_6960b36a"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_standards_en_gbt33199_scope",
+      "intent": "standards",
+      "language": "en",
+      "query": "What units and methods are covered by GB/T 33199.1?",
+      "expected_evidence": [{"evidence_id": "gbt33199_scope", "chunk_id": "gb_t_33199_1_2016_1_50mw_6960b36a_p0005_00004", "doc_id": "gb_t_33199_1_2016_1_50mw_6960b36a", "pages": [5, 6], "rationale": "The scope page states rating, speed, unit types and analysis/measurement methods."}],
+      "key_facts": [{"fact_id": "power", "aliases": ["50 mw", "50mw", "大于50mw"]}, {"fact_id": "unit", "aliases": ["turbine-generator", "gas turbine", "透平发电机组"]}, {"fact_id": "method", "aliases": ["analysis", "measurement verification", "分析评定", "测量验证"]}],
+      "completeness_rubric": {"required_sections": ["conclusion"], "human_usable_if": "States rating, speed/unit scope and natural-frequency analysis/measurement verification."},
+      "evidence_boundary": {"allowed_doc_ids": ["gb_t_33199_1_2016_1_50mw_6960b36a"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_formula_zh_influence_vector",
+      "intent": "formula",
+      "language": "zh",
+      "query": "单平面动平衡中，如何用试重前后的响应计算影响矢量？",
+      "expected_evidence": [{"evidence_id": "influence_vector_formula", "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316", "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55", "pages": [232], "rationale": "该段给出 C=Hm校准 及 H=(T-O)/m校准。"}],
+      "key_facts": [{"fact_id": "response_difference", "aliases": ["t-0", "t−0", "响应矢量c"]}, {"fact_id": "divide_weight", "aliases": ["m校准", "试重", "校准配重"]}, {"fact_id": "complex_vector", "aliases": ["振幅和相位", "复数"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "premises"], "human_usable_if": "给出H=(T-O)/m并定义原始响应、总响应、试重和相位约定。"},
+      "evidence_boundary": {"allowed_doc_ids": ["donalde_bently_charlest_hatch_2014_cdef6d55"], "requires_multiple_docs": false}
+    },
+    {
+      "case_id": "p5_formula_en_influence_vector",
+      "intent": "formula",
+      "language": "en",
+      "query": "How is the influence vector calculated from pre-trial and post-trial vibration in single-plane balancing?",
+      "expected_evidence": [{"evidence_id": "influence_vector_formula", "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316", "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55", "pages": [232], "rationale": "The passage gives C=Hm_trial and H=(T-O)/m_trial."}],
+      "key_facts": [{"fact_id": "response_difference", "aliases": ["t-o", "t−o", "response vector c", "响应矢量c"]}, {"fact_id": "divide_weight", "aliases": ["trial weight", "calibration weight", "m校准"]}, {"fact_id": "complex_vector", "aliases": ["amplitude and phase", "complex", "振幅和相位"]}],
+      "completeness_rubric": {"required_sections": ["conclusion", "premises"], "human_usable_if": "States H=(T-O)/m and defines original/total response, trial weight and phase convention."},
+      "evidence_boundary": {"allowed_doc_ids": ["donalde_bently_charlest_hatch_2014_cdef6d55"], "requires_multiple_docs": false}
+    }
+  ]
+}

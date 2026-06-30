@@ -1,7 +1,7 @@
 # Phase 5 Scope
 
 Date: 2026-06-29
-Status: ACTIVE - OBJ0 COMPLETE; OBJ1 READY
+Status: ACTIVE - OBJ1 COMPLETE; OBJ2 PENDING BASELINE REVIEW
 
 ## Phase Boundary
 

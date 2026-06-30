@@ -74,3 +74,40 @@ documentation-only.
 
 Rollback: revert the Phase-5 planning documents. The frozen Phase-4 runtime is
 unaffected.
+
+### Obj1 - Real-question evaluation contract (2026-06-30)
+
+Status: implemented; baseline pending user review.
+
+Additive artifacts:
+
+- `tests/fixtures/rag_qa/questions.json` defines
+  `phase5.rag_qa.questions.v1`: stable case ids, bilingual intent coverage,
+  expected doc/page/chunk evidence, key-fact aliases, human completeness rubric,
+  evidence boundary, and diagnostic hints.
+- `scripts/rag_qa_eval.py` emits `phase5.rag_qa.report.v2`: per-case chain output
+  and aggregate recall@5/@10, completeness, V2 faithfulness, sentence
+  completeness, latency, V2 status counts, multi-label miss counts, mutually
+  exclusive primary miss counts, and a deterministic fingerprint.
+- `tests/fixtures/rag_qa/post_r3_baseline.json` freezes the 4,436-chunk post-R3
+  scorecard and records corpus id, embedding model/dimension, retrieval config,
+  and Git commit.
+
+Execution boundary:
+
+- The runner uses the existing S2 -> S3 -> V2 -> V4 runtime contracts and does
+  not change any production schema, score, retrieval setting, or answer path.
+- Live providers and Postgres logging are disabled for this evaluator. The
+  sentence-transformer is resolved from an existing local snapshot and Qdrant
+  is local read-only input; a missing corpus or model snapshot fails loud.
+- Latency is reported but excluded from the deterministic fingerprint. Any
+  future field or scoring change requires a report-schema version bump and a
+  regenerated baseline rather than silently overwriting this contract.
+- Report v2 supersedes the pre-review v1 baseline. It makes ranking reachable
+  whenever recall improves from top 5 to top 10, derives terminology from
+  asymmetric bilingual-pair recall instead of English-only hints, and records
+  the stable evidence rule `exact chunk id OR same doc id with page overlap`.
+
+Compatibility: additive evaluation-only contract; no runtime consumer changes.
+Data migration: none. Rollback: remove the Obj1 evaluator, fixtures, baseline,
+and tests; the Phase-4 runtime remains unchanged.

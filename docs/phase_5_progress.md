@@ -4,8 +4,9 @@ Updated: 2026-06-30
 
 ## Status
 
-Phase 5 is active. Obj0 is complete and Obj1 is cleared to start but has not
-started. Phase 4, including its R1-R3 local iteration, is formally closed
+Phase 5 is active. Obj0 and Obj1 are complete; the Obj1 baseline is ready for
+user review before Obj2 is released. Phase 4, including its R1-R3 local
+iteration, is formally closed
 (`docs/phase_4_progress.md`, Obj0-18). Phase 5 exists to systematically close
 the gaps that the R1-R3 iteration exposed on the real corpus. Shared, remote,
 public, and multi-user deployment are deferred indefinitely and are not part of
@@ -47,7 +48,7 @@ regression target.
 ## Objective Status
 
 0. Phase-5 baseline and governance: complete
-1. Real-question evaluation harness and baseline scorecard: planned
+1. Real-question evaluation harness and baseline scorecard: complete
 2. Answer-quality calibration and V2 hard gate: planned
 3. Multilingual retrieval formalization and reindex tooling: planned
 4. Independent lexical + ANN lanes, bilingual expansion, fusion: planned
@@ -146,7 +147,74 @@ identified to drive Obj3-6 scope.
 Dependencies: Obj0 (measurement only, no runtime contract change). Hard
 prerequisite for all later objectives.
 
-Status: planned.
+Status: complete.
+
+Implementation Notes:
+
+- Added 14 human-labeled questions covering definition, mechanism, comparison,
+  diagnosis, workflow, standards, and formula intents in Chinese and English.
+- Added `scripts/rag_qa_eval.py`, which runs the existing S2 -> S3 -> V2 -> V4
+  chain and records per-case retrieval hits, answer, citations, V2 status,
+  completeness, sentence completeness, latency, evidence-boundary checks,
+  primary miss category, and co-occurring miss signals.
+- Kept the evaluator offline: it resolves the existing multilingual embedding
+  snapshot from the local Hugging Face cache, disables Postgres logging, injects
+  no live LLM client, and reads the local Qdrant corpus once per run.
+- Stored the generated post-R3 report at
+  `tests/fixtures/rag_qa/post_r3_baseline.json` with corpus, embedding,
+  retrieval-config, Git-commit, and deterministic-fingerprint metadata.
+
+Baseline Results:
+
+- Corpus: 4,436 chunks; multilingual MiniLM-L12-v2; 384 dimensions; hybrid RRF
+  with BM25 50, ANN 50, final top 10, rerank disabled.
+- Recall@5: 0.429; recall@10: 0.571; completeness: 0.316; V2 faithfulness:
+  0.429; sentence completeness: 0.703.
+- Multi-label miss signals: synthesis 13, retrieval 4, ranking 3, terminology 2,
+  cross-doc 2, pass 1. Primary categories: synthesis 4, retrieval 4, ranking 3,
+  terminology 2, pass 1. Multi-label counts intentionally expose co-occurring
+  early-rank and downstream synthesis failures instead of hiding them behind one
+  mutually exclusive category.
+- Terminology is measured symmetrically: a Chinese/English pair must target the
+  same labeled evidence, and only the failing language is tagged when its peer
+  reaches full recall@10. Pairs where both languages fail remain retrieval.
+- V2 statuses: ok 6, insufficient 6, unknown 2. The 0.429 faithfulness rate
+  remains an all-case baseline; Obj2 must calibrate unknown separately from an
+  explicit insufficient verdict.
+- Two consecutive full-corpus runs produced the same deterministic fingerprint
+  (`9ca91eb77f18dd84099196ff16b0689fb0170af3ff10e0a09f3b8df6daaf30d2`).
+  Observed total latency was 49.6 s on both review-fix runs; latency is intentionally not
+  part of the deterministic fingerprint.
+
+Verification:
+
+- `.venv\\Scripts\\python.exe -m pytest tests/eval/test_rag_qa_eval.py -q`:
+  8 passed.
+- `.venv\\Scripts\\python.exe scripts\\rag_qa_eval.py`: 14 cases completed
+  against the local 4,436-chunk Qdrant snapshot; second run exited 0 and matched
+  the first deterministic fingerprint.
+- `.venv\\Scripts\\python.exe -m pytest tests -q -m "not large_corpus"
+  --basetemp=.pytest_obj1_full2 -p no:cacheprovider`: 549 passed, 1 deselected,
+  exit code 0. The deselected test is the registered large-corpus test.
+
+Residual Risk:
+
+- The 14-case set is a deliberately small engineering baseline, not a claim of
+  broad domain coverage. New real misses must become permanent labeled cases.
+- Completeness is transparent phrase/section coverage until Obj2 calibrates it
+  against human usable/unusable labels; it must not be used as a product-quality
+  threshold yet.
+- Exact chunk ids are backed by doc/page matching to tolerate ranking among
+  neighboring chunks. Report v2 records the binding rule as `exact chunk id OR
+  same doc id with page overlap`; changing it requires a report version bump.
+  Any corpus mutation still requires a new snapshot and a full scorecard rerun.
+
+Next Objective Gate:
+
+- Obj1 implementation and measurement are complete.
+- Obj2 remains blocked until the user reviews and accepts the question labels,
+  evidence boundaries, and post-R3 scorecard. Obj3-Obj8 remain blocked by the
+  same gate.
 
 ## Obj2 - Answer-quality calibration and V2 hard gate
 

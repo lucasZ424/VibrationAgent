@@ -1,0 +1,2107 @@
+{
+  "baseline_id": "post-r3-2026-06-30",
+  "case_count": 14,
+  "cases": [
+    {
+      "answer": "## 结论\n根据已检索证据，可以确定：\n1. 充分掌握和理解旋转机械故障机理与振动特征、振动传感器和鉴相传感器的正确安装对旋转机械阶比分析的结果起着决定性作用。（证据：vold_kalman_e0e977fa_p0043_00059）\n2. 在前面几个章节中论证了阶比分析技术在旋转机械非平稳信号分析中，尤其在分析旋转机械升降速等变速过程的振动信号时的重要性。（证据：vold_kalman_04578d8a_p0058_00093）\n3. 计算阶比跟踪技术是由HP 公司[9]的Potter 开发的，其通过同步采集拾取旋转机械振动信号和转速脉冲信号，得到双通道等时间间隔采集的时域同步信号，然后根据阶比采样定理，通过转速脉冲信号计算每转内插入的阶比重采样时刻来实现振动信号的重采样，从而得到角域信号，最后进行阶比分析。（证据：vold_kalman_04578d8a_p0007_00010）\n4. 基于Vold-Kalman跟踪滤波的旋转机械阶比分析方法研究（证据：vold_kalman_04578d8a_p0001_00001）\n\n## 工程意义\n工程意义仅限于所引证据：在前面几个章节中论证了阶比分析技术在旋转机械非平稳信号分析中，尤其在分析旋转机械升降速等变速过程的振动信号时的重要性。\n\n## 适用前提\n仅适用于检索到的证据块：vold_kalman_04578d8a_p0058_00093。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- 基于Vold-Kalman跟踪滤波的旋转机械阶比分析方法研究（重大傅韦娜）.pdf (第58页, 已记录): 在前面几个章节中论证了阶比分析技术在旋转机械非平稳信号分析中，尤其在分析旋转机械升降速等变速过程的振动信号时的重要性。 [资产: vold_kalman_04578d8a_p0058_00093_body]",
+      "case_id": "p5_definition_zh_order_analysis",
+      "citations": [
+        {
+          "chunk_id": "vold_kalman_04578d8a_p0058_00093",
+          "confidence": 0.7850740535234112,
+          "doc_id": "vold_kalman_04578d8a",
+          "evidence_type": "documented",
+          "pages": [
+            58
+          ],
+          "snippet": "5 旋转机械阶比分析系统的开发 在前面几个章节中论证了阶比分析技术在旋转机械非平稳信号分析中，尤 其在分析旋转机械升降速等变速过程的振动信号时的重要性。为了有针对性地 分析旋转机械升降速过程中的非平稳信号，研究和开发阶比分析软件是十分必 要的。本章在以上章节论述的基础上，根据阶比分析的实际需求，利用面向对 象的编程技术以及Visual C++6.0 开发工具…",
+          "source_filename": "基于Vold-Kalman跟踪滤波的旋转机械阶比分析方法研究（重大傅韦娜）.pdf",
+          "source_title": "基于Vold-Kalman跟踪滤波的旋转机械阶比分析方法研究（重大傅韦娜）"
+        }
+      ],
+      "completeness": 0.75,
+      "evidence_boundary_ok": false,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "angular_domain"
+        },
+        {
+          "covered": true,
+          "fact_id": "variable_speed"
+        }
+      ],
+      "intent": "definition",
+      "language": "zh",
+      "latency_ms": 8954.386,
+      "matched_evidence_at_10": [
+        "order_definition"
+      ],
+      "matched_evidence_at_5": [
+        "order_definition"
+      ],
+      "miss_categories": [
+        "synthesis"
+      ],
+      "miss_category": "synthesis",
+      "query": "什么是阶比分析，它对变速旋转机械有什么作用？",
+      "recall_at_10": 1.0,
+      "recall_at_5": 1.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_04578d8a_p0011_00017",
+          "doc_id": "vold_kalman_04578d8a",
+          "pages": [
+            11
+          ],
+          "reason": "bm25+dense match; matched: 是阶, 阶比, 比分, 分析; topic: 2 基于转速脉冲信号计算转速曲线的阶比跟踪技术; source priority 2",
+          "score": 0.046858,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0071_00077",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            71,
+            72
+          ],
+          "reason": "bm25+dense match; matched: order, analysis, tracking, 阶比; topic: 参考文献; source priority 2",
+          "score": 0.045566,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0004_00007",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "reason": "bm25+dense match; matched: order, analysis, tracking, 阶比; topic: Abstract; source priority 2",
+          "score": 0.044243,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_04578d8a_p0005_00008",
+          "doc_id": "vold_kalman_04578d8a",
+          "pages": [
+            5,
+            6
+          ],
+          "reason": "bm25+dense match; matched: order, 是阶, 阶比, 比分; topic: 1 绪论\n1.1 课题来源; source priority 2",
+          "score": 0.043937,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0026_00031",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            26
+          ],
+          "reason": "bm25+dense match; matched: 是阶, 阶比, 比分, 分析; topic: 3.1 概述; source priority 2",
+          "score": 0.043908,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_04578d8a_p0002_00002",
+          "doc_id": "vold_kalman_04578d8a",
+          "pages": [
+            2
+          ],
+          "reason": "bm25+dense match; matched: 是阶, 阶比, 比分, 分析; topic: 摘 要; source priority 2",
+          "score": 0.043062,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_04578d8a_p0003_00004",
+          "doc_id": "vold_kalman_04578d8a",
+          "pages": [
+            3
+          ],
+          "reason": "bm25+dense match; matched: order, analysis, tracking, 阶比; topic: ABSTRACT; source priority 2",
+          "score": 0.042188,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_04578d8a_p0058_00093",
+          "doc_id": "vold_kalman_04578d8a",
+          "pages": [
+            58
+          ],
+          "reason": "bm25+dense match; matched: 阶比, 比分, 分析, 阶比分; topic: 5 旋转机械阶比分析系统的开发; source priority 2",
+          "score": 0.036787,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0044_00060",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            44
+          ],
+          "reason": "bm25+dense match; matched: 阶比, 比分, 分析, 阶比分; topic: 第三章 旋转机械传统阶比分析技术; source priority 2",
+          "score": 0.033837,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_9af23819_p0074_00088",
+          "doc_id": "document_9af23819",
+          "pages": [
+            74
+          ],
+          "reason": "bm25 match; matched: order, analysis, tracking, 阶比; topic: 参考文献; source priority 2",
+          "score": 0.026593,
+          "source_type": "paper"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 0.7,
+      "status": "ok",
+      "v2_status": "ok",
+      "warnings": []
+    },
+    {
+      "answer": "## Conclusion\nBased on the retrieved evidence:\n1. In this paper, the following research is conducted around order analysis:For the case where a speed signal is available: this thesis establishes a LabVIEW-based rotating machine vibration signal order analysis system to realize the functions of the computational order analysis process (calculation of the arrival time of the rotational speed pulse,calculation of the rotational speed curve by first-order five-point numerical differentiation, determination of the anti-order mixing filter and angular domain resampling rate, etc.). (evidence: document_bce240f3_p0005_00008)\n2. In order to verify the effectiveness of the tachometer-free order analysis method proposed in this thesis, a hybrid bus transmission vibration test is designed and the signals of the collected vibration acceleration signals were analyzed, then the results show that the engine speed curve extracted by the FPO algorithm is basically consistent with the engine speed curve measured by the photoelectric tachometer, which reflects that the method has high accuracy and good noise immunity in extracting the instantaneous frequency values of the corresponding order components in the time-frequency diagram and enables the effective realization of the order analysis of rotating machinery vibration signal without tachometer. (evidence: document_bce240f3_p0005_00009)\n3. A novel order tracking method for rotating machinery based on tacholess and Vold-Kalman order tracking filtering technique is proposed. (evidence: vold_kalman_04578d8a_p0003_00005)\n4. Finally, an Vold-Kalman order analysis systems for rotating machinery is developed, with VC++ as the development platform. (evidence: vold_kalman_04578d8a_p0003_00005)\n\n## Engineering Meaning\nEngineering implication is limited to the cited evidence: In this paper, the following research is conducted around order analysis:For the case where a speed signal is available: this thesis establishes a LabVIEW-based rotating machine vibration signal order analysis system to realize the functions of the computational order analysis process (calculation of the arrival time of the rotational speed pulse,calculation of the rotational speed curve by first-order five-point numerical differentiation, determination of the anti-order mixing filter and angular domain resampling rate, etc.).\n\n## Premises\nApply this only to the retrieved evidence chunks: document_bce240f3_p0005_00008, document_bce240f3_p0005_00009.\n\n## Failure Conditions / Common Pitfalls\nDo not extrapolate beyond the cited operating condition, units, or numeric values.\n\n## Next Actions\nInspect the cited chunks before applying thresholds, maintenance actions, or model assumptions.\n\n## Evidence\n- 旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆).pdf (p.5, documented): In this paper, the following research is conducted around order analysis:For the case where a speed signal is available: this thesis establishes a LabVIEW-based rotating machine vibration signal order analysis system to realize the functions of the computational order analysis process (calculation of the arrival time of the rotational speed pulse,calculation of the rotational speed curve by first-order five-point numerical differentiation, determination of the anti-order mixing filter and angular domain resampling rate, etc.). [assets: document_bce240f3_p0005_00008_body]\n- 旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆).pdf (pp.5-7, documented): In order to verify the effectiveness of the tachometer-free order analysis method proposed in this thesis, a hybrid bus transmission vibration test is designed and the signals of the collected vibration acceleration signals were analyzed, then the results show that the engine speed curve extracted by the FPO algorithm is basically consistent with the engine speed curve measured by the photoelectric tachometer, which reflects that the method has high accuracy and good noise immunity in extracting the instantaneous frequency values of the corresponding order components in the time-frequency diagram and enables the effective realization of the order analysis of rotating machinery vibration signal without tachometer. [assets: document_bce240f3_p0005_00009_body]",
+      "case_id": "p5_definition_en_order_analysis",
+      "citations": [
+        {
+          "chunk_id": "document_bce240f3_p0005_00008",
+          "confidence": 0.9385222019346567,
+          "doc_id": "document_bce240f3",
+          "evidence_type": "documented",
+          "pages": [
+            5
+          ],
+          "snippet": "Abstract Rotating machinery is a kind of mechanical equipment widely used in fields such as auto- motive, aviation, petrochemical, electric power industries and etc. Its vibration…",
+          "source_filename": "旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆).pdf",
+          "source_title": "旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆)"
+        },
+        {
+          "chunk_id": "document_bce240f3_p0005_00009",
+          "confidence": 0.786099996115147,
+          "doc_id": "document_bce240f3",
+          "evidence_type": "documented",
+          "pages": [
+            5,
+            6,
+            7
+          ],
+          "snippet": "strates the effectiveness of the system through simulation, and also proves the applicability of order analysis for non-stationary. For the case where a speed signal is unavailable…",
+          "source_filename": "旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆).pdf",
+          "source_title": "旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆)"
+        }
+      ],
+      "completeness": 0.5,
+      "evidence_boundary_ok": false,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "angular_domain"
+        },
+        {
+          "covered": false,
+          "fact_id": "variable_speed"
+        }
+      ],
+      "intent": "definition",
+      "language": "en",
+      "latency_ms": 3667.107,
+      "matched_evidence_at_10": [],
+      "matched_evidence_at_5": [],
+      "miss_categories": [
+        "terminology",
+        "synthesis"
+      ],
+      "miss_category": "terminology",
+      "query": "What is order analysis and why is it used for variable-speed rotating machinery?",
+      "recall_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_04578d8a_p0003_00004",
+          "doc_id": "vold_kalman_04578d8a",
+          "pages": [
+            3
+          ],
+          "reason": "bm25+dense match; matched: is, order, analysis, and; topic: ABSTRACT; source priority 2",
+          "score": 0.051482,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_bce240f3_p0005_00008",
+          "doc_id": "document_bce240f3",
+          "pages": [
+            5
+          ],
+          "reason": "bm25+dense match; matched: is, order, analysis, and; topic: Abstract; source priority 2",
+          "score": 0.048317,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_9af23819_p0074_00089",
+          "doc_id": "document_9af23819",
+          "pages": [
+            74,
+            75
+          ],
+          "reason": "bm25+dense match; matched: order, analysis, and, for; topic: 参考文献; source priority 2",
+          "score": 0.047397,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0071_00077",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            71,
+            72
+          ],
+          "reason": "bm25+dense match; matched: order, analysis, and, for; topic: 参考文献; source priority 2",
+          "score": 0.046491,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0004_00007",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            4,
+            5,
+            6,
+            7,
+            8,
+            9,
+            10
+          ],
+          "reason": "bm25+dense match; matched: is, order, analysis, and; topic: Abstract; source priority 2",
+          "score": 0.046463,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_bce240f3_p0002_00003",
+          "doc_id": "document_bce240f3",
+          "pages": [
+            2,
+            3
+          ],
+          "reason": "bm25+dense match; matched: order, analysis, for, rotating; topic: Method for Order Analysis of Rotating Machinery; source priority 2",
+          "score": 0.045541,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0004_00005",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            4
+          ],
+          "reason": "bm25+dense match; matched: is, order, analysis, and; topic: Abstract; source priority 2",
+          "score": 0.041037,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_bce240f3_p0005_00009",
+          "doc_id": "document_bce240f3",
+          "pages": [
+            5,
+            6,
+            7
+          ],
+          "reason": "bm25+dense match; matched: is, order, analysis, and; topic: Abstract; source priority 2",
+          "score": 0.04047,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "b_k_order_analysis_3aa007f3_p0007_00012",
+          "doc_id": "b_k_order_analysis_3aa007f3",
+          "pages": [
+            7,
+            8
+          ],
+          "reason": "bm25+dense match; matched: is, order, analysis, and; topic: Characteristics of the Vold-Kalman Order\nTracking Filter; source priority 2",
+          "score": 0.040102,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_04578d8a_p0004_00006",
+          "doc_id": "vold_kalman_04578d8a",
+          "pages": [
+            4,
+            5
+          ],
+          "reason": "bm25+dense match; matched: order, and, rotating, machinery; topic: ABSTRACT; source priority 2",
+          "score": 0.038771,
+          "source_type": "paper"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 0.727,
+      "status": "ok",
+      "v2_status": "ok",
+      "warnings": []
+    },
+    {
+      "answer": "## 结论\n根据已检索证据，可以确定：\n1. 在低转速及转子临界转速时振动幅值可能异常或过大。（证据：gbt_19873_1_2005_1_57afcb1a_p0033_00053）\n2. 当通过临界转速时将发生显著的相位变化。（证据：gbt_19873_1_2005_1_57afcb1a_p0033_00052）\n3. 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。（证据：gbt_19873_1_2005_1_57afcb1a_p0033_00054）\n4. 注:升速和降速期间,由于动力放大效应,当通过临界转速时通常发生最大的振动。（证据：gbt_11348_4_2015_4_1d3de67f_p0010_00019）\n\n## 工程意义\n工程意义仅限于所引证据：在低转速及转子临界转速时振动幅值可能异常或过大。\n\n## 适用前提\n仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0033_00053, gbt_19873_1_2005_1_57afcb1a_p0033_00054。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33页, 已记录): 在低转速及转子临界转速时振动幅值可能异常或过大。 [资产: gbt_19873_1_2005_1_57afcb1a_p0033_00053_body, gbt_19873_1_2005_1_57afcb1a_p0033_table_0001, gbt_19873_1_2005_1_57afcb1a_p0033_figure_0002]\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33-34页, 已记录): 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。 [资产: gbt_19873_1_2005_1_57afcb1a_p0033_00054_body, gbt_19873_1_2005_1_57afcb1a_p0033_table_0001, gbt_19873_1_2005_1_57afcb1a_p0033_figure_0002, gbt_19873_1_2005_1_57afcb1a_p0034_table_0001, gbt_19873_1_2005_1_57afcb1a_p0034_figure_0002]",
+      "case_id": "p5_mechanism_zh_critical_speed",
+      "citations": [
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00053",
+          "confidence": 0.5665620325699959,
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "evidence_type": "documented",
+          "pages": [
+            33
+          ],
+          "snippet": "域。振动读数通常是非称定的而且随时间增大.可能有必要用其他技 术表征这种类型的故障 2x 在Zx的激励与转子临界转速重合时，振动达到峰值。在固定转速下 振动幅值恒定.在大型机器上采用补偿槽使这种激励最小 刚度不对称(例如发 电机/电动机转子中 的轴向绕组槽) 转子弯曲 (参见热不对称) Ix、2x 或较高阶 谐波 最普遍的是Ix的变化。如果转子在联轴器附近弯…",
+          "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+          "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+          "confidence": 0.9066720037078391,
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "evidence_type": "documented",
+          "pages": [
+            33,
+            34
+          ],
+          "snippet": "在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响 应中相位角有明显大的变化。转子不平衡也是最常见的激励，它在机 器的非旋转系统中能产生机器的共振响应。对于电机，另一个主要激 一时 励是2x，它由转子感应在定子上的电磁力引起 最常见的是1x，但 低速时轻微摩擦可使之磨合，然而，在高速时摩抹有可能使振动突变， 很快上升到要求停机的幅值 有时摩擦是由…",
+          "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+          "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则"
+        }
+      ],
+      "completeness": 1.0,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": true,
+          "fact_id": "resonance"
+        },
+        {
+          "covered": true,
+          "fact_id": "phase_change"
+        }
+      ],
+      "intent": "mechanism",
+      "language": "zh",
+      "latency_ms": 3584.618,
+      "matched_evidence_at_10": [
+        "critical_response"
+      ],
+      "matched_evidence_at_5": [
+        "critical_response"
+      ],
+      "miss_categories": [
+        "pass"
+      ],
+      "miss_category": "pass",
+      "query": "转子接近临界转速时，为什么振动幅值会增大并出现相位变化？",
+      "recall_at_10": 1.0,
+      "recall_at_5": 1.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0021_00028",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            21,
+            22
+          ],
+          "reason": "bm25+dense match; matched: 转子, 临界, 界转, 转速; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.047467,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33,
+            34
+          ],
+          "reason": "bm25+dense match; matched: 转子, 临界, 界转, 转速; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.043037,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0029_00035",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            29,
+            30
+          ],
+          "reason": "bm25+dense match; matched: 转子, 接近, 临界, 转速; source priority 4",
+          "score": 0.040967,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0149_00203",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            149,
+            150
+          ],
+          "reason": "bm25+dense match; matched: 转子, 转速, 速时, 转速时; source priority 4",
+          "score": 0.037847,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0289_00400",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            289
+          ],
+          "reason": "bm25+dense match; matched: 转子, 接近, 转速, 振动; source priority 4",
+          "score": 0.037535,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0288_00399",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            288,
+            289
+          ],
+          "reason": "bm25+dense match; matched: 转子, 接近, 转速, 振动; source priority 4",
+          "score": 0.037438,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "document_bce240f3_p0010_00017",
+          "doc_id": "document_bce240f3",
+          "pages": [
+            10,
+            11
+          ],
+          "reason": "bm25+dense match; matched: 接近, 临界, 界转, 转速; topic: 1.2.1 阶次分析; source priority 2",
+          "score": 0.034819,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "gbt_6075_2_2012_2_50mw_ddb25098_p0016_00018",
+          "doc_id": "gbt_6075_2_2012_2_50mw_ddb25098",
+          "pages": [
+            16
+          ],
+          "reason": "bm25+dense match; matched: 临界, 界转, 转速, 速时; source priority 5",
+          "score": 0.034168,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_6075_4_2015_4_adad02be_p0017_00019",
+          "doc_id": "gbt_6075_4_2015_4_adad02be",
+          "pages": [
+            17
+          ],
+          "reason": "bm25+dense match; matched: 临界, 界转, 转速, 速时; source priority 5",
+          "score": 0.033434,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00053",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33
+          ],
+          "reason": "bm25 match; matched: 转子, 临界, 界转, 转速; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.026893,
+          "source_type": "standard"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 0.727,
+      "status": "ok",
+      "v2_status": "ok",
+      "warnings": []
+    },
+    {
+      "answer": "V4 requires upstream answer sections or citations to render.",
+      "case_id": "p5_mechanism_en_critical_speed",
+      "citations": [],
+      "completeness": 0.0,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "resonance"
+        },
+        {
+          "covered": false,
+          "fact_id": "phase_change"
+        }
+      ],
+      "intent": "mechanism",
+      "language": "en",
+      "latency_ms": 3977.25,
+      "matched_evidence_at_10": [
+        "critical_response"
+      ],
+      "matched_evidence_at_5": [
+        "critical_response"
+      ],
+      "miss_categories": [
+        "synthesis"
+      ],
+      "miss_category": "synthesis",
+      "query": "Why do rotor vibration amplitude and phase change near critical speed?",
+      "recall_at_10": 1.0,
+      "recall_at_5": 1.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0288_00399",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            288,
+            289
+          ],
+          "reason": "bm25+dense match; matched: 转速, 速度, 共振, 振转; source priority 4",
+          "score": 0.045495,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0021_00028",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            21,
+            22
+          ],
+          "reason": "bm25+dense match; matched: 临界, 界转, 转速, 临界转; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.044203,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0029_00035",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            29,
+            30
+          ],
+          "reason": "bm25+dense match; matched: 临界, 转速, 界速, 速度; source priority 4",
+          "score": 0.043876,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33,
+            34
+          ],
+          "reason": "bm25+dense match; matched: 临界, 界转, 转速, 临界转; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.043434,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_11348_2_2012_2_50mw_1500rmin_1800rmin_3000rmin_3600rmin_2b462961_p0011_00013",
+          "doc_id": "gbt_11348_2_2012_2_50mw_1500rmin_1800rmin_3000rmin_3600rmin_2b462961",
+          "pages": [
+            11,
+            12
+          ],
+          "reason": "bm25+dense match; matched: 临界, 界转, 转速, 临界转; source priority 5",
+          "score": 0.039226,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33
+          ],
+          "reason": "bm25+dense match; matched: 临界, 界转, 转速, 临界转; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.037343,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_11348_4_2015_4_1d3de67f_p0010_00019",
+          "doc_id": "gbt_11348_4_2015_4_1d3de67f",
+          "pages": [
+            10,
+            11
+          ],
+          "reason": "bm25+dense match; matched: 临界, 界转, 转速, 临界转; topic: 4.\n2.\n2.\n4 评价区域边界; source priority 5",
+          "score": 0.036432,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "orbit_60_orbit_studio_configuration_software_user_guide_137m0696_3ad0b4ef_p0116_00203",
+          "doc_id": "orbit_60_orbit_studio_configuration_software_user_guide_137m0696_3ad0b4ef",
+          "pages": [
+            116
+          ],
+          "reason": "bm25+dense match; matched: rotor, vibration, amplitude, and; topic: Properties; source priority 4",
+          "score": 0.035653,
+          "source_type": "manual"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0315_00440",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            315
+          ],
+          "reason": "bm25 match; matched: 临界, 界转, 转速, 临界转; source priority 4",
+          "score": 0.026793,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0149_00203",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            149,
+            150
+          ],
+          "reason": "dense match; source priority 4",
+          "score": 0.026793,
+          "source_type": "book"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 1.0,
+      "status": "insufficient",
+      "v2_status": "insufficient",
+      "warnings": [
+        "S4 found no cited claims tied to visible retrieval evidence.",
+        "V2 blocked 4 unsupported claim(s).",
+        "No renderable upstream content supplied to V4."
+      ]
+    },
+    {
+      "answer": "V4 requires upstream answer sections or citations to render.",
+      "case_id": "p5_comparison_zh_unbalance_misalignment",
+      "citations": [],
+      "completeness": 0.0,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "unbalance_1x"
+        },
+        {
+          "covered": false,
+          "fact_id": "misalignment_harmonics"
+        },
+        {
+          "covered": false,
+          "fact_id": "axial"
+        }
+      ],
+      "intent": "comparison",
+      "language": "zh",
+      "latency_ms": 3430.02,
+      "matched_evidence_at_10": [
+        "standard_fault_table",
+        "misalignment_detail"
+      ],
+      "matched_evidence_at_5": [
+        "misalignment_detail"
+      ],
+      "miss_categories": [
+        "ranking",
+        "cross-doc",
+        "synthesis"
+      ],
+      "miss_category": "ranking",
+      "query": "转子不平衡与轴系不对中的振动频谱和方向特征有什么区别？",
+      "recall_at_10": 1.0,
+      "recall_at_5": 0.5,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            22
+          ],
+          "reason": "bm25+dense match; matched: 转子, 子不, 不平, 平衡; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.049151,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0021_00027",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            21
+          ],
+          "reason": "bm25+dense match; matched: 转子, 子不, 不平, 平衡; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.047922,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0258_00352",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            258
+          ],
+          "reason": "bm25+dense match; matched: 转子, 子不, 不平, 平衡; source priority 4",
+          "score": 0.042319,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            32
+          ],
+          "reason": "bm25+dense match; matched: 转子, 不对, 对中, 中的; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.041653,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            278,
+            279
+          ],
+          "reason": "bm25+dense match; matched: 转子, 不对, 对中, 中的; source priority 4",
+          "score": 0.038128,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0274_00378",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            274,
+            275
+          ],
+          "reason": "bm25+dense match; matched: 平衡, 不对, 对中, 中的; source priority 4",
+          "score": 0.036825,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33
+          ],
+          "reason": "bm25+dense match; matched: 转子, 不平, 平衡, 不对; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.03592,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00365",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            265
+          ],
+          "reason": "bm25+dense match; matched: 转子, 子不, 不平, 平衡; source priority 4",
+          "score": 0.035741,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0155_00209",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            155,
+            156
+          ],
+          "reason": "bm25+dense match; matched: 转子, 不平, 平衡, 不对; source priority 4",
+          "score": 0.033003,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "document_3351ffa1_p0015_00021",
+          "doc_id": "document_3351ffa1",
+          "pages": [
+            15,
+            16
+          ],
+          "reason": "dense match; source priority 2",
+          "score": 0.026593,
+          "source_type": "paper"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 1.0,
+      "status": "insufficient",
+      "v2_status": "insufficient",
+      "warnings": [
+        "S4 found no cited claims tied to visible retrieval evidence.",
+        "V2 blocked 4 unsupported claim(s).",
+        "No renderable upstream content supplied to V4."
+      ]
+    },
+    {
+      "answer": "V4 requires upstream answer sections or citations to render.",
+      "case_id": "p5_comparison_en_unbalance_misalignment",
+      "citations": [],
+      "completeness": 0.0,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "unbalance_1x"
+        },
+        {
+          "covered": false,
+          "fact_id": "misalignment_harmonics"
+        },
+        {
+          "covered": false,
+          "fact_id": "axial"
+        }
+      ],
+      "intent": "comparison",
+      "language": "en",
+      "latency_ms": 3929.247,
+      "matched_evidence_at_10": [
+        "standard_fault_table",
+        "misalignment_detail"
+      ],
+      "matched_evidence_at_5": [
+        "misalignment_detail"
+      ],
+      "miss_categories": [
+        "ranking",
+        "cross-doc",
+        "synthesis"
+      ],
+      "miss_category": "ranking",
+      "query": "How do the spectrum and vibration direction differ between rotor unbalance and shaft misalignment?",
+      "recall_at_10": 1.0,
+      "recall_at_5": 0.5,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            22
+          ],
+          "reason": "bm25+dense match; matched: 不平, 平衡, 不平衡, 转子; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.047251,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0021_00027",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            21
+          ],
+          "reason": "bm25+dense match; matched: 不平, 平衡, 不平衡, 转子; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.04622,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "bakerhughes_bn_fbd5b29e_p0005_00009",
+          "doc_id": "bakerhughes_bn_fbd5b29e",
+          "pages": [
+            5
+          ],
+          "reason": "bm25+dense match; matched: the, vibration, rotor, unbalance; topic: Measurement—in detail; source priority 4",
+          "score": 0.041393,
+          "source_type": "manual"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0318_00448",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            318,
+            319
+          ],
+          "reason": "bm25+dense match; matched: 不平, 平衡, 不平衡, 转子; source priority 4",
+          "score": 0.039684,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "bently_912f4d62_p0004_00006",
+          "doc_id": "bently_912f4d62",
+          "pages": [
+            4
+          ],
+          "reason": "bm25+dense match; matched: the, and, vibration, direction; topic: Recip monitoring—in detail; source priority 4",
+          "score": 0.039367,
+          "source_type": "manual"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33
+          ],
+          "reason": "bm25+dense match; matched: 不平, 平衡, 不平衡, 转子; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.038332,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            32
+          ],
+          "reason": "bm25+dense match; matched: 转子, 不对, 对中, 不对中; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.036947,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0258_00352",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            258
+          ],
+          "reason": "bm25+dense match; matched: 不平, 平衡, 不平衡, 转子; source priority 4",
+          "score": 0.035094,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0155_00209",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            155,
+            156
+          ],
+          "reason": "bm25+dense match; matched: 不平, 平衡, 不平衡, 转子; source priority 4",
+          "score": 0.033153,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "document_3351ffa1_p0015_00021",
+          "doc_id": "document_3351ffa1",
+          "pages": [
+            15,
+            16
+          ],
+          "reason": "dense match; source priority 2",
+          "score": 0.026593,
+          "source_type": "paper"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 1.0,
+      "status": "insufficient",
+      "v2_status": "insufficient",
+      "warnings": [
+        "S4 found no cited claims tied to visible retrieval evidence.",
+        "V2 blocked 4 unsupported claim(s).",
+        "No renderable upstream content supplied to V4."
+      ]
+    },
+    {
+      "answer": "V4 requires upstream answer sections or citations to render.",
+      "case_id": "p5_diagnosis_zh_fault_discrimination",
+      "citations": [],
+      "completeness": 0.0,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "phase"
+        },
+        {
+          "covered": false,
+          "fact_id": "harmonics"
+        },
+        {
+          "covered": false,
+          "fact_id": "axial"
+        }
+      ],
+      "intent": "diagnosis",
+      "language": "zh",
+      "latency_ms": 3464.934,
+      "matched_evidence_at_10": [
+        "standard_fault_table"
+      ],
+      "matched_evidence_at_5": [],
+      "miss_categories": [
+        "ranking",
+        "synthesis"
+      ],
+      "miss_category": "ranking",
+      "query": "设备出现1X径向振动时，怎样判断是转子不平衡还是不对中？",
+      "recall_at_10": 1.0,
+      "recall_at_5": 0.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0021_00027",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            21
+          ],
+          "reason": "bm25+dense match; matched: 出现, 振动, 动时, 转子; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.047827,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            22
+          ],
+          "reason": "bm25+dense match; matched: 径向, 向振, 振动, 径向振; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.047254,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0258_00352",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            258
+          ],
+          "reason": "bm25+dense match; matched: 1x, 出现, 振动, 动时; source priority 4",
+          "score": 0.042139,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0258_00353",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            258,
+            259
+          ],
+          "reason": "bm25+dense match; matched: 1x, 出现, 振动, 动时; source priority 4",
+          "score": 0.041584,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            32
+          ],
+          "reason": "bm25+dense match; matched: 径向, 向振, 振动, 径向振; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.040355,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33,
+            34
+          ],
+          "reason": "bm25+dense match; matched: 1x, 振动, 转子, 子不; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.040166,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00053",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33
+          ],
+          "reason": "bm25+dense match; matched: 1x, 向振, 振动, 向振动; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.039008,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            278,
+            279
+          ],
+          "reason": "bm25+dense match; matched: 1x, 出现, 径向, 向振; source priority 4",
+          "score": 0.038171,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00366",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            265,
+            266
+          ],
+          "reason": "bm25+dense match; matched: 1x, 出现, 振动, 转子; source priority 4",
+          "score": 0.034611,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0318_00448",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            318,
+            319
+          ],
+          "reason": "bm25+dense match; matched: 1x, 出现, 振动, 转子; source priority 4",
+          "score": 0.034289,
+          "source_type": "book"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 1.0,
+      "status": "insufficient",
+      "v2_status": "insufficient",
+      "warnings": [
+        "S4 found no cited claims tied to visible retrieval evidence.",
+        "V2 blocked 4 unsupported claim(s).",
+        "No renderable upstream content supplied to V4."
+      ]
+    },
+    {
+      "answer": "V4 requires upstream answer sections or citations to render.",
+      "case_id": "p5_diagnosis_en_fault_discrimination",
+      "citations": [],
+      "completeness": 0.0,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "phase"
+        },
+        {
+          "covered": false,
+          "fact_id": "harmonics"
+        },
+        {
+          "covered": false,
+          "fact_id": "axial"
+        }
+      ],
+      "intent": "diagnosis",
+      "language": "en",
+      "latency_ms": 3897.471,
+      "matched_evidence_at_10": [
+        "standard_fault_table"
+      ],
+      "matched_evidence_at_5": [
+        "standard_fault_table"
+      ],
+      "miss_categories": [
+        "synthesis"
+      ],
+      "miss_category": "synthesis",
+      "query": "When radial 1X vibration is high, how should unbalance be distinguished from misalignment?",
+      "recall_at_10": 1.0,
+      "recall_at_5": 1.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            22
+          ],
+          "reason": "bm25+dense match; matched: 不平, 平衡, 不平衡, 转子; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.048109,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0021_00027",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            21
+          ],
+          "reason": "bm25+dense match; matched: 不平, 平衡, 不平衡, 转子; topic: 2.2.1 转子不平衡; source priority 2",
+          "score": 0.044525,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "bakerhughes_bn_fbd5b29e_p0005_00009",
+          "doc_id": "bakerhughes_bn_fbd5b29e",
+          "pages": [
+            5
+          ],
+          "reason": "bm25+dense match; matched: 1x, vibration, is, unbalance; topic: Measurement—in detail; source priority 4",
+          "score": 0.040861,
+          "source_type": "manual"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33,
+            34
+          ],
+          "reason": "bm25+dense match; matched: 1x, 不平, 平衡, 不平衡; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.040172,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0318_00448",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            318,
+            319
+          ],
+          "reason": "bm25+dense match; matched: 1x, 不平, 平衡, 不平衡; source priority 4",
+          "score": 0.040115,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00052",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            33
+          ],
+          "reason": "bm25+dense match; matched: 1x, 不平, 平衡, 不平衡; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.039901,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+          "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+          "pages": [
+            32
+          ],
+          "reason": "bm25+dense match; matched: 转子, 一倍, 倍频, 一倍频; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+          "score": 0.038509,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00365",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            265
+          ],
+          "reason": "bm25+dense match; matched: 1x, 不平, 平衡, 不平衡; source priority 4",
+          "score": 0.03641,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0155_00209",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            155,
+            156
+          ],
+          "reason": "bm25+dense match; matched: 1x, 不平, 平衡, 不平衡; source priority 4",
+          "score": 0.034207,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0248_00337",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            248
+          ],
+          "reason": "dense match; source priority 4",
+          "score": 0.026492,
+          "source_type": "book"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 1.0,
+      "status": "insufficient",
+      "v2_status": "insufficient",
+      "warnings": [
+        "S4 found no cited claims tied to visible retrieval evidence.",
+        "V2 blocked 4 unsupported claim(s).",
+        "No renderable upstream content supplied to V4."
+      ]
+    },
+    {
+      "answer": "## 结论\n根据已检索证据，可以确定：\n1. 阶比分析技术是旋转机械振动信号分析和故障诊断的一项重要技术。（证据：vold_kalman_04578d8a_p0002_00002）\n2. 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一,特别是在旋转机械的启停振动分析中比传统的频谱分析有着明显的优势。（证据：document_cdd35349_p0026_00031）\n3. 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一，是一种研究旋转机械振动特征的、在FFT 分析技术基础上发展起来的技术，它被广泛应用于旋转机械系统的动态分析、工况监测与故障诊断，是本文最重要的研究内容之一，在下一章中将重点论述它的原理及实现过程。（证据：document_cdd35349_p0020_00023）\n4. 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一。（证据：vold_kalman_e0e977fa_p0044_00062）\n\n## 工程意义\n工程意义仅限于所引证据：阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一，是一种研究旋转机械振动特征的、在FFT 分析技术基础上发展起来的技术，它被广泛应用于旋转机械系统的动态分析、工况监测与故障诊断，是本文最重要的研究内容之一，在下一章中将重点论述它的原理及实现过程。\n\n## 适用前提\n仅适用于检索到的证据块：document_cdd35349_p0020_00023, vold_kalman_e0e977fa_p0044_00062。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- 旋转机械阶比分析研究与软件实现 (南航刘科伟硕士论文阶比计算).pdf (第20-21页, 已记录): 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一，是一种研究旋转机械振动特征的、在FFT 分析技术基础上发展起来的技术，它被广泛应用于旋转机械系统的动态分析、工况监测与故障诊断，是本文最重要的研究内容之一，在下一章中将重点论述它的原理及实现过程。 [资产: document_cdd35349_p0020_00023_body, document_cdd35349_p0020_figure_0001, document_cdd35349_p0020_figure_0002, document_cdd35349_p0020_figure_0003, document_cdd35349_p0021_figure_0001, document_cdd35349_p0021_figure_0002, document_cdd35349_p0021_figure_0003]\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第44页, 已记录): 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一。 [资产: vold_kalman_e0e977fa_p0044_00062_body]",
+      "case_id": "p5_workflow_zh_measurement_diagnosis",
+      "citations": [
+        {
+          "chunk_id": "document_cdd35349_p0020_00023",
+          "confidence": 0.8775998891769409,
+          "doc_id": "document_cdd35349",
+          "evidence_type": "documented",
+          "pages": [
+            20,
+            21
+          ],
+          "snippet": "与此相应，旋转机械特征分析方法也可分为平稳振动信号分析和非平稳振动 信号分析两大部分。傅里叶分析是一种全局分析，可以有效地揭示被分析信 号整个过程中所包含的频率成分，但无法反映信号中频率随时间变化的规律， 因此，它只适用于平稳信号的分析。 2.3.3 阶比分析方法 旋转机械的振动往往与转速有关，工作状态可以由与转速成正比的振动信 号各阶频率分量之间的相互关系…",
+          "source_filename": "旋转机械阶比分析研究与软件实现 (南航刘科伟硕士论文阶比计算).pdf",
+          "source_title": "旋转机械阶比分析研究与软件实现 (南航刘科伟硕士论文阶比计算)"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0044_00062",
+          "confidence": 0.8044566701628703,
+          "doc_id": "vold_kalman_e0e977fa",
+          "evidence_type": "documented",
+          "pages": [
+            44
+          ],
+          "snippet": "阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一。传统的阶比分析是对 角域采样信号的频谱分析，关键是实现振动信号的等角度采样，即每隔一定的角度就对旋转机 械进行采样，无论旋转机械的转速是多少，每一转的采样点数总是相同的。要保证等角度采样 必需根据参考轴的转速变化相应的调节采样率，这个过程就是传统意义上的阶比跟踪。目前国 内外对阶比分析技术主要分为两…",
+          "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+          "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)"
+        }
+      ],
+      "completeness": 0.667,
+      "evidence_boundary_ok": false,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "feasibility"
+        },
+        {
+          "covered": true,
+          "fact_id": "operating_state"
+        },
+        {
+          "covered": false,
+          "fact_id": "whole_train"
+        }
+      ],
+      "intent": "workflow",
+      "language": "zh",
+      "latency_ms": 3428.993,
+      "matched_evidence_at_10": [],
+      "matched_evidence_at_5": [],
+      "miss_categories": [
+        "retrieval",
+        "synthesis"
+      ],
+      "miss_category": "retrieval",
+      "query": "如何规划一次旋转机械振动故障诊断的测量流程？",
+      "recall_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0002_00002",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            2
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 械振; topic: 摘 要; source priority 2",
+          "score": 0.050531,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_986871c1_p0102_00099",
+          "doc_id": "document_986871c1",
+          "pages": [
+            102,
+            103
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 械振; source priority 5",
+          "score": 0.047263,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "document_e3b12a5a_p0075_00086",
+          "doc_id": "document_e3b12a5a",
+          "pages": [
+            75,
+            76,
+            77
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 振动; topic: 第六章总结与展望; source priority 2",
+          "score": 0.045903,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0020_00023",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            20,
+            21
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 械振; topic: 4. 方差; source priority 2",
+          "score": 0.044346,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0012_00012",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            12
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 械振; topic: 第二章 旋转机械振动信号测量及分析方法; source priority 2",
+          "score": 0.041167,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0044_00062",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            44
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 械振; topic: 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一。传统的阶比分析是对; source priority 2",
+          "score": 0.04065,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0025_00029",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            25,
+            26
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 械振; topic: 2.4 本章小结; source priority 2",
+          "score": 0.038633,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_9af23819_p0010_00018",
+          "doc_id": "document_9af23819",
+          "pages": [
+            10,
+            11
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 振动; topic: 1.1 研究背景及意义; source priority 2",
+          "score": 0.037436,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0032_00045",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            32,
+            33
+          ],
+          "reason": "bm25+dense match; matched: 旋转, 转机, 机械, 械振; topic: 2.4 振动特征提取和分析方法; source priority 2",
+          "score": 0.037277,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0018_00020",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            18
+          ],
+          "reason": "bm25+dense match; matched: 如何, 旋转, 转机, 机械; topic: 1.3 本文研究意义; source priority 2",
+          "score": 0.032268,
+          "source_type": "paper"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 0.727,
+      "status": "ok",
+      "v2_status": "ok",
+      "warnings": []
+    },
+    {
+      "answer": "## Conclusion\nBased on the retrieved evidence:\n1. ’rorsional vibration IS a basic mode of rotating machinery slaattlng．Torsional vibration monitoring of unit shaft system，can effectively reduce the serious accident caused by torsional vibration fault．The destructiveness of torsional vibration is the result of the accumulation of fatigue caused by alternating load，this damage is sudden after the accumulation of fatigue，may cause serious accidents．At the same time，the scale and speed of rotating machinery is increasing，and the shafting structure is more complex，what puts forward the higher request to the stability of the machine．But the current measurement method for torsional vibration of rotating machines is not mature，especially in the domestic torsional vibration measurement equipment is far to meet the requirement of the monitor．The structure is complex，the operation is complicated and the antinoise ability is pool what are restricted the torsional vibration testing technology for industrial monitoring of rotating machinery．So the development of suitable for on-site monitoring of torsional vibration measurement technology is the urgent demand of industrial application．In this paper,the method of the torsional vibration fault fast identification is based on the fluctuations of instantaneous angular velocity． (evidence: document_e3b12a5a_p0005_00006)\n2. Fourthly,torsional vibration test system for experimental verification．Structures，torsional vibration fault detection test bench，the shaft with gear plate as testing object，the shaft torsional vibration natural frequency were measured，and the measured values and compares the simulation results analysis，through the simulation of torsional vibration speed change，verify the reliability of the detection system．Experimental results prove that the torsional vibration monitoring system can effectively detect the torsional vibration of rotating machinery,can be found that the torsional vibration of rotating machinery fault in time，and report to the police．The whole monitoring system easy to operate，convenient to expand，detection has higher reliability,in order to further build torsional vibration on．1ine monitoring platform provides a practical basis． (evidence: document_e3b12a5a_p0007_00008)\n3. instrument software developed by monitoring platform，not only simplifies the structure of the monitoring instrument，but also expanded the analysis function，and overcome the influence of the noise environment．At the same time，the method make full use of the powerful operation ability of computer in data processing and image analysis aspect．It realizes the real-time collection and analysis of the torsional vibration signal and data storage function．The system also has the very good extensibility of function，further in the future in the industrial environment to carry out the shafting torsional vibration of the real—time monitoring，alarm analysis，failure analysis，and other functions to provide the theoretical basis and practice platform．In the process of the research，the main contents arranged as follows：Firstly,Make a research on torsional vibration test methods and test equipment development，and summarize the advantages and disadvantages of existing testing methods and testing equipment．Put forward the method of the torsional vibration fault fast identification iS based on the fluctuations of instantaneous angular velocity．Make a decision to use LabVIEW what is a graphical programming language for building method．Secondly,make an analysis on the cause of torsional vibration and failure mechanism，and introduce the theories of the torsional vibration characteristics calculation method．And the Ansys is used for shaft torsional vibration modal simulation analysis．V (evidence: document_e3b12a5a_p0006_00007)\n4. The DK-IlI torsional vibration measurement instrument was verified by simulating real measurement environment on a small flexible rotor experiment bench The free frequency and excitation frequency of a rotor shaft in torsional vibration were measured in the experiment and experimental results were compared with that ofmeasurementintraditionalelectricleveltranslation circuit andtheoretical calculation.Experiment results show that the measurementresults are closer to that of theoreticalcaleulationthanthatoftraditionalmeasurementincomplicatedcondition DK-IHI torsional vibration measurement instrument can be used to realize high precis measurement of torsional vibration of shaftingincomplicatedcondition Keywords:torsionalvibration pulsesequencecount peak sequence detection programmablelogic CoM'spackage (evidence: document_538fb8d6_p0004_00005)\n\n## Engineering Meaning\nEngineering implication is limited to the cited evidence: ’rorsional vibration IS a basic mode of rotating machinery slaattlng．Torsional vibration monitoring of unit shaft system，can effectively reduce the serious accident caused by torsional vibration fault．The destructiveness of torsional vibration is the result of the accumulation of fatigue caused by alternating load，this damage is sudden after the accumulation of fatigue，may cause serious accidents．At the same time，the scale and speed of rotating machinery is increasing，and the shafting structure is more complex，what puts forward the higher request to the stability of the machine．But the current measurement method for torsional vibration of rotating machines is not mature，especially in the domestic torsional vibration measurement equipment is far to meet the requirement of the monitor．The structure is complex，the operation is complicated and the antinoise ability is pool what are restricted the torsional vibration testing technology for industrial monitoring of rotating machinery．So the development of suitable for on-site monitoring of torsional vibration measurement technology is the urgent demand of industrial application．In this paper,the method of the torsional vibration fault fast identification is based on the fluctuations of instantaneous angular velocity．\n\n## Premises\nApply this only to the retrieved evidence chunks: document_e3b12a5a_p0005_00006.\n\n## Failure Conditions / Common Pitfalls\nDo not extrapolate beyond the cited operating condition, units, or numeric values.\n\n## Next Actions\nInspect the cited chunks before applying thresholds, maintenance actions, or model assumptions.\n\n## Evidence\n- 旋转机械扭转振动监测方法研究  北京化工大学  张超  论文.pdf (pp.5-6, documented): ’rorsional vibration IS a basic mode of rotating machinery slaattlng．Torsional vibration monitoring of unit shaft system，can effectively reduce the serious accident caused by torsional vibration fault．The destructiveness of torsional vibration is the result of the accumulation of fatigue caused by alternating load，this damage is sudden after the accumulation of fatigue，may cause serious accidents．At the same time，the scale and speed of rotating machinery is increasing，and the shafting structure is more complex，what puts forward the higher request to the stability of the machine．But the current measurement method for torsional vibration of rotating machines is not mature，especially in the domestic torsional vibration measurement equipment is far to meet the requirement of the monitor．The structure is complex，the operation is complicated and the antinoise ability is pool what are restricted the torsional vibration testing technology for industrial monitoring of rotating machinery．So the development of suitable for on-site monitoring of torsional vibration measurement technology is the urgent demand of industrial application．In this paper,the method of the torsional vibration fault fast identification is based on the fluctuations of instantaneous angular velocity． [assets: document_e3b12a5a_p0005_00006_body]",
+      "case_id": "p5_workflow_en_measurement_diagnosis",
+      "citations": [
+        {
+          "chunk_id": "document_e3b12a5a_p0005_00006",
+          "confidence": 0.9100604057218189,
+          "doc_id": "document_e3b12a5a",
+          "evidence_type": "documented",
+          "pages": [
+            5,
+            6
+          ],
+          "snippet": "VIBRATIoN oF THE RoTATING MACHINERY ABSTRACT ■ 一 ● 一 一 一 一 ● ●- ● 一- —一 ’rorsional vibration IS a basic mode of rotating machinery slaattlng． Torsional vibration monitoring of unit…",
+          "source_filename": "旋转机械扭转振动监测方法研究  北京化工大学  张超  论文.pdf",
+          "source_title": "旋转机械扭转振动监测方法研究  北京化工大学  张超  论文"
+        }
+      ],
+      "completeness": 0.667,
+      "evidence_boundary_ok": false,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "feasibility"
+        },
+        {
+          "covered": true,
+          "fact_id": "operating_state"
+        },
+        {
+          "covered": false,
+          "fact_id": "whole_train"
+        }
+      ],
+      "intent": "workflow",
+      "language": "en",
+      "latency_ms": 3907.513,
+      "matched_evidence_at_10": [],
+      "matched_evidence_at_5": [],
+      "miss_categories": [
+        "retrieval",
+        "synthesis"
+      ],
+      "miss_category": "retrieval",
+      "query": "What measurement workflow should be used for vibration fault diagnosis on a rotating machine?",
+      "recall_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0004_00004",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            4
+          ],
+          "reason": "bm25+dense match; matched: be, used, for, vibration; topic: Abstract; source priority 2",
+          "score": 0.050823,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_e3b12a5a_p0005_00006",
+          "doc_id": "document_e3b12a5a",
+          "pages": [
+            5,
+            6
+          ],
+          "reason": "bm25+dense match; matched: what, measurement, for, vibration; topic: VIBRATIoN oF THE RoTATING MACHINERY; source priority 2",
+          "score": 0.046252,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0003_00003",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            3,
+            4,
+            5,
+            6,
+            7
+          ],
+          "reason": "bm25+dense match; matched: measurement, used, for, vibration; topic: Abstract; source priority 2",
+          "score": 0.03844,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "compensation_for_encoder_geometryand_shaft_speed_variation_445fc50c_p0002_00008",
+          "doc_id": "compensation_for_encoder_geometryand_shaft_speed_variation_445fc50c",
+          "pages": [
+            2
+          ],
+          "reason": "bm25+dense match; matched: measurement, used, for, vibration; topic: ARTICLE IN PRESS; source priority 2",
+          "score": 0.035814,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_986871c1_p0102_00099",
+          "doc_id": "document_986871c1",
+          "pages": [
+            102,
+            103
+          ],
+          "reason": "dense match; source priority 5",
+          "score": 0.026893,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0014_00013",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            14,
+            15
+          ],
+          "reason": "dense match; topic: 1.1 本文研究背景; source priority 2",
+          "score": 0.025988,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "vold_kalman_e0e977fa_p0002_00002",
+          "doc_id": "vold_kalman_e0e977fa",
+          "pages": [
+            2
+          ],
+          "reason": "dense match; topic: 摘 要; source priority 2",
+          "score": 0.025713,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0009_00008",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            9,
+            10
+          ],
+          "reason": "dense match; topic: 1.1 课题研究的目的与意义; source priority 2",
+          "score": 0.025347,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_bce240f3_p0078_00108",
+          "doc_id": "document_bce240f3",
+          "pages": [
+            78,
+            79
+          ],
+          "reason": "bm25 match; matched: measurement, for, vibration, fault; topic: 参考文献; source priority 2",
+          "score": 0.025105,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "document_cdd35349_p0002_00002",
+          "doc_id": "document_cdd35349",
+          "pages": [
+            2,
+            3
+          ],
+          "reason": "dense match; topic: 摘要; source priority 2",
+          "score": 0.025016,
+          "source_type": "paper"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 0.3,
+      "status": "ok",
+      "v2_status": "ok",
+      "warnings": []
+    },
+    {
+      "answer": "范围外：Phase-0 只处理振动、旋转机械、信号分析、状态监测和相关标准问题。",
+      "case_id": "p5_standards_zh_gbt33199_scope",
+      "citations": [],
+      "completeness": 0.0,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "power"
+        },
+        {
+          "covered": false,
+          "fact_id": "unit"
+        },
+        {
+          "covered": false,
+          "fact_id": "method"
+        }
+      ],
+      "intent": "standards",
+      "language": "zh",
+      "latency_ms": 1.01,
+      "matched_evidence_at_10": [],
+      "matched_evidence_at_5": [],
+      "miss_categories": [
+        "retrieval",
+        "synthesis"
+      ],
+      "miss_category": "retrieval",
+      "query": "GB/T 33199.1 的适用机组范围和规定的方法是什么？",
+      "recall_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "retrieval_hits": [],
+      "retrieval_source": null,
+      "sentence_completeness": 0.0,
+      "status": "insufficient",
+      "v2_status": "unknown",
+      "warnings": [
+        "Query is outside the Phase-0 vibration-agent scope."
+      ]
+    },
+    {
+      "answer": "Out of scope: Phase-0 only handles vibration, rotating machinery, signal analysis, condition monitoring, and related standards.",
+      "case_id": "p5_standards_en_gbt33199_scope",
+      "citations": [],
+      "completeness": 0.167,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "power"
+        },
+        {
+          "covered": false,
+          "fact_id": "unit"
+        },
+        {
+          "covered": true,
+          "fact_id": "method"
+        }
+      ],
+      "intent": "standards",
+      "language": "en",
+      "latency_ms": 0.117,
+      "matched_evidence_at_10": [],
+      "matched_evidence_at_5": [],
+      "miss_categories": [
+        "retrieval",
+        "synthesis"
+      ],
+      "miss_category": "retrieval",
+      "query": "What units and methods are covered by GB/T 33199.1?",
+      "recall_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "retrieval_hits": [],
+      "retrieval_source": null,
+      "sentence_completeness": 0.0,
+      "status": "insufficient",
+      "v2_status": "unknown",
+      "warnings": [
+        "Query is outside the Phase-0 vibration-agent scope."
+      ]
+    },
+    {
+      "answer": "## 结论\n根据已检索证据，可以确定：\n1. 利用校准配重平衡的结果很容易计算影响矢量。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316）\n2. 同时，该平衡重还充当用于计算影响矢量的校准重量。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0341_00480）\n3. 选择一个平面作为参考平面，然后使用式（16-23）计算影响矢量。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0240_00327）\n4. 通过影响矢量进行多平面平衡在前面的章节中，从“全局”视角查看双平面平衡，同时在整个速度范围内查看机器的响应。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0239_00326）\n\n## 工程意义\n工程意义仅限于所引证据：利用校准配重平衡的结果很容易计算影响矢量。\n\n## 适用前提\n仅适用于检索到的证据块：donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316, donalde_bently_charlest_hatch_2014_cdef6d55_p0240_00327, donalde_bently_charlest_hatch_2014_cdef6d55_p0239_00326。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第232页, 已记录): 利用校准配重平衡的结果很容易计算影响矢量。 [资产: donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316_body]\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第240-241页, 已记录): 选择一个平面作为参考平面，然后使用式（16-23）计算影响矢量。 [资产: donalde_bently_charlest_hatch_2014_cdef6d55_p0240_00327_body]\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第239-240页, 已记录): 通过影响矢量进行多平面平衡在前面的章节中，从“全局”视角查看双平面平衡，同时在整个速度范围内查看机器的响应。 [资产: donalde_bently_charlest_hatch_2014_cdef6d55_p0239_00326_body]",
+      "case_id": "p5_formula_zh_influence_vector",
+      "citations": [
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316",
+          "confidence": 1.0,
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "evidence_type": "documented",
+          "pages": [
+            232
+          ],
+          "snippet": "利用校准配重平衡的结果很容易计算影响矢量。给出校准配重m校准和影响矢量H，可 得出相关的响应矢量C，即 C=Hm校准 (16-22) 因此，影响矢量H为 C -(T-0) H=- (16-23) m校准 m校准 式中，0为原始不平衡响应矢量，T为总响应，其中包括原始不平衡响应和校准配重响应。 -[c| H= (16-24) m校准 从因校准配重导致的响应的滞…",
+          "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+          "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0240_00327",
+          "confidence": 0.9458165767533104,
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "evidence_type": "documented",
+          "pages": [
+            240,
+            241
+          ],
+          "snippet": "使用此方法计算双平面平衡问题的解时，必须进行两次独立的校准运行，以生成一组完 整的4个影响矢量。对于每次运行，都会在一个平衡配重平面中安装一个校准配重，然后每 个测量平面中的振动变化将用于计算两个影响矢量，随后对另一个平衡配重平面重复该过 程。只要获得这组影响矢量，就可以使用式（16-35）或式（16-36）来计算所求的平衡解 第16章转子系统的基本平衡 2…",
+          "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+          "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0239_00326",
+          "confidence": 0.9175674350171653,
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "evidence_type": "documented",
+          "pages": [
+            239,
+            240
+          ],
+          "snippet": "图16-14所示为机器响应。现在，二阶模态响应已极大减少，但一阶模态与上次运行相 比没有变化。由于一阶模态为同相模态，因此对增加的反相平衡配重分布不敏感 220 旋转机械诊断技术 内侧 外侧 0° 0° 旋转方向 0.4g315° 旋转方向 2030 5600 2020 270° 2010 90° 270. 2010 90° 2000% 19901950 1…",
+          "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+          "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年"
+        }
+      ],
+      "completeness": 0.667,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "response_difference"
+        },
+        {
+          "covered": true,
+          "fact_id": "divide_weight"
+        },
+        {
+          "covered": false,
+          "fact_id": "complex_vector"
+        }
+      ],
+      "intent": "formula",
+      "language": "zh",
+      "latency_ms": 3459.933,
+      "matched_evidence_at_10": [
+        "influence_vector_formula"
+      ],
+      "matched_evidence_at_5": [
+        "influence_vector_formula"
+      ],
+      "miss_categories": [
+        "synthesis"
+      ],
+      "miss_category": "synthesis",
+      "query": "单平面动平衡中，如何用试重前后的响应计算影响矢量？",
+      "recall_at_10": 1.0,
+      "recall_at_5": 1.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            232
+          ],
+          "reason": "bm25+dense match; matched: 平面, 平衡, 如何, 的响; source priority 4",
+          "score": 0.050975,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0219_00300",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            219,
+            220
+          ],
+          "reason": "bm25+dense match; matched: 单平, 平面, 动平, 平衡; source priority 4",
+          "score": 0.048813,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0240_00327",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            240,
+            241
+          ],
+          "reason": "bm25+dense match; matched: 单平, 平面, 平衡, 单平面; source priority 4",
+          "score": 0.048213,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00317",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            232,
+            233,
+            234
+          ],
+          "reason": "bm25+dense match; matched: 平面, 平衡, 后的, 的响; source priority 4",
+          "score": 0.047729,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0239_00326",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            239,
+            240
+          ],
+          "reason": "bm25+dense match; matched: 单平, 平面, 平衡, 单平面; source priority 4",
+          "score": 0.046773,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0234_00318",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            234,
+            235
+          ],
+          "reason": "bm25+dense match; matched: 平面, 平衡, 的响, 响应; source priority 4",
+          "score": 0.042658,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0243_00331",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            243,
+            244
+          ],
+          "reason": "bm25+dense match; matched: 平面, 平衡, 如何, 计算; source priority 4",
+          "score": 0.041604,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0215_00291",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            215
+          ],
+          "reason": "bm25+dense match; matched: 单平, 平面, 平衡, 单平面; source priority 4",
+          "score": 0.04114,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0227_00311",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            227,
+            228,
+            229
+          ],
+          "reason": "bm25+dense match; matched: 单平, 平面, 平衡, 单平面; source priority 4",
+          "score": 0.04029,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "document_3351ffa1_p0023_00028",
+          "doc_id": "document_3351ffa1",
+          "pages": [
+            23,
+            24
+          ],
+          "reason": "bm25+dense match; matched: 的响, 响应, 应计, 计算; source priority 2",
+          "score": 0.037684,
+          "source_type": "paper"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 0.667,
+      "status": "ok",
+      "v2_status": "ok",
+      "warnings": []
+    },
+    {
+      "answer": "V4 requires upstream answer sections or citations to render.",
+      "case_id": "p5_formula_en_influence_vector",
+      "citations": [],
+      "completeness": 0.0,
+      "evidence_boundary_ok": true,
+      "fact_results": [
+        {
+          "covered": false,
+          "fact_id": "response_difference"
+        },
+        {
+          "covered": false,
+          "fact_id": "divide_weight"
+        },
+        {
+          "covered": false,
+          "fact_id": "complex_vector"
+        }
+      ],
+      "intent": "formula",
+      "language": "en",
+      "latency_ms": 3940.32,
+      "matched_evidence_at_10": [],
+      "matched_evidence_at_5": [],
+      "miss_categories": [
+        "terminology",
+        "synthesis"
+      ],
+      "miss_category": "terminology",
+      "query": "How is the influence vector calculated from pre-trial and post-trial vibration in single-plane balancing?",
+      "recall_at_10": 0.0,
+      "recall_at_5": 0.0,
+      "retrieval_hits": [
+        {
+          "chunk_id": "bakerhughes_bn_fbd5b29e_p0015_00034",
+          "doc_id": "bakerhughes_bn_fbd5b29e",
+          "pages": [
+            15
+          ],
+          "reason": "bm25 match; matched: is, the, from, and; topic: MDS in-house applications; source priority 4",
+          "score": 0.026793,
+          "source_type": "manual"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0243_00331",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            243,
+            244
+          ],
+          "reason": "dense match; source priority 4",
+          "score": 0.026793,
+          "source_type": "book"
+        },
+        {
+          "chunk_id": "compensation_for_encoder_geometryand_shaft_speed_variation_445fc50c_p0002_00008",
+          "doc_id": "compensation_for_encoder_geometryand_shaft_speed_variation_445fc50c",
+          "pages": [
+            2
+          ],
+          "reason": "dense match; topic: ARTICLE IN PRESS; source priority 2",
+          "score": 0.026263,
+          "source_type": "paper"
+        },
+        {
+          "chunk_id": "gbt_11348_2_2012_2_50mw_1500rmin_1800rmin_3000rmin_3600rmin_2b462961_p0008_00007",
+          "doc_id": "gbt_11348_2_2012_2_50mw_1500rmin_1800rmin_3000rmin_3600rmin_2b462961",
+          "pages": [
+            8,
+            9
+          ],
+          "reason": "dense match; source priority 5",
+          "score": 0.026194,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_11348_4_2015_4_1d3de67f_p0005_00007",
+          "doc_id": "gbt_11348_4_2015_4_1d3de67f",
+          "pages": [
+            5
+          ],
+          "reason": "dense match; topic: 机械振动\n在旋转轴上测量评价机器的振动\n第4部分:具有滑动轴承的燃气轮机组; source priority 5",
+          "score": 0.025772,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "bn_96e07701_p0003_00006",
+          "doc_id": "bn_96e07701",
+          "pages": [
+            3
+          ],
+          "reason": "bm25 match; matched: is, the, pre, and; topic: Pre/post-turnaround\nassessment services; source priority 4",
+          "score": 0.025507,
+          "source_type": "manual"
+        },
+        {
+          "chunk_id": "gbt_6075_2_2012_2_50mw_ddb25098_p0001_00001",
+          "doc_id": "gbt_6075_2_2012_2_50mw_ddb25098",
+          "pages": [
+            1,
+            2,
+            3
+          ],
+          "reason": "dense match; source priority 5",
+          "score": 0.025375,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "gbt_6075_6_2002_iso_10816_6_6_100kw_ebc68734_p0006_00009",
+          "doc_id": "gbt_6075_6_2002_iso_10816_6_6_100kw_ebc68734",
+          "pages": [
+            6
+          ],
+          "reason": "dense match; topic: 在非旋转部件上测量和\n评价机器的机械振动\n第6部分:功率大于100\nkW\n的往复式机器; source priority 5",
+          "score": 0.025099,
+          "source_type": "standard"
+        },
+        {
+          "chunk_id": "bn_96e07701_p0002_00004",
+          "doc_id": "bn_96e07701",
+          "pages": [
+            2,
+            3
+          ],
+          "reason": "bm25 match; matched: is, the, pre, and; topic: Machinery health reports; source priority 4",
+          "score": 0.024851,
+          "source_type": "manual"
+        },
+        {
+          "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0333_00470",
+          "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+          "pages": [
+            333,
+            334
+          ],
+          "reason": "dense match; source priority 4",
+          "score": 0.024742,
+          "source_type": "book"
+        }
+      ],
+      "retrieval_source": "file_chunks",
+      "sentence_completeness": 1.0,
+      "status": "insufficient",
+      "v2_status": "insufficient",
+      "warnings": [
+        "S4 found no cited claims tied to visible retrieval evidence.",
+        "V2 blocked 4 unsupported claim(s).",
+        "No renderable upstream content supplied to V4."
+      ]
+    }
+  ],
+  "corpus": {
+    "actual_chunk_count": 4436,
+    "embedding_dimension": 384,
+    "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "expected_chunk_count": 4436,
+    "snapshot_id": "qdrant-chunks-post-r3-2026-06-30"
+  },
+  "deterministic_fingerprint": "9ca91eb77f18dd84099196ff16b0689fb0170af3ff10e0a09f3b8df6daaf30d2",
+  "evaluation_contract": {
+    "evidence_match_rule": "exact_chunk_id OR same_doc_id_with_page_overlap",
+    "miss_counts_are_multi_label": true,
+    "terminology_rule": "paired zh/en cases over identical labeled evidence with asymmetric recall@10"
+  },
+  "git_commit": "e29783605e83e203de79bbb2ca06116ea9c1f39c",
+  "live_providers_constructed": false,
+  "question_schema_version": "phase5.rag_qa.questions.v1",
+  "retrieval_config": {
+    "bm25_top_k": 50,
+    "dense_top_k": 50,
+    "final_top_k": 10,
+    "fusion": "rrf",
+    "mode": "hybrid",
+    "rerank_enabled": false
+  },
+  "schema_version": "phase5.rag_qa.report.v2",
+  "scorecard": {
+    "completeness_rate": 0.316,
+    "dominant_miss_category": {
+      "category": "synthesis",
+      "count": 13
+    },
+    "latency_ms": {
+      "max": 8954.386,
+      "mean": 3545.923,
+      "total": 49642.919
+    },
+    "miss_counts": {
+      "cross-doc": 2,
+      "pass": 1,
+      "ranking": 3,
+      "retrieval": 4,
+      "synthesis": 13,
+      "terminology": 2
+    },
+    "primary_miss_counts": {
+      "pass": 1,
+      "ranking": 3,
+      "retrieval": 4,
+      "synthesis": 4,
+      "terminology": 2
+    },
+    "recall_at_10": 0.571,
+    "recall_at_5": 0.429,
+    "sentence_completeness_rate": 0.703,
+    "v2_faithfulness_rate": 0.429,
+    "v2_status_counts": {
+      "insufficient": 6,
+      "ok": 6,
+      "unknown": 2
+    }
+  }
+}
