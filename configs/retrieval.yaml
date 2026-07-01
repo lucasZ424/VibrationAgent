@@ -1,4 +1,5 @@
 mode: hybrid                       # bm25 | dense | hybrid
+independent_lanes_enabled: true    # promoted after Obj4 retrieval + full RAG/V2 gates
 top_k:
   bm25: 50
   dense: 50

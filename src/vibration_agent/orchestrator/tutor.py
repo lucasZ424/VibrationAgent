@@ -16,7 +16,7 @@ from uuid import uuid4
 from ..agent.routing import AdvisoryRoutingDecision, Difficulty, RouteDecision, route_advisory_skills, route_task
 from ..agent.supervisor import SupervisorLoop
 from ..config import load
-from ..retrieval.query_normalize import alias_family_coverage
+from ..retrieval.query_normalize import alias_family_coverage, is_corpus_standard_query
 from ..schemas import SkillInput, SkillOutput, UserMode
 from ..skills import (
     CitationCheckSkill,
@@ -201,6 +201,8 @@ def is_in_scope(query: str, *, context: Mapping[str, Any] | None = None, constra
     normalized = query.casefold()
     if any(pattern in normalized for pattern in _NEGATIVE_SCOPE_PATTERNS):
         return False
+    if is_corpus_standard_query(normalized):
+        return True
     if _any_word_match(query, _ASCII_STRONG_TERMS):
         return True
     if any(term in query for term in _CJK_STRONG_TERMS):

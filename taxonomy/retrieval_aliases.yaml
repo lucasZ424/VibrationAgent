@@ -1,0 +1,27 @@
+schema_version: phase5.retrieval_aliases.v1
+families:
+  - id: damping_ratio
+    aliases: [damping ratio, zeta, ζ, 阻尼比, 相对阻尼]
+  - id: natural_frequency
+    aliases: [natural frequency, omega_n, ωn, 固有频率, 自然频率]
+  - id: critical_speed
+    aliases: [critical speed, resonant speed, resonance, 临界转速, 临界速度, 共振转速, 共振]
+  - id: rotor_unbalance
+    aliases: [rotor unbalance, unbalance, 不平衡, 转子不平衡]
+  - id: orbit
+    aliases: [orbit, shaft orbit, 轴心轨迹, 转子轨迹]
+  - id: synchronous_response
+    aliases: [synchronous response, 1x, 一倍频, 同步响应]
+  - id: misalignment
+    aliases: [misalignment, 不对中, 轴系不对中]
+  - id: bearing_fault
+    aliases: [bearing fault, bearing defect, 轴承故障]
+  - id: steam_turbine
+    aliases: [steam turbine, 汽轮机, 汽轮, 透平]
+    ambiguity: Generic "turbine" and "gas turbine" must not expand to this family.
+  - id: torsional_vibration
+    aliases: [torsional vibration, 扭转振动, 扭振]
+  - id: order_analysis
+    aliases: [order analysis, order tracking, 阶比分析, 阶次分析]
+  - id: shaft_train
+    aliases: [shaft train, shafting, 轴系]

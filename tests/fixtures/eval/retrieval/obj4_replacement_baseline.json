@@ -1,0 +1,42 @@
+{
+  "schema_version": "phase5.obj4_replacement_baseline.v1",
+  "recorded_at": "2026-07-01",
+  "source_reports": {
+    "lane_eval": "run_logs/obj4_lane_eval_retry_20260701_174106.json",
+    "full_validation": "run_logs/obj4_full_validation_retry_20260701_175811.json"
+  },
+  "corpus": {
+    "snapshot_id": "qdrant-chunks-post-r3-2026-06-30",
+    "chunk_count": 4436,
+    "embedding_model": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+    "embedding_dimension": 384
+  },
+  "lane_scorecards": {
+    "bm25": {"recall_at_5": 0.286, "recall_at_10": 0.429},
+    "dense": {"recall_at_5": 0.5, "recall_at_10": 0.5},
+    "hybrid": {"recall_at_5": 0.5, "recall_at_10": 0.607}
+  },
+  "replacement_gate": {
+    "candidate_eligible": true,
+    "post_r3_hybrid_recall_at_10": 0.571,
+    "fixed_baseline_miss_case_ids": ["p5_standards_zh_gbt33199_scope"],
+    "regressed_baseline_pass_case_ids": []
+  },
+  "full_chain": {
+    "recall_at_5": 0.5,
+    "recall_at_10": 0.607,
+    "completeness_rate": 0.339,
+    "sentence_completeness_rate": 0.902,
+    "v2_faithfulness_rate": 0.5,
+    "v2_status_counts": {"insufficient": 7, "ok": 7}
+  },
+  "promotion": {
+    "independent_lanes_default": true,
+    "rollback_env": "RETRIEVAL_INDEPENDENT_LANES_ENABLED=false",
+    "canonical_nonlarge": {
+      "passed": 591,
+      "deselected": 1,
+      "failed": 0
+    }
+  }
+}

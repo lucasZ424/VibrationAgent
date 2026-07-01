@@ -4,7 +4,7 @@ Updated: 2026-07-01
 
 ## Status
 
-Phase 5 is active. Obj0-Obj3 are complete and Obj4 is cleared to start. Phase 4,
+Phase 5 is active. Obj0-Obj4 are complete and Obj5 is cleared to start. Phase 4,
 including its R1-R3 local iteration, is formally closed
 (`docs/phase_4_progress.md`, Obj0-18). Phase 5 exists to systematically close
 the gaps that the R1-R3 iteration exposed on the real corpus. Shared, remote,
@@ -50,7 +50,7 @@ regression target.
 1. Real-question evaluation harness and baseline scorecard: complete
 2. Answer-quality calibration and V2 hard gate: complete
 3. Multilingual retrieval formalization and reindex tooling: complete
-4. Independent lexical + ANN lanes, bilingual expansion, fusion: planned
+4. Independent lexical + ANN lanes, bilingual expansion, fusion: complete
 5. Evidence selection, adjacent-passage expansion, reranking: planned
 6. Controlled LLM synthesis lane (default-off, replay-first): planned
 7. Corpus and taxonomy quality pass: planned
@@ -469,7 +469,100 @@ fixed); contract changes migration-recorded.
 
 Dependencies: Obj1, Obj3.
 
-Status: planned.
+Status: complete.
+
+Implementation Notes:
+
+- Added a default-off independent-lane runtime candidate. ANN remains a direct
+  Qdrant query; BM25 now receives the complete payload corpus rather than ANN
+  top-N candidates.
+- Added a process cache for the lexical payload corpus. Refresh is explicit via
+  `clear_runtime_lexical_cache()` or service restart after ingestion/reindex.
+- Moved bilingual retrieval aliases into versioned
+  `taxonomy/retrieval_aliases.yaml`; query expansion reports its schema version
+  and retains negative ambiguity behavior for generic/gas turbine queries.
+- BM25 now indexes Qdrant `source_title`/`source_filename`, allowing exact
+  standard identifiers to participate in lexical recall.
+- Added lane telemetry and normalized RRF contributions, plus a three-mode
+  evaluator with the frozen replacement gate. Full RAG/V2 validation remains a
+  second prerequisite and is not run unless the lane candidate first qualifies.
+
+Blocking Prerequisite:
+
+- The user must run the Obj4 three-mode evaluator against the 4436-chunk corpus.
+  If the candidate does not match the best lane, hold the feature flag false and
+  use the per-case report to decide the next scoped implementation change.
+
+First Lane Result and Fusion Adjustment (2026-07-01):
+
+- BM25/dense/hybrid recall@10 was 0.429/0.500/0.536. Plain RRF exceeded both
+  single lanes but remained below the 0.571 runtime baseline and fixed no frozen
+  miss, so replacement stayed blocked.
+- The Chinese GB/T 33199 scope case was fixed by BM25 but dropped by plain RRF;
+  global RRF K/raw-score scans did not change the result, while global lexical
+  weighting regressed a definition case.
+- Added a scoped deterministic fusion for explicit standard lookup only:
+  lexical 0.9 / ANN 0.1. Other intents remain RRF. The revised candidate requires
+  another three-mode operator evaluation before any full RAG/V2 run.
+
+Revised Lane Result (2026-07-01):
+
+- BM25/dense/hybrid recall@10 remained 0.429/0.500 and improved to 0.607 for
+  hybrid. Hybrid now exceeds the best single lane and the 0.571 runtime baseline.
+- The candidate fixed frozen miss `p5_standards_zh_gbt33199_scope` and produced
+  no complete miss regression among existing baseline passes.
+- The lane replacement candidate is eligible. Full RAG/V2 validation with the
+  default-off flag explicitly enabled is now the blocking prerequisite for
+  promotion; the checked-in default remains false.
+
+First Full-Chain Result and Scope Fix (2026-07-01):
+
+- Full-chain recall@10 was 0.536 and V2 faithfulness remained 0.429. Both frozen
+  GB/T 33199 cases returned before S2 with empty retrieval hits, so the lane fix
+  was unreachable in production despite passing the isolated evaluator.
+- Added a provisional narrow scope allowlist for `GB/T 33199`; the final review
+  replaced it with versioned `taxonomy/corpus_standards.yaml`, generated from
+  Qdrant document identity metadata. This admits all cataloged standard families
+  without treating standards merely cited in document bodies as corpus members.
+
+Final Full-Chain Result and Promotion (2026-07-01):
+
+- Final report v3 covered 14 cases and 4436/4436 chunks. Recall@5/@10 improved
+  from 0.429/0.571 to 0.500/0.607. The frozen Chinese GB/T 33199 miss reached
+  `status=ok`, recall@10 1.0, and V2 `ok`.
+- V2 faithfulness improved from 0.429 to 0.500; completeness improved from 0.316
+  to 0.339; sentence completeness improved from 0.767 to 0.902.
+- Independent lanes are promoted as the checked-in default. Explicit rollback is
+  `RETRIEVAL_INDEPENDENT_LANES_ENABLED=false`. The compact evidence artifact is
+  `tests/fixtures/eval/retrieval/obj4_replacement_baseline.json`.
+
+Final Blocking Prerequisite (completed):
+
+- Run the canonical non-large suite after default promotion. Obj4 closes and
+  Obj5 is released only after that operator result is reviewed.
+
+Final Regression Result (2026-07-01):
+
+- Canonical non-large suite: 591 passed, 1 deselected, 0 failed in 12.63s. The
+  deselected test is the registered `large_corpus` case.
+
+Review Follow-up (2026-07-01):
+
+- Removed the fixture-specific `GB/T 33199` scope constant. Scope admission now
+  reads the corpus-derived standard catalog; regression coverage includes
+  `GB/T 11348`, `GB/T 33199`, `ISO 10816`, and the non-corpus `GB/T 19001`
+  negative case.
+- `scripts/build_corpus_standard_catalog.py` refreshes the catalog after corpus
+  replacement/reindex. It extracts identifiers only from source identity fields,
+  never from body references, and fails if no standard documents are found.
+- The gas-turbine/steam-turbine negative expansion required by AC6 was already
+  present and remains green. The frozen 14-case scorecard was not expanded with
+  unreviewed labels; additional standard retrieval cases require a separately
+  reviewed fixture/calibration update.
+
+Next Objective Gate:
+
+- Obj4 is complete. Obj5 is cleared to start.
 
 ## Obj5 - Evidence selection, adjacent-passage expansion, reranking
 
@@ -536,11 +629,14 @@ friction.
 Scope: Qdrant client timeout/batching for bulk operations; PG `qa_logs`
 fast-fail when Postgres is unavailable (no per-query timeout latency); operator
 hot-reload or a clear restart contract; health/diagnostics surfacing
-`retrieval_source` and the active embedding model; asset cache-busting retained.
+`retrieval_source` and the active embedding model; asset cache-busting retained;
+replace or formally capacity-bound Obj4's process-cached full-payload lexical
+backend, including enforced cache/catalog refresh after reindex.
 
 Definition of Done: bulk reindex completes within timeout; qa_logs failure adds
 no query latency; operator surfaces retrieval source and model; diagnostics
-reflect the multilingual ANN path.
+reflect the multilingual ANN path; lexical memory/refresh behavior is measured
+and no stale payload or standard catalog survives the supported restart flow.
 
 Dependencies: Obj3 and Obj7.
 

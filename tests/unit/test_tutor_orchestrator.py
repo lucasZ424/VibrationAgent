@@ -124,6 +124,11 @@ def test_scope_detection_accepts_vibration_terms_and_rejects_general_topics():
     assert is_in_scope("阻尼比如何影响转子振动？") is True
     assert is_in_scope("How does API 684 discuss critical speed?") is True
     assert is_in_scope("bearing fault diagnosis workflow") is True
+    assert is_in_scope("GB/T 33199.1 的适用机组范围和规定的方法是什么？") is True
+    assert is_in_scope("What units and methods are covered by GB/T 33199.1?") is True
+    assert is_in_scope("GB/T 11348.4 的轴振动测量范围是什么？") is True
+    assert is_in_scope("DL/T 5565 的适用范围是什么？") is True
+    assert is_in_scope("What does ISO 10816 cover?") is True
     assert is_in_scope("帮我写一个市场营销口号") is False
 
 
@@ -133,6 +138,7 @@ def test_scope_detection_rejects_borderline_false_positives():
     assert is_in_scope("autism spectrum support resources") is False
     assert is_in_scope("standard operating procedure for visas") is False
     assert is_in_scope("标准操作流程怎么写") is False
+    assert is_in_scope("GB/T 19001 quality management requirements") is False
 
 
 def test_domain_scope_alias_can_force_scope_decision():

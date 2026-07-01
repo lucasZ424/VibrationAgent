@@ -36,7 +36,8 @@ def tokenize(text: str) -> list[str]:
 
 def _chunk_text(chunk: Mapping[str, Any]) -> str:
     parts = [
-        str(chunk.get("title") or ""),
+        str(chunk.get("source_title") or chunk.get("title") or ""),
+        str(chunk.get("source_filename") or ""),
         str(chunk.get("topic") or ""),
         str(chunk.get("text") or ""),
     ]

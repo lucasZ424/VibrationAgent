@@ -8,32 +8,19 @@ local seed taxonomy is sparse or partially corrupted.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping, Sequence
+from functools import lru_cache
+from pathlib import Path
 from typing import Any
+
+import yaml
 
 from vibration_agent.schemas import Intent
 
-_DOMAIN_ALIASES: dict[str, tuple[str, ...]] = {
-    "damping_ratio": ("damping ratio", "zeta", "ζ", "阻尼比", "相对阻尼"),
-    "natural_frequency": ("natural frequency", "omega_n", "ωn", "固有频率", "自然频率"),
-    "critical_speed": (
-        "critical speed",
-        "resonant speed",
-        "resonance",
-        "临界转速",
-        "临界速度",
-        "共振转速",
-        "共振",
-    ),
-    "rotor_unbalance": ("rotor unbalance", "unbalance", "不平衡", "转子不平衡"),
-    "orbit": ("orbit", "shaft orbit", "轴心轨迹", "转子轨迹"),
-    "synchronous_response": ("synchronous response", "1x", "一倍频", "同步响应"),
-    "misalignment": ("misalignment", "不对中", "轴系不对中"),
-    "bearing_fault": ("bearing fault", "轴承故障", "bearing defect"),
-    "steam_turbine": ("steam turbine", "汽轮机", "汽轮", "透平"),
-    "torsional_vibration": ("torsional vibration", "扭转振动", "扭振"),
-    "order_analysis": ("order analysis", "order tracking", "阶比分析", "阶次分析"),
-    "shaft_train": ("shaft train", "shafting", "轴系"),
-}
+_ALIAS_PATH = Path(__file__).resolve().parents[3] / "taxonomy" / "retrieval_aliases.yaml"
+_ALIAS_SCHEMA = "phase5.retrieval_aliases.v1"
+_STANDARD_CATALOG_PATH = Path(__file__).resolve().parents[3] / "taxonomy" / "corpus_standards.yaml"
+_STANDARD_CATALOG_SCHEMA = "phase5.corpus_standards.v1"
 
 _SYMBOL_ALIASES: dict[str, tuple[str, ...]] = {
     "zeta": ("zeta", "ζ", "damping ratio", "阻尼比"),
@@ -46,6 +33,73 @@ _STANDARD_MARKERS = ("standard", "iso", "api ", "gb/t", "规范", "标准")
 _SCOPE_MARKERS = ("scope", "适用范围", "范围", "适用于")
 _OUTCOME_MARKERS = ("发生什么", "会怎样", "如何变化", "什么影响", "what happens", "affect", "effect")
 _CRITICAL_SPEED_OUTCOME_EXPANSIONS = ("响应放大", "振幅增大", "振动增大", "response amplification", "amplitude increase")
+
+
+@lru_cache(maxsize=8)
+def load_alias_families(path: str | Path = _ALIAS_PATH) -> dict[str, tuple[str, ...]]:
+    source = Path(path)
+    data = yaml.safe_load(source.read_text(encoding="utf-8"))
+    if not isinstance(data, dict) or data.get("schema_version") != _ALIAS_SCHEMA:
+        raise ValueError(f"Unsupported retrieval alias taxonomy: {source}")
+    families: dict[str, tuple[str, ...]] = {}
+    for row in data.get("families", []):
+        if not isinstance(row, dict) or not row.get("id") or not isinstance(row.get("aliases"), list):
+            raise ValueError(f"Invalid retrieval alias family in {source}")
+        aliases = tuple(str(value).strip() for value in row["aliases"] if str(value).strip())
+        if len(aliases) < 2:
+            raise ValueError(f"Retrieval alias family requires at least two aliases: {row.get('id')}")
+        families[str(row["id"])] = aliases
+    return families
+
+
+def clear_alias_cache() -> None:
+    load_alias_families.cache_clear()
+
+
+def _standard_keys(value: str) -> tuple[tuple[str, str], ...]:
+    matches = re.finditer(
+        r"(?i)(gb\s*[/∕]?\s*t|gbt|dl\s*[/∕]?\s*t|dlt|iso|api)[\s_-]*(\d{3,6})(?:\.\d+)*",
+        value,
+    )
+    return tuple(
+        (re.sub(r"[\s/∕]", "", match.group(1)).casefold(), match.group(2))
+        for match in matches
+    )
+
+
+def _standard_key(value: str) -> tuple[str, str] | None:
+    return next(iter(_standard_keys(value)), None)
+
+
+def standard_identifiers_from_sources(rows: Sequence[Mapping[str, Any]]) -> tuple[str, ...]:
+    """Extract standard families from ingested document identity fields only."""
+
+    identifiers: set[tuple[str, str]] = set()
+    for row in rows:
+        for field in ("source_title", "source_filename", "doc_id", "title"):
+            identifiers.update(_standard_keys(str(row.get(field) or "")))
+    names = {"gbt": "GB/T", "dlt": "DL/T", "iso": "ISO", "api": "API"}
+    return tuple(f"{names[organization]} {number}" for organization, number in sorted(identifiers))
+
+
+@lru_cache(maxsize=4)
+def load_corpus_standard_identifiers(path: str | Path = _STANDARD_CATALOG_PATH) -> frozenset[str]:
+    source = Path(path)
+    payload = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
+    if payload.get("schema_version") != _STANDARD_CATALOG_SCHEMA:
+        raise ValueError(f"Unsupported corpus standard catalog: {source}")
+    identifiers = payload.get("identifiers")
+    if not isinstance(identifiers, list):
+        raise ValueError(f"Invalid corpus standard catalog: {source}")
+    keys = {_standard_key(str(value)) for value in identifiers}
+    if None in keys:
+        raise ValueError(f"Invalid standard identifier in corpus catalog: {source}")
+    return frozenset(":".join(key) for key in keys if key is not None)
+
+
+def is_corpus_standard_query(query: str) -> bool:
+    key = _standard_key(query)
+    return key is not None and ":".join(key) in load_corpus_standard_identifiers()
 
 
 def _clean_query(query: str) -> str:
@@ -69,7 +123,7 @@ def alias_family_coverage(query: str, answer: str) -> tuple[int, int]:
     answer_lower = answer.lower()
     covered = 0
     total = 0
-    for aliases in _DOMAIN_ALIASES.values():
+    for aliases in load_alias_families().values():
         if any(alias.lower() in query_lower for alias in aliases):
             total += 1
             if any(alias.lower() in answer_lower for alias in aliases):
@@ -88,7 +142,7 @@ def focus_aliases(query: str) -> tuple[str, ...]:
     """Return the alias family with the longest member present in the query."""
     lowered = _clean_query(query).lower()
     matches: list[tuple[int, tuple[str, ...]]] = []
-    for aliases in _DOMAIN_ALIASES.values():
+    for aliases in load_alias_families().values():
         matched_lengths = [len(alias) for alias in aliases if alias.lower() in lowered]
         if matched_lengths:
             matches.append((max(matched_lengths), aliases))
@@ -97,14 +151,12 @@ def focus_aliases(query: str) -> tuple[str, ...]:
 
 def infer_intent(query: str) -> Intent:
     lowered = query.lower()
-    if is_standard_scope_query(query):
+    if is_standard_scope_query(query) or any(marker in lowered for marker in _STANDARD_MARKERS):
         return "standard_lookup"
     if any(marker in lowered for marker in ("define", "definition", "what is", "是什么", "定义")):
         return "definition"
     if any(marker in lowered for marker in ("compare", "difference", " vs ", "versus", "区别", "对比", "比较")):
         return "comparison"
-    if any(marker in lowered for marker in _STANDARD_MARKERS):
-        return "standard_lookup"
     if any(marker in lowered for marker in ("summary", "summarize", "总结", "概述", "摘要")):
         return "summary"
     if lowered:
@@ -115,12 +167,13 @@ def infer_intent(query: str) -> Intent:
 def normalize(query: str) -> dict[str, Any]:
     """Return normalized query metadata used by retrieval lanes."""
     cleaned = _clean_query(query)
-    detected_terms = [term for term, aliases in _DOMAIN_ALIASES.items() if _contains_any(cleaned, aliases)]
+    domain_aliases = load_alias_families()
+    detected_terms = [term for term, aliases in domain_aliases.items() if _contains_any(cleaned, aliases)]
     detected_symbols = [symbol for symbol, aliases in _SYMBOL_ALIASES.items() if _contains_any(cleaned, aliases)]
 
     expansions: list[str] = []
     for term in detected_terms:
-        expansions.extend(_DOMAIN_ALIASES[term])
+        expansions.extend(domain_aliases[term])
     for symbol in detected_symbols:
         expansions.extend(_SYMBOL_ALIASES[symbol])
     if "critical_speed" in detected_terms and _contains_any(cleaned, _OUTCOME_MARKERS):
@@ -129,8 +182,10 @@ def normalize(query: str) -> dict[str, Any]:
     expanded = " ".join(dict.fromkeys([cleaned, *expansions])) if cleaned else ""
     return {
         "normalized_query": expanded,
+        "semantic_query": cleaned,
         "original_query": query,
         "detected_terms": detected_terms,
         "detected_symbols": detected_symbols,
+        "alias_schema_version": _ALIAS_SCHEMA,
         "intent_hint": infer_intent(cleaned),
     }

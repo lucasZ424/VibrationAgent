@@ -88,6 +88,7 @@ class RoutingSettings(BaseModel):
 
 class RetrievalSettings(BaseModel):
     mode: str = "hybrid"
+    independent_lanes_enabled: bool = True
     bm25_top_k: int = Field(default=50, ge=1)
     dense_top_k: int = Field(default=50, ge=1)
     final_top_k: int = Field(default=10, ge=1)
@@ -414,6 +415,10 @@ def load(workspace: Path | None = None) -> Settings:
         ),
         retrieval=RetrievalSettings(
             mode=str(_env("RETRIEVAL_MODE", retrieval_yaml.get("mode", "hybrid"))),
+            independent_lanes_enabled=_env_bool(
+                "RETRIEVAL_INDEPENDENT_LANES_ENABLED",
+                bool(retrieval_yaml.get("independent_lanes_enabled", True)),
+            ),
             bm25_top_k=int(retrieval_top_k.get("bm25", 50)),
             dense_top_k=int(retrieval_top_k.get("dense", 50)),
             final_top_k=int(retrieval_top_k.get("final", 10)),

@@ -428,6 +428,8 @@ Status: planned | in_progress | blocked | complete
 - 固化 Qdrant bulk timeout、batching、retry、resume 和错误汇总，不再依赖临时命令绕过。
 - PG `qa_logs` 在依赖关闭或失败时快速降级，避免每次问答重复等待完整 connect timeout。
 - 统一以 `scripts/start_operator.py` 为服务生命周期入口，明确 restart/reload/cache contract。
+- 评估并替换或明确限制 Obj4 的全 payload 进程内 lexical cache；reindex 后必须刷新
+  lexical payload cache 与 corpus standard catalog，不能继续服务旧语料边界。
 - `/health`、`/diagnostics` 和 operator 展示 retrieval source、embedding model、store 状态和 fallback。
 - 保持本地单用户边界，不新增远程管理、共享账号或公网部署能力。
 
@@ -438,6 +440,8 @@ Status: planned | in_progress | blocked | complete
 - 官方启动、restart、stop、端口占用和 stale process 均有脚本测试。
 - 重启后 `/operator` 与 versioned JS/CSS 返回当前内容，无旧 UI cache 问题。
 - diagnostics 明确区分 configured/enabled/reachable，并显示 active embedding model 与 retrieval source。
+- lexical backend 有代表性语料规模下的内存/延迟记录；支持的 restart 流程后不存在旧
+  payload cache 或旧 `taxonomy/corpus_standards.yaml`。
 - 可靠性改动不改变答案 authority、chain order 或 V2 hard gate。
 
 依赖与放行条件：

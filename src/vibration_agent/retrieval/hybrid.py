@@ -7,6 +7,7 @@ rows and preserves the production retrieval shape: normalize -> BM25 + dense lan
 from __future__ import annotations
 
 import json
+import time
 from collections.abc import Iterable, Mapping, Sequence
 from functools import lru_cache
 from pathlib import Path
@@ -21,6 +22,7 @@ from .embeddings import embed_texts
 
 RRF_K = 60
 SOURCE_PRIORITY_BOOST = 0.0001
+STANDARD_LEXICAL_WEIGHT = 0.9
 _CHUNK_FILE_PATTERNS = ("**/chunks.jsonl", "**/chunks_*.jsonl")
 SOURCE_PRIORITY = {
     "standard": 5,
@@ -33,6 +35,7 @@ SOURCE_PRIORITY = {
     "note": 1,
 }
 _MOJIBAKE_MARKERS = set("ÃÂ�¤¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿çåèéã")
+_RUNTIME_LEXICAL_CACHE: dict[tuple[int, str], list[dict[str, Any]]] = {}
 
 
 @lru_cache(maxsize=1)
@@ -46,6 +49,10 @@ def default_retrieval_settings() -> Settings:
 
 def clear_default_settings_cache() -> None:
     _default_settings.cache_clear()
+
+
+def clear_runtime_lexical_cache() -> None:
+    _RUNTIME_LEXICAL_CACHE.clear()
 
 
 def read_chunks_jsonl(path: str | Path) -> list[dict[str, Any]]:
@@ -92,12 +99,19 @@ def load_chunks(
 def load_runtime_chunks(settings: Settings) -> list[dict[str, Any]]:
     if not settings.database.qdrant_enabled:
         return []
-    return _dedupe_chunks(
+    client = qdrant.runtime_client(settings)
+    key = (id(client), settings.database.qdrant_collection)
+    cached = _RUNTIME_LEXICAL_CACHE.get(key)
+    if cached is not None:
+        return [dict(chunk) for chunk in cached]
+    chunks = _dedupe_chunks(
         qdrant.load_chunk_payloads(
-            qdrant.runtime_client(settings),
+            client,
             collection=settings.database.qdrant_collection,
         )
     )
+    _RUNTIME_LEXICAL_CACHE[key] = chunks
+    return [dict(chunk) for chunk in chunks]
 
 
 def _runtime_qdrant_ann_results(
@@ -270,18 +284,68 @@ def _rrf_candidates(
                     "score": 0.0,
                     "lanes": [],
                     "lane_scores": {},
+                    "lane_contributions": {},
                     "matched_terms": [],
                 },
             )
-            candidate["score"] += 1.0 / (RRF_K + rank)
+            rank_contribution = 1.0 / (RRF_K + rank)
+            raw_contribution = 0.0
+            candidate["score"] += rank_contribution
             if max_lane_score > 0:
-                candidate["score"] += 0.01 * (float(result.get("score") or 0.0) / max_lane_score)
+                raw_contribution = 0.01 * (float(result.get("score") or 0.0) / max_lane_score)
+                candidate["score"] += raw_contribution
             candidate["lanes"].append(lane_name)
             candidate["lane_scores"][lane_name] = float(result.get("score") or 0.0)
+            candidate["lane_contributions"][lane_name] = round(rank_contribution + raw_contribution, 6)
             for term in result.get("matched_terms", []) or []:
                 if term not in candidate["matched_terms"]:
                     candidate["matched_terms"].append(term)
 
+    for candidate in candidates.values():
+        priority = _source_priority(candidate["chunk"], source_priority)
+        candidate["source_priority"] = priority
+        candidate["score"] += priority * SOURCE_PRIORITY_BOOST
+    return sorted(candidates.values(), key=lambda item: item["score"], reverse=True)
+
+
+def _weighted_candidates(
+    *,
+    bm25_results: Sequence[Mapping[str, Any]],
+    dense_results: Sequence[Mapping[str, Any]],
+    source_priority: Mapping[str, int],
+    lexical_weight: float,
+) -> list[dict[str, Any]]:
+    candidates: dict[str, dict[str, Any]] = {}
+    for lane_name, weight, results in (
+        ("bm25", lexical_weight, _order_lane_results(bm25_results, source_priority)),
+        ("dense", 1.0 - lexical_weight, _order_lane_results(dense_results, source_priority)),
+    ):
+        max_score = max((float(item.get("score") or 0.0) for item in results), default=0.0)
+        for result in results:
+            chunk = result.get("chunk")
+            if not isinstance(chunk, Mapping) or not chunk.get("chunk_id"):
+                continue
+            chunk_id = str(chunk["chunk_id"])
+            candidate = candidates.setdefault(
+                chunk_id,
+                {
+                    "chunk": dict(chunk),
+                    "score": 0.0,
+                    "lanes": [],
+                    "lane_scores": {},
+                    "lane_contributions": {},
+                    "matched_terms": [],
+                },
+            )
+            normalized = float(result.get("score") or 0.0) / max_score if max_score else 0.0
+            contribution = weight * normalized
+            candidate["score"] += contribution
+            candidate["lanes"].append(lane_name)
+            candidate["lane_scores"][lane_name] = float(result.get("score") or 0.0)
+            candidate["lane_contributions"][lane_name] = round(contribution, 6)
+            for term in result.get("matched_terms", []) or []:
+                if term not in candidate["matched_terms"]:
+                    candidate["matched_terms"].append(term)
     for candidate in candidates.values():
         priority = _source_priority(candidate["chunk"], source_priority)
         candidate["source_priority"] = priority
@@ -335,6 +399,7 @@ def _context_from_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "retrieval_lanes": lanes,
         "retrieval_contribution": "hybrid" if len(set(lanes)) > 1 else (lanes[0] if lanes else "unknown"),
         "lane_scores": dict(candidate.get("lane_scores", {}) or {}),
+        "lane_contributions": dict(candidate.get("lane_contributions", {}) or {}),
         "source_priority": candidate.get("source_priority", 0),
         "text": chunk.get("api_context") or chunk.get("text") or "",
         "assets": chunk.get("assets", []),
@@ -353,28 +418,43 @@ def search(
     """Return a RetrievalOutput-shaped dict plus retrieval_context."""
     active_settings = settings or _default_settings()
     final_top_k = active_settings.retrieval.final_top_k if top_k is None else top_k
+    mode = active_settings.retrieval.mode
+    if mode not in {"bm25", "dense", "hybrid"}:
+        raise ValueError(f"Unsupported retrieval mode: {mode}")
     normalized = query_normalize.normalize(query)
     normalized_query = normalized["normalized_query"]
+    semantic_query = normalized["semantic_query"]
     warnings: list[str] = []
 
     corpus = load_chunks(chunks=chunks, chunk_paths=chunk_paths, chunks_dir=chunks_dir)
     runtime_dense_results: list[dict[str, Any]] = []
     retrieval_source = "file_chunks"
-    if not corpus and chunks is None and not chunk_paths and chunks_dir is None:
-        runtime_dense_results = _runtime_qdrant_ann_results(
-            normalized_query,
-            settings=active_settings,
-            top_k=active_settings.retrieval.dense_top_k,
-            warnings=warnings,
-        )
-        if runtime_dense_results:
-            corpus = _dedupe_chunks(result["chunk"] for result in runtime_dense_results if isinstance(result.get("chunk"), Mapping))
-            retrieval_source = "runtime_qdrant_ann"
-        else:
-            retrieval_source = "runtime_qdrant_payloads"
+    runtime = not corpus and chunks is None and not chunk_paths and chunks_dir is None
+    if runtime:
+        if mode in {"dense", "hybrid"}:
+            runtime_dense_results = _runtime_qdrant_ann_results(
+                semantic_query,
+                settings=active_settings,
+                top_k=active_settings.retrieval.dense_top_k,
+                warnings=warnings,
+            )
         try:
-            if not corpus:
+            if mode in {"bm25", "hybrid"} and (
+                active_settings.retrieval.independent_lanes_enabled or not runtime_dense_results
+            ):
                 corpus = load_runtime_chunks(active_settings)
+                retrieval_source = (
+                    "runtime_qdrant_independent_lanes"
+                    if runtime_dense_results
+                    else "runtime_qdrant_payloads"
+                )
+            elif runtime_dense_results:
+                corpus = _dedupe_chunks(
+                    result["chunk"]
+                    for result in runtime_dense_results
+                    if isinstance(result.get("chunk"), Mapping)
+                )
+                retrieval_source = "runtime_qdrant_ann"
         except Exception as exc:
             warnings.append(f"Runtime Qdrant corpus unavailable: {type(exc).__name__}: {exc}")
     if not normalized_query:
@@ -402,19 +482,43 @@ def search(
         )
         return {**output.model_dump(mode="json"), "retrieval_context": []}
 
-    bm25_results = bm25.search(normalized_query, chunks=corpus, top_k=active_settings.retrieval.bm25_top_k)
-    dense_results = runtime_dense_results or dense.search(
-        normalized_query,
-        chunks=corpus,
-        top_k=active_settings.retrieval.dense_top_k,
-        settings=active_settings,
-        warnings=warnings,
+    lexical_started = time.perf_counter()
+    bm25_results = (
+        bm25.search(normalized_query, chunks=corpus, top_k=active_settings.retrieval.bm25_top_k)
+        if mode in {"bm25", "hybrid"}
+        else []
     )
-    candidates = _rrf_candidates(
-        bm25_results=bm25_results,
-        dense_results=dense_results,
-        source_priority=active_settings.retrieval.source_priority,
-    )
+    lexical_latency_ms = (time.perf_counter() - lexical_started) * 1000
+    ann_started = time.perf_counter()
+    dense_results = []
+    if mode in {"dense", "hybrid"}:
+        dense_results = (
+            runtime_dense_results
+            if runtime
+            else dense.search(
+                semantic_query,
+                chunks=corpus,
+                top_k=active_settings.retrieval.dense_top_k,
+                settings=active_settings,
+                warnings=warnings,
+            )
+        )
+    ann_latency_ms = (time.perf_counter() - ann_started) * 1000
+    if normalized["intent_hint"] == "standard_lookup" and mode == "hybrid":
+        candidates = _weighted_candidates(
+            bm25_results=bm25_results,
+            dense_results=dense_results,
+            source_priority=active_settings.retrieval.source_priority,
+            lexical_weight=STANDARD_LEXICAL_WEIGHT,
+        )
+        fusion_method = "standard_lookup_weighted"
+    else:
+        candidates = _rrf_candidates(
+            bm25_results=bm25_results,
+            dense_results=dense_results,
+            source_priority=active_settings.retrieval.source_priority,
+        )
+        fusion_method = "rrf"
     candidates, filter_warnings = _quality_filter_candidates(candidates, normalized_query=normalized_query)
     warnings.extend(filter_warnings)
     if active_settings.retrieval.rerank_enabled:
@@ -437,5 +541,49 @@ def search(
         "retrieval_source": retrieval_source,
         "detected_terms": normalized.get("detected_terms", []),
         "detected_symbols": normalized.get("detected_symbols", []),
+        "alias_schema_version": normalized.get("alias_schema_version"),
+        "fusion_method": fusion_method,
+        "lanes": {
+            "lexical": _lane_telemetry(
+                bm25_results,
+                enabled=mode in {"bm25", "hybrid"},
+                latency_ms=lexical_latency_ms,
+                source="qdrant_payload_cache" if runtime else "file_chunks",
+                fallback=False,
+            ),
+            "ann": _lane_telemetry(
+                dense_results,
+                enabled=mode in {"dense", "hybrid"},
+                latency_ms=ann_latency_ms,
+                source="qdrant_ann" if runtime else "local_dense",
+                fallback=any("ANN unavailable" in warning or "embedding" in warning.lower() for warning in warnings),
+            ),
+        },
         "retrieval_context": [_context_from_candidate(candidate) for candidate in candidates],
+    }
+
+
+def _lane_telemetry(
+    results: Sequence[Mapping[str, Any]],
+    *,
+    enabled: bool,
+    latency_ms: float,
+    source: str,
+    fallback: bool,
+) -> dict[str, Any]:
+    max_score = max((float(item.get("score") or 0.0) for item in results), default=0.0)
+    return {
+        "enabled": enabled,
+        "source": source,
+        "latency_ms": round(latency_ms, 3),
+        "fallback": fallback,
+        "hits": [
+            {
+                "chunk_id": item.get("chunk", {}).get("chunk_id"),
+                "rank": rank,
+                "raw_score": round(float(item.get("score") or 0.0), 6),
+                "normalized_score": round(float(item.get("score") or 0.0) / max_score, 6) if max_score else 0.0,
+            }
+            for rank, item in enumerate(results, start=1)
+        ],
     }

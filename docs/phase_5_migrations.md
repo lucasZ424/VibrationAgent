@@ -251,3 +251,64 @@ Post-validation measurement correction:
 - The user ratified this Obj3/Obj4 scope split on 2026-07-01. Obj3 still requires
   a post-reindex hybrid scorecard against the unchanged 0.571 hybrid baseline;
   the operator result held at 0.571 and closed the runtime no-regression loop.
+
+### Obj4 - Independent retrieval lane candidate (2026-07-01)
+
+Status: complete; replacement, full RAG/V2, and canonical non-large gates passed.
+
+- `RETRIEVAL_INDEPENDENT_LANES_ENABLED` is additive and defaults false. The
+  existing ANN-candidate-scoped runtime path remains active until the Obj4
+  replacement gate passes.
+- When enabled, ANN queries Qdrant directly while BM25 searches the complete
+  Qdrant payload corpus. Payloads are cached once per process/client/collection;
+  ingestion or reindex requires explicit cache clear or process restart.
+- `phase5.retrieval_aliases.v1` is the only bilingual lexical expansion source.
+  Free-form/model query rewrite is not used.
+- Retrieval output adds mode-specific lane telemetry: source, latency, fallback,
+  rank, raw/normalized score, and per-candidate RRF contribution.
+- Hybrid uses RRF for general intents. Explicit standard identifiers use a
+  deterministic lexical 0.9 / ANN 0.1 candidate fusion because the first lane
+  run proved BM25 fixed the Chinese standard miss while plain RRF discarded it.
+- `phase5.obj4_retrieval_eval.report.v1` compares bm25/dense/hybrid independently.
+  Candidate replacement requires hybrid recall@10 >= both single lanes and the
+  0.571 runtime baseline, at least one frozen miss fixed, and no existing pass
+  becoming a complete miss. A passing candidate still requires full RAG/V2
+  validation before default promotion.
+
+Compatibility: output/config fields are additive; the runtime retrieval default
+intentionally changes after both replacement gates passed. Rollback: set
+`RETRIEVAL_INDEPENDENT_LANES_ENABLED=false`; no corpus change is required.
+
+Lane calibration result:
+
+- First plain-RRF candidate scored hybrid recall@10 0.536 and failed replacement.
+- Standard-lookup weighted fusion scored 0.607 versus BM25 0.429, ANN 0.500,
+  and runtime baseline 0.571; it fixed the frozen Chinese GB/T 33199 scope miss
+  without turning an existing pass into a complete miss.
+- This releases only the full RAG/V2 prerequisite. Default promotion remains
+  blocked until faithfulness and answer-quality checks pass.
+- The first full-chain run exposed a pre-S2 scope mismatch: `GB/T 33199` queries
+  were rejected before retrieval. The scope boundary now narrowly admits that
+  frozen rotating-machinery standard identifier while retaining an unrelated
+  GB/T negative regression; at that checkpoint default promotion awaited a rerun.
+
+Final promotion:
+
+- The rerun produced hybrid recall@10 0.607 and V2 faithfulness 0.500, both above
+  the post-R3 0.571/0.429 references. Completeness and sentence completeness also
+  improved to 0.339/0.902.
+- `independent_lanes_enabled` is now true by default. Operators can immediately
+  roll back with `RETRIEVAL_INDEPENDENT_LANES_ENABLED=false`; no data migration or
+  reindex is required.
+- Final canonical non-large regression: 591 passed, 1 registered large-corpus
+  deselection, 0 failed.
+
+Review hardening:
+
+- Standard scope is no longer a literal `GB/T 33199` exception. The versioned
+  `taxonomy/corpus_standards.yaml` snapshot is derived from Qdrant
+  `source_title`, `source_filename`, `doc_id`, and `title` fields.
+- After replacing or reindexing the corpus, run
+  `python scripts/build_corpus_standard_catalog.py` before restarting the service.
+  Body-text references are intentionally excluded so a cited, non-ingested
+  standard does not widen the scope boundary.

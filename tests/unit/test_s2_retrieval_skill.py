@@ -1,9 +1,15 @@
 import json
 from pathlib import Path
 
+from vibration_agent.retrieval.bm25 import search as bm25_search
 from vibration_agent.retrieval.bm25 import tokenize
 from vibration_agent.retrieval.hybrid import load_chunks, search
-from vibration_agent.retrieval.query_normalize import focus_aliases, normalize
+from vibration_agent.retrieval.query_normalize import (
+    focus_aliases,
+    is_corpus_standard_query,
+    normalize,
+    standard_identifiers_from_sources,
+)
 from vibration_agent.retrieval.rerank import run as rerank_run
 from vibration_agent.schemas import SkillInput
 from vibration_agent.skills import RetrievalSkill
@@ -87,6 +93,21 @@ def test_query_normalize_does_not_expand_gas_turbine_to_steam_turbine():
     assert "汽轮机" not in result["normalized_query"]
 
 
+def test_corpus_standard_catalog_uses_document_identity_not_body_references():
+    # WHY: a standard merely cited in a document is not itself retrievable as an
+    # in-corpus standard and must not widen the pre-retrieval scope boundary.
+    rows = [
+        {
+            "source_title": "GB∕T 33199.1-2016 机械振动（ISO 10816）",
+            "text": "Normative reference: GB/T 19001 quality management.",
+        }
+    ]
+
+    assert standard_identifiers_from_sources(rows) == ("GB/T 33199", "ISO 10816")
+    assert is_corpus_standard_query("GB/T 11348.4 的适用范围是什么？") is True
+    assert is_corpus_standard_query("GB/T 19001 quality management requirements") is False
+
+
 def test_query_focus_aliases_choose_the_longest_detected_domain_phrase():
     aliases = focus_aliases("阶比分析在旋转机械扭振测量中的作用是什么？")
 
@@ -149,6 +170,9 @@ def test_hybrid_search_returns_retrieval_output_with_reasons():
     assert result["retrieval_context"][0]["retrieval_contribution"] == "hybrid"
     assert set(result["retrieval_context"][0]["retrieval_lanes"]) == {"bm25", "dense"}
     assert set(result["retrieval_context"][0]["lane_scores"]) == {"bm25", "dense"}
+    assert set(result["retrieval_context"][0]["lane_contributions"]) == {"bm25", "dense"}
+    assert result["lanes"]["lexical"]["hits"][0]["rank"] == 1
+    assert result["lanes"]["lexical"]["hits"][0]["normalized_score"] == 1.0
 
 
 def test_hybrid_search_propagates_source_filename_to_context():
@@ -197,7 +221,7 @@ def test_hybrid_search_uses_runtime_qdrant_corpus_when_no_file_chunks(monkeypatc
     assert result["hits"][0]["chunk_id"] == "c1"
 
 
-def test_hybrid_search_uses_runtime_qdrant_ann_before_payload_scroll(monkeypatch):
+def test_runtime_lexical_lane_is_not_limited_to_ann_candidates(monkeypatch):
     from vibration_agent.config import load
     from vibration_agent.retrieval import hybrid
     from vibration_agent.schemas import EmbeddingRecord
@@ -206,7 +230,10 @@ def test_hybrid_search_uses_runtime_qdrant_ann_before_payload_scroll(monkeypatch
     settings.database.qdrant_enabled = True
     settings.database.qdrant_collection = "test_chunks"
     settings.embeddings.enabled = True
-    monkeypatch.setattr(hybrid.qdrant, "runtime_client", lambda _: object())
+    settings.retrieval.independent_lanes_enabled = True
+    client = object()
+    hybrid.clear_runtime_lexical_cache()
+    monkeypatch.setattr(hybrid.qdrant, "runtime_client", lambda _: client)
     monkeypatch.setattr(
         hybrid,
         "embed_texts",
@@ -224,21 +251,143 @@ def test_hybrid_search_uses_runtime_qdrant_ann_before_payload_scroll(monkeypatch
         hybrid.qdrant,
         "search_chunks",
         lambda client, vector, *, top_k, collection: [
-            {"chunk": _chunk("c1", "resonance response amplification without query keyword"), "score": 0.8, "lane": "dense_qdrant"}
+            {"chunk": _chunk("c1", "semantic-only candidate"), "score": 0.8, "lane": "dense_qdrant"}
         ],
     )
     monkeypatch.setattr(
         hybrid.qdrant,
         "load_chunk_payloads",
-        lambda client, *, collection: (_ for _ in ()).throw(AssertionError("payload scroll should not run")),
+        lambda client, *, collection: [
+            _chunk("c1", "semantic-only candidate"),
+            _chunk("c2", "critical speed definition and operating limit"),
+        ],
     )
 
-    result = search("critical speed", top_k=1, settings=settings)
+    result = search("critical speed", top_k=2, settings=settings)
 
     assert result["status"] == "ok"
+    assert result["retrieval_source"] == "runtime_qdrant_independent_lanes"
+    by_id = {item["chunk_id"]: item for item in result["retrieval_context"]}
+    assert by_id["c1"]["retrieval_lanes"] == ["dense"]
+    assert by_id["c2"]["retrieval_lanes"] == ["bm25"]
+    assert result["lanes"]["lexical"]["hits"][0]["chunk_id"] == "c2"
+    assert result["lanes"]["ann"]["hits"][0]["chunk_id"] == "c1"
+
+
+def test_independent_runtime_candidate_can_be_explicitly_disabled(monkeypatch):
+    from vibration_agent.config import load
+    from vibration_agent.retrieval import hybrid
+    from vibration_agent.schemas import EmbeddingRecord
+
+    settings = load()
+    settings.database.qdrant_enabled = True
+    settings.embeddings.enabled = True
+    settings.retrieval.independent_lanes_enabled = False
+    assert settings.retrieval.independent_lanes_enabled is False
+    monkeypatch.setattr(hybrid.qdrant, "runtime_client", lambda _: object())
+    monkeypatch.setattr(
+        hybrid,
+        "embed_texts",
+        lambda texts, *, settings: [
+            EmbeddingRecord(text_hash="q", vector=[1.0, 0.0], dimension=2, provider="sentence_transformers")
+        ],
+    )
+    monkeypatch.setattr(
+        hybrid.qdrant,
+        "search_chunks",
+        lambda *args, **kwargs: [{"chunk": _chunk("ann", "critical speed"), "score": 0.8}],
+    )
+    monkeypatch.setattr(
+        hybrid.qdrant,
+        "load_chunk_payloads",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("default path must not scroll payloads")),
+    )
+
+    result = search("critical speed", settings=settings)
+
     assert result["retrieval_source"] == "runtime_qdrant_ann"
-    assert result["hits"][0]["chunk_id"] == "c1"
-    assert "dense" in result["retrieval_context"][0]["retrieval_lanes"]
+    assert [hit["chunk_id"] for hit in result["hits"]] == ["ann"]
+
+
+def test_independent_runtime_lanes_are_promoted_with_env_rollback(monkeypatch):
+    from vibration_agent.config import load
+
+    assert load().retrieval.independent_lanes_enabled is True
+    monkeypatch.setenv("RETRIEVAL_INDEPENDENT_LANES_ENABLED", "false")
+    assert load().retrieval.independent_lanes_enabled is False
+
+
+def test_bm25_indexes_qdrant_source_title_for_standard_lookup():
+    chunks = [
+        {
+            **_chunk("standard", "scope and methods"),
+            "source_title": "GB/T 33199.1 rotating machinery torsional vibration",
+        },
+        _chunk("other", "scope and methods"),
+    ]
+
+    results = bm25_search("GB/T 33199.1", chunks=chunks, top_k=2)
+
+    assert results[0]["chunk"]["chunk_id"] == "standard"
+
+
+def test_standard_lookup_candidate_uses_lexical_weight_without_changing_other_intents(monkeypatch):
+    from vibration_agent.config import load
+    from vibration_agent.retrieval import hybrid
+
+    target = _chunk("target", "scope and specified method")
+    distractors = [_chunk(f"dense-{index}", f"semantic result {index}") for index in range(10)]
+    settings = load()
+    settings.retrieval.mode = "hybrid"
+    monkeypatch.setattr(hybrid.bm25, "search", lambda *args, **kwargs: [{"chunk": target, "score": 1.0}])
+    monkeypatch.setattr(
+        hybrid.dense,
+        "search",
+        lambda *args, **kwargs: [
+            {"chunk": chunk, "score": 1.0 - index * 0.01}
+            for index, chunk in enumerate(distractors)
+        ],
+    )
+
+    result = search("What is covered by GB/T 33199.1?", chunks=[target, *distractors], settings=settings)
+
+    assert result["fusion_method"] == "standard_lookup_weighted"
+    assert result["hits"][0]["chunk_id"] == "target"
+    assert result["retrieval_context"][0]["lane_contributions"]["bm25"] == 0.9
+
+
+def test_retrieval_modes_report_only_enabled_lanes(monkeypatch):
+    from vibration_agent.config import load
+    from vibration_agent.retrieval import hybrid
+
+    chunks = [_chunk("c1", "critical speed resonance")]
+    settings = load()
+    settings.retrieval.mode = "bm25"
+
+    lexical = search("critical speed", chunks=chunks, settings=settings)
+
+    assert lexical["lanes"]["lexical"]["enabled"] is True
+    assert lexical["lanes"]["ann"]["enabled"] is False
+    assert lexical["retrieval_context"][0]["retrieval_lanes"] == ["bm25"]
+
+    settings.retrieval.mode = "dense"
+    monkeypatch.setattr(
+        hybrid.dense,
+        "search",
+        lambda *args, **kwargs: [{"chunk": chunks[0], "score": 0.9, "lane": "dense_embedding"}],
+    )
+    ann = search("critical speed", chunks=chunks, settings=settings)
+
+    assert ann["lanes"]["lexical"]["enabled"] is False
+    assert ann["lanes"]["ann"]["enabled"] is True
+    assert ann["retrieval_context"][0]["retrieval_lanes"] == ["dense"]
+
+
+def test_query_normalize_reports_versioned_alias_taxonomy():
+    result = normalize("order analysis for variable speed")
+
+    assert result["alias_schema_version"] == "phase5.retrieval_aliases.v1"
+    assert "阶比分析" in result["normalized_query"]
 
 
 def test_hybrid_search_uses_source_priority_as_tie_boost():
