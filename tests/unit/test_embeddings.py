@@ -3,8 +3,15 @@ import sys
 import pytest
 
 from vibration_agent.config import EmbeddingSettings, Settings, load
+from vibration_agent.llm._guards import LiveProviderDisabledError
 from vibration_agent.retrieval import dense
-from vibration_agent.retrieval.embeddings import clear_embedding_cache, embed_texts, text_hash
+from vibration_agent.retrieval.embeddings import (
+    _load_model,
+    _local_model_path,
+    clear_embedding_cache,
+    embed_texts,
+    text_hash,
+)
 from vibration_agent.schemas import EmbeddingRecord
 
 
@@ -199,6 +206,17 @@ def test_sentence_transformer_provider_falls_back_under_pytest_before_real_load(
     assert "forbidden during pytest" in records[0].warnings[0]
 
 
+def test_non_default_sentence_transformer_cannot_load_live_under_pytest():
+    settings = _embedding_settings(
+        provider="sentence_transformers",
+        model_name="org/non-default-model",
+        local_files_only=False,
+    )
+
+    with pytest.raises(LiveProviderDisabledError, match="forbidden during pytest"):
+        _load_model(settings)
+
+
 def test_embed_texts_falls_back_with_warning_when_model_unavailable():
     settings = _embedding_settings()
 
@@ -212,6 +230,14 @@ def test_embed_texts_falls_back_with_warning_when_model_unavailable():
     assert records[0].vector == []
     assert records[0].dimension == 0
     assert "Embedding model unavailable" in records[0].warnings[0]
+
+
+def test_local_model_id_resolves_existing_huggingface_snapshot(tmp_path, monkeypatch):
+    snapshot = tmp_path / "models--org--model" / "snapshots" / "revision-1"
+    snapshot.mkdir(parents=True)
+    monkeypatch.setenv("HUGGINGFACE_HUB_CACHE", str(tmp_path))
+
+    assert _local_model_path("org/model") == snapshot
 
 
 def test_dense_search_uses_embedding_vectors_when_available(monkeypatch):

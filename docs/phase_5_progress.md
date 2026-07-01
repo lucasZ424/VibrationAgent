@@ -4,7 +4,7 @@ Updated: 2026-07-01
 
 ## Status
 
-Phase 5 is active. Obj0-Obj2 are complete and Obj3 is cleared to start. Phase 4,
+Phase 5 is active. Obj0-Obj3 are complete and Obj4 is cleared to start. Phase 4,
 including its R1-R3 local iteration, is formally closed
 (`docs/phase_4_progress.md`, Obj0-18). Phase 5 exists to systematically close
 the gaps that the R1-R3 iteration exposed on the real corpus. Shared, remote,
@@ -49,7 +49,7 @@ regression target.
 0. Phase-5 baseline and governance: complete
 1. Real-question evaluation harness and baseline scorecard: complete
 2. Answer-quality calibration and V2 hard gate: complete
-3. Multilingual retrieval formalization and reindex tooling: planned
+3. Multilingual retrieval formalization and reindex tooling: complete
 4. Independent lexical + ANN lanes, bilingual expansion, fusion: planned
 5. Evidence selection, adjacent-passage expansion, reranking: planned
 6. Controlled LLM synthesis lane (default-off, replay-first): planned
@@ -382,7 +382,8 @@ Post-Review Hardening:
 
 Next Objective Gate:
 
-- Obj2 is complete. Obj3 is cleared to start.
+- Obj2 completion cleared Obj3; Obj3 has since passed its hybrid no-regression
+  validation and Obj4 is now ready.
 
 ## Obj3 - Multilingual retrieval formalization and reindex tooling
 
@@ -395,13 +396,63 @@ first-class script with tests (permanently removing the WinError 10053 bulk
 upsert failure); record embedding model/dimension in a migration; measure
 cross-lingual recall on the Obj1 set; verify PG:Qdrant parity after reindex.
 
-Definition of Done: reindex script with tests; cross-lingual recall@10 >=
-baseline with at least one real miss fixed; parity (points == embeddable_chunks)
-verified; migration recorded.
+Definition of Done: reindex script with tests; independent ANN recall/latency
+baseline recorded; post-reindex hybrid recall@10 not below the post-R3 hybrid
+baseline on the same fixture/corpus; parity (points == embeddable_chunks)
+verified; migration recorded. Recall improvement plus at least one fixed real
+miss belongs to Obj4's replacement gate.
 
 Dependencies: Obj1, Obj2.
 
-Status: planned.
+Status: complete.
+
+Implementation Notes:
+
+- Added migration 004 so Postgres preserves canonical document/chunk ids and
+  chunk provenance required to reproduce Qdrant stable UUIDs.
+- Added a dry-run-default PostgreSQL-to-Qdrant reindex CLI with bounded batches,
+  timeout overrides, atomic checkpoint progress, idempotent resume, explicit
+  collection recreation, dimension/distance guards, and error summaries.
+- Qdrant payloads now carry the configured embedding dimension in addition to
+  model/version. Token-feature fallback is rejected as a reindex input.
+- Successful execution compares Postgres embeddable chunk count and source-type
+  distribution with the final Qdrant payload set; mismatch returns
+  `parity_failed`.
+- Added an ANN-only evaluator that directly embeds each Obj1 query and searches
+  Qdrant. It reports overall and zh/en recall@10, paired cross-lingual recall,
+  missing cases, first-query cold latency, and steady p50/p95 latency without
+  importing lexical, fusion, rerank, or fallback retrieval.
+
+Checkpoint Verification:
+
+- Storage identity/migration mapping: 13 focused tests passed.
+- Reindex, ANN evaluator, embedding, Qdrant, CLI, and storage regressions: 57
+  focused tests passed.
+
+Operator Validation Result (2026-07-01):
+
+- Reindex completed 4436/4436 with exact point/source-type parity, no errors, and
+  no model/version/dimension provenance mismatch. Corpus fingerprint:
+  `1d4be4aed716a0849a120f19384aebbfab38429d043d243f109e7b1155f565ab`.
+- ANN-only recall@10 is 0.500 (zh 0.643, en 0.357); paired zh/en recall is
+  0.286. Cold-start latency is 4785.320 ms; steady p50/p95 are 21.660/44.038 ms.
+- The prior 0.571 post-R3 score is hybrid retrieval and is not a valid ANN-only
+  pass/fail comparator. The accepted ANN baseline is 0.500 and is versioned at
+  `tests/fixtures/eval/retrieval/obj3_ann_baseline.json` for Obj4 lane comparison.
+- Diagnostic top-50 checks confirmed stored vectors exactly match fresh
+  embeddings. Remaining misses map to Obj4 query normalization/fusion and Obj5
+  cross-doc/neighbor ranking; they are not reindex corruption.
+- The user explicitly ratified the Obj3/Obj4 scope split on 2026-07-01: Obj3
+  records the independent ANN baseline; Obj4 owns retrieval improvement and the
+  fixed-miss requirement.
+- The post-reindex hybrid scorecard completed on 2026-07-01 with report v3,
+  14 cases, and 4436/4436 chunks. Recall@5/@10 remained 0.429/0.571, exactly
+  matching the post-R3 hybrid baseline at the Obj3 decision threshold.
+
+Next Objective Gate:
+
+- Obj3 is complete. Obj4 may start with ANN recall@10 0.500 as its ANN lane floor
+  and hybrid recall@10 0.571 as the runtime no-regression reference.
 
 ## Obj4 - Independent lexical + ANN lanes, bilingual expansion, fusion
 

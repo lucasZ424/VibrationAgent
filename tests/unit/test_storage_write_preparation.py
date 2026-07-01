@@ -112,10 +112,14 @@ def test_postgres_ingestion_plan_maps_manifest_chunks_and_assets():
     rows = plan.rows
 
     assert rows["documents"][0]["hash"] == "abc123"
+    assert rows["documents"][0]["external_id"] == "doc1"
     assert rows["documents"][0]["file_path"] == "C:/books/rotor.pdf"
     assert rows["document_sections"][0]["heading"] == "Chapter 1 Rotor Dynamics"
     assert rows["chunks"][0]["chunk_type"] == "text"
     assert rows["chunks"][0]["token_count"] == 42
+    assert rows["chunks"][0]["external_id"] == "doc1_p0001_00001"
+    assert rows["chunks"][0]["pages"] == [1, 2]
+    assert rows["chunks"][0]["source_type"] == "book"
     assert rows["chunks"][0]["_meta"]["chunk_id"] == "doc1_p0001_00001"
     assert rows["figures_tables"][0]["kind"] == "figure"
     assert rows["figures_tables"][0]["caption"] == "Figure 1 rotor orbit"

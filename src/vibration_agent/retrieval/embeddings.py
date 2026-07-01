@@ -75,11 +75,36 @@ def _load_model(settings: EmbeddingSettings) -> Any:
         return _load_openai_client(settings)
     if settings.provider != "sentence_transformers":
         raise RuntimeError(f"Unsupported embedding provider: {settings.provider}")
-    if settings.local_files_only and not Path(settings.model_name).expanduser().exists():
+    if settings.local_files_only and pytest_guard_active() and settings.model_name == EmbeddingSettings().model_name:
         raise EmbeddingModelNotConfigured(f"Local embedding model path not found: {settings.model_name}")
+    model_name = str(_local_model_path(settings.model_name)) if settings.local_files_only else settings.model_name
     if pytest_guard_active():
         raise LiveProviderDisabledError("Live sentence-transformer embedding model loads are forbidden during pytest.")
-    return _load_sentence_transformer(settings.model_name, settings.local_files_only)
+    return _load_sentence_transformer(model_name, settings.local_files_only)
+
+
+def _local_model_path(model_name: str) -> Path:
+    configured = Path(model_name).expanduser()
+    if configured.exists():
+        return configured
+    if model_name.startswith((".", "data/", "data\\")) or configured.is_absolute():
+        raise EmbeddingModelNotConfigured(f"Local embedding model path not found: {model_name}")
+    cache_root = Path(
+        os.getenv("HUGGINGFACE_HUB_CACHE")
+        or (
+            Path(os.getenv("HF_HOME")) / "hub"
+            if os.getenv("HF_HOME")
+            else Path.home() / ".cache" / "huggingface" / "hub"
+        )
+    )
+    snapshots = sorted(
+        path
+        for path in (cache_root / f"models--{model_name.replace('/', '--')}" / "snapshots").glob("*")
+        if path.is_dir()
+    )
+    if snapshots:
+        return snapshots[-1]
+    raise EmbeddingModelNotConfigured(f"Offline embedding snapshot not found: {model_name}")
 
 
 def _load_openai_client(settings: EmbeddingSettings) -> Any:

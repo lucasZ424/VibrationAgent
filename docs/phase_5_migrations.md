@@ -210,3 +210,44 @@ Final verification: Obj1 report v3/score v2 regenerated; answer-quality
 calibration accuracy 1.0 with zero false allows/blocks; legacy V2 calibration
 12/12 passed; retrieval fixture recall@5/@10 1.0; canonical non-large suite
 562 passed with one registered large-corpus deselection.
+
+### Obj3 - Stable reindex identity and vector-space contract (2026-07-01)
+
+Status: complete; operator parity, ANN baseline, and hybrid no-regression
+validation reviewed.
+
+- Migration `004_phase5_obj3_reindex_identity.sql` adds stable external document
+  and chunk ids plus chunk pages/source type/topic to Postgres. Existing exports
+  must be persisted again after migration so old rows receive these fields; no
+  OCR, chunking, or corpus-content change is required.
+- The supported baseline remains
+  `sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2`, 384 dimensions,
+  and cosine distance. Qdrant payloads now record model, version, and dimension.
+- `scripts/qdrant_reindex.py` is dry-run by default. Execution is explicit,
+  batched, idempotent by stable chunk UUID, and resumable from a checkpoint bound
+  to corpus fingerprint, collection, model/version, and dimension.
+- Existing collections with a different dimension or distance fail loud.
+  Recreate requires the explicit `--recreate-collection` option and cannot resume
+  a partially completed checkpoint.
+- Token-feature fallback is never written or reported as ANN. Completion requires
+  exact Postgres/Qdrant point and source-type parity.
+- `scripts/ann_retrieval_eval.py` measures only query embedding plus Qdrant ANN.
+  It reports recall@10 overall/by language, paired zh/en recall, and cold/steady
+  latency; lexical, hybrid, rerank, and token fallback paths are not imported.
+
+Compatibility: additive Postgres columns and Qdrant payload field. Query and
+answer contracts are unchanged. Rollback: stop using the reindex command and
+retain the existing collection; the additive database columns may remain.
+
+Post-validation measurement correction:
+
+- `phase5.obj3_ann_eval.report.v2` records post-R3 hybrid recall as an
+  informational, non-comparable reference. ANN-only recall is no longer failed
+  against a hybrid score that includes lexical/fusion compensation.
+- The accepted independent ANN baseline is recall@10 0.500, zh 0.643, en 0.357,
+  paired zh/en 0.286. Obj4 must compare ANN and lexical lanes independently;
+  replacement still requires fused recall not below the better lane and at least
+  one real miss fixed.
+- The user ratified this Obj3/Obj4 scope split on 2026-07-01. Obj3 still requires
+  a post-reindex hybrid scorecard against the unchanged 0.571 hybrid baseline;
+  the operator result held at 0.571 and closed the runtime no-regression loop.

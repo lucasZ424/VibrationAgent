@@ -54,6 +54,7 @@ def chunk_payload(
     *,
     embedding_model: str | None = None,
     embedding_version: str | None = None,
+    embedding_dimension: int | None = None,
 ) -> dict[str, Any]:
     metadata = chunk.get("metadata", {}) if isinstance(chunk.get("metadata"), Mapping) else {}
     return {
@@ -85,6 +86,7 @@ def chunk_payload(
         "needs_review_pages": chunk.get("needs_review_pages", []),
         "embedding_model": embedding_model,
         "embedding_version": embedding_version,
+        "embedding_dimension": embedding_dimension,
     }
 
 
@@ -96,15 +98,20 @@ def prepare_chunk_points(
     embedding_version: str | None = None,
 ) -> QdrantWritePlan:
     vectors = embeddings or {}
+    vector_size = next((len(vector) for vector in vectors.values() if vector), VECTOR_SIZE)
     points = [
         QdrantPoint(
             id=stable_point_id(str(chunk["chunk_id"])),
             vector=list(vectors[str(chunk["chunk_id"])]) if str(chunk["chunk_id"]) in vectors else None,
-            payload=chunk_payload(chunk, embedding_model=embedding_model, embedding_version=embedding_version),
+            payload=chunk_payload(
+                chunk,
+                embedding_model=embedding_model,
+                embedding_version=embedding_version,
+                embedding_dimension=vector_size,
+            ),
         )
         for chunk in chunks
     ]
-    vector_size = next((len(point.vector) for point in points if point.vector), VECTOR_SIZE)
     return QdrantWritePlan(collection=COLLECTION_CHUNKS, points=points, vector_size=vector_size)
 
 

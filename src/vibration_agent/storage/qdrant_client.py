@@ -69,6 +69,25 @@ def ensure_collection(
     )
 
 
+def collection_vector_contract(client: Any, *, collection: str) -> dict[str, Any] | None:
+    if hasattr(client, "collection_exists") and not client.collection_exists(collection):
+        return None
+    try:
+        info = client.get_collection(collection)
+    except Exception:
+        return None
+    config = getattr(info, "config", None)
+    params = getattr(config, "params", None)
+    vectors = getattr(params, "vectors", None)
+    if vectors is None or isinstance(vectors, dict):
+        return None
+    distance = getattr(vectors, "distance", None)
+    return {
+        "size": int(getattr(vectors, "size")),
+        "distance": str(getattr(distance, "value", distance)),
+    }
+
+
 def upsert_points(client: Any, *, collection: str, points: Sequence[Any]) -> int:
     usable_points = [point for point in points if point.vector]
     if not usable_points:

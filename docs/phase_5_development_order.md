@@ -234,7 +234,11 @@ Status: planned | in_progress | blocked | complete
 - 中断后重跑不会重复累积 point；相同 chunk id 仍稳定覆盖同一 UUID。
 - 完成后 `Qdrant points == Postgres embeddable_chunks`，source-type 分布一致。
 - Qdrant payload 中的模型名、版本和 vector dimension 与查询端配置一致。
-- Obj1 cross-lingual recall@10 不低于 post-R3 baseline；任何“提升”声明必须修复已标注 miss。
+- 记录独立 ANN recall@10、双语 pair recall 和 latency，作为 Obj4 的 ANN lane baseline；
+  不将 ANN-only 分数与 post-R3 hybrid 分数作直接 pass/fail 比较。
+- post-reindex 完整 hybrid scorecard 的 recall@10 不得低于同 fixture/corpus 的
+  post-R3 hybrid baseline；该检查只证明 runtime no-regression。
+- 任何后续“提升”声明必须高于该 ANN baseline，并修复至少一个已标注 miss。
 - embedding/Qdrant 不可用时 fallback 可见，不允许把 token-feature fallback 报成 ANN。
 
 依赖与放行条件：
@@ -384,6 +388,8 @@ Status: planned | in_progress | blocked | complete
 - 从 Obj1 miss 扩充术语、符号、单位、同义词和双语 alias family。
 - 对每次 OCR/chunk/taxonomy 变化建立 versioned corpus snapshot 和可重现 ingestion 记录。
 - 语料 mutation 与 Obj3–Obj6 串行隔离，变化后重跑完整 Obj1 scorecard。
+- shrinking corpus 或 chunk rename 会留下 Qdrant orphan point；Obj7 必须显式 recreate
+  collection，并使用新 fingerprint/checkpoint，不能跨 corpus mutation resume。
 
 验收标准：
 
@@ -391,6 +397,7 @@ Status: planned | in_progress | blocked | complete
 - 被 Obj1 标记的 mojibake/generic-name case 全部修复，并形成永久 regression。
 - taxonomy 新条目均能追溯到真实 miss，含 canonical term、aliases、语言和歧义说明。
 - ingestion 可重复执行；完成后 PG:Qdrant parity 和 source-type 分布检查通过。
+- corpus 缩减或 chunk id 变化时使用显式 collection recreate；旧 checkpoint 必须失效。
 - corpus mutation 前后 scorecard 分开保存，不把 corpus 改善混算为 retrieval/synthesis 改善。
 - Obj1 已通过 case 不回归；如发生 chunk id 变化，fixture migration 明确记录映射或替换理由。
 
@@ -536,6 +543,8 @@ Status: planned | in_progress | blocked | complete
    `run_logs/` 的 CLI，不主动执行，除非用户明确授权本次运行。
 10. 若某项验证结果决定下一步实现方案或 threshold，该验证即为硬前置：实现 agent 在
     可运行 checkpoint 完成后暂停，等待用户结果，不在同一轮提前开发后续部分。
+11. PowerShell 验证命令读取 JSON 时必须使用 `Get-Content -Raw -Encoding UTF8`；大型 JSON
+    优先用 Python `json.load(..., encoding="utf-8")` 提取关键字段，不依赖系统默认代码页。
 
 ## 验证策略
 

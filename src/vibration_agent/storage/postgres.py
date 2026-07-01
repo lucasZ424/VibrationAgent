@@ -40,6 +40,7 @@ POSTGRES_COLUMNS: dict[str, tuple[str, ...]] = {
         "ocr_status",
         "parse_status",
         "version",
+        "external_id",
     ),
     "document_sections": ("doc_id", "parent_id", "heading", "level", "page_start", "page_end"),
     "chunks": (
@@ -52,6 +53,10 @@ POSTGRES_COLUMNS: dict[str, tuple[str, ...]] = {
         "normalized_text",
         "token_count",
         "citation_anchor",
+        "external_id",
+        "pages",
+        "source_type",
+        "topic",
     ),
     "figures_tables": ("doc_id", "page_no", "kind", "caption", "image_path", "related_chunk_ids"),
     "terms": ("canonical_term", "zh_name", "en_name", "aliases", "notes", "topic"),
@@ -131,6 +136,7 @@ def document_row(manifest: Mapping[str, Any]) -> dict[str, Any]:
     input_info = manifest.get("input", {})
     counts = manifest.get("counts", {})
     return {
+        "external_id": manifest.get("doc_id"),
         "title": manifest.get("title") or input_info.get("filename") or manifest.get("doc_id"),
         "type": manifest.get("source_type", "book"),
         "source": input_info.get("source_path"),
@@ -180,6 +186,7 @@ def section_rows(chunks: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
 
 def chunk_row(chunk: Mapping[str, Any]) -> dict[str, Any]:
     return {
+        "external_id": chunk.get("chunk_id"),
         "doc_id": None,
         "section_id": None,
         "page_start": chunk.get("page_start"),
@@ -189,6 +196,9 @@ def chunk_row(chunk: Mapping[str, Any]) -> dict[str, Any]:
         "normalized_text": chunk.get("text", ""),
         "token_count": chunk.get("token_estimate"),
         "citation_anchor": chunk.get("citation_anchor"),
+        "pages": chunk.get("pages", []),
+        "source_type": chunk.get("source_type"),
+        "topic": chunk.get("topic"),
         "_meta": {
             "chunk_id": chunk.get("chunk_id"),
             "logical_doc_id": chunk.get("doc_id"),

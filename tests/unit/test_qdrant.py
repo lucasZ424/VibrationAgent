@@ -24,6 +24,7 @@ def test_qdrant_payload_keeps_retrieval_context_text():
     assert payload["text"] == "rotor damping evidence"
     assert payload["api_context"] == "short context"
     assert payload["embedding_model"] == "fake-model"
+    assert payload["embedding_dimension"] is None
 
 
 def test_qdrant_stable_point_id_is_uuid_for_runtime_api_compatibility():
@@ -83,6 +84,7 @@ def test_qdrant_dry_run_reports_actual_vector_dimension():
     )
 
     assert plan.dry_run()["vector_size"] == 3
+    assert plan.points[0].payload["embedding_dimension"] == 3
 
 
 def test_qdrant_search_maps_hits_to_dense_lane(monkeypatch):
