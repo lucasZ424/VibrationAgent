@@ -42,6 +42,7 @@ REQUIRED_INTENTS = {
     "formula",
 }
 REQUIRED_LANGUAGES = {"zh", "en"}
+USABILITY_LABELS = {"usable", "unusable"}
 MISS_PRIORITY = (
     "corpus-quality",
     "terminology",
@@ -77,6 +78,8 @@ def _validate_questions(data: Mapping[str, Any]) -> None:
         ids.add(case_id)
         intent, language = str(row.get("intent") or ""), str(row.get("language") or "")
         coverage.add((intent, language))
+        if row.get("usability_label") not in USABILITY_LABELS or not row.get("usability_reason"):
+            raise ValueError(f"{case_id} requires a usability label and reason.")
         if not row.get("query") or not row.get("expected_evidence") or not row.get("key_facts"):
             raise ValueError(f"{case_id} requires query, expected_evidence, and key_facts.")
         rubric = row.get("completeness_rubric")
@@ -136,7 +139,7 @@ def run_rag_qa_eval(
     v2_status_counts = Counter(case["v2_status"] for case in cases)
     deterministic = [_deterministic_case(case) for case in cases]
     report = {
-        "schema_version": "phase5.rag_qa.report.v2",
+        "schema_version": "phase5.rag_qa.report.v3",
         "question_schema_version": active.get("schema_version"),
         "baseline_id": active.get("baseline_id"),
         "corpus": {**dict(active.get("corpus") or {}), "actual_chunk_count": corpus_count},
@@ -218,6 +221,7 @@ def _run_case(case: Mapping[str, Any], *, query_runner: QueryRunner) -> dict[str
         "answer": answer,
         "citations": citations,
         "v2_status": v2_status,
+        "answer_quality": dict(quality),
         "fact_results": facts,
         "completeness": completeness,
         "sentence_completeness": round(float(subscores.get("readability") or 0.0), 3),
@@ -362,7 +366,7 @@ def main(argv: list[str] | None = None) -> int:
     local_runner = make_local_runner(settings=settings, chunks=chunks)
 
     def reporting_runner(case: Mapping[str, Any]) -> SkillOutput:
-        print(f"running {case['case_id']}...", file=sys.stderr, flush=True)
+        print(f"running {case['case_id']}...", flush=True)
         return local_runner(case)
 
     report = run_rag_qa_eval(

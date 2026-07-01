@@ -35,6 +35,7 @@ db/qdrant/storage/
 node_modules/
 apps/ui/.next/
 graphify-out/
+run_logs/
 
 # Local issue review logs
 docs/issues

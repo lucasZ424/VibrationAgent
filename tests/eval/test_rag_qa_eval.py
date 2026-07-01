@@ -55,6 +55,8 @@ def test_obj1_question_set_covers_every_intent_in_both_languages_with_human_labe
     }
     assert len({case["case_id"] for case in questions["cases"]}) == 14
     assert all(case["completeness_rubric"]["human_usable_if"] for case in questions["cases"])
+    assert {case["usability_label"] for case in questions["cases"]} == {"usable", "unusable"}
+    assert all(case["usability_reason"] for case in questions["cases"])
 
 
 def test_obj1_scorecard_reports_required_metrics_without_live_providers():
@@ -66,7 +68,7 @@ def test_obj1_scorecard_reports_required_metrics_without_live_providers():
         git_commit="test-commit",
     )
 
-    assert report["schema_version"] == "phase5.rag_qa.report.v2"
+    assert report["schema_version"] == "phase5.rag_qa.report.v3"
     assert report["live_providers_constructed"] is False
     assert report["case_count"] == 14
     assert report["scorecard"]["recall_at_5"] == 1.0
@@ -83,6 +85,7 @@ def test_obj1_scorecard_reports_required_metrics_without_live_providers():
     assert report["corpus"]["embedding_dimension"] == 384
     assert report["retrieval_config"]["final_top_k"] == 10
     assert report["git_commit"] == "test-commit"
+    assert report["cases"][0]["answer_quality"]["faithfulness_status"] == "ok"
 
 
 def test_obj1_deterministic_fingerprint_excludes_runtime_latency():

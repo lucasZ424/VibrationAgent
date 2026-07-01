@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import time
+from math import log2
 from collections.abc import Mapping
 from typing import Any
 from uuid import uuid4
@@ -15,7 +16,6 @@ from uuid import uuid4
 from ..agent.routing import AdvisoryRoutingDecision, Difficulty, RouteDecision, route_advisory_skills, route_task
 from ..agent.supervisor import SupervisorLoop
 from ..config import load
-from ..retrieval.bm25 import tokenize
 from ..retrieval.query_normalize import alias_family_coverage
 from ..schemas import SkillInput, SkillOutput, UserMode
 from ..skills import (
@@ -280,30 +280,65 @@ def _answer_text(output: SkillOutput) -> str:
     return value if isinstance(value, str) else output.summary
 
 
-def _query_coverage(query: str, answer: str) -> float:
-    # Prefer bilingual domain-term families so a cross-language answer (e.g. an
-    # English query answered from Chinese evidence) is not scored as zero coverage.
+_QUERY_ASPECTS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("variable_speed", ("variable-speed", "varying speed", "变速", "升降速")),
+    ("amplitude", ("amplitude", "magnitude", "幅值", "振幅")),
+    ("phase", ("phase", "相位")),
+    ("spectrum", ("spectrum", "spectral", "频谱")),
+    ("direction", ("direction", "radial", "axial", "方向", "径向", "轴向")),
+    ("workflow", ("workflow", "procedure", "流程", "步骤")),
+    ("scope", ("scope", "covered", "适用", "范围")),
+    ("formula", ("formula", "equation", "calculate", "公式", "计算")),
+)
+ANSWER_QUALITY_THRESHOLD = 0.75
+
+
+def _contains_any(text: str, values: tuple[str, ...]) -> bool:
+    folded = text.casefold()
+    return any(value.casefold() in folded for value in values)
+
+
+def _query_aspect_coverage(query: str, answer: str) -> tuple[float, list[str], list[str]]:
+    required: list[str] = []
+    covered_slots: list[str] = []
     covered, total = alias_family_coverage(query, answer)
     if total:
-        return covered / total
-    query_tokens = {token for token in tokenize(query) if len(token) >= 2}
-    if not query_tokens:
-        return 1.0 if answer.strip() else 0.0
-    answer_tokens = set(tokenize(answer))
-    return len(query_tokens & answer_tokens) / len(query_tokens)
+        required.extend(f"domain_term_{index}" for index in range(total))
+        covered_slots.extend(f"domain_term_{index}" for index in range(covered))
+    for name, aliases in _QUERY_ASPECTS:
+        if _contains_any(query, aliases):
+            required.append(name)
+            if _contains_any(answer, aliases):
+                covered_slots.append(name)
+    if not required:
+        return (1.0 if answer.strip() else 0.0), ["answer_present"], (["answer_present"] if answer.strip() else [])
+    return len(covered_slots) / len(required), required, covered_slots
+
+
+def _query_coverage(query: str, answer: str) -> float:
+    score, _required, _covered = _query_aspect_coverage(query, answer)
+    return score
 
 
 def _evidence_relevance(s2_output: SkillOutput, citations: list[Any]) -> float:
-    if citations:
-        return sum(float(getattr(citation, "confidence", 0.0) or 0.0) for citation in citations) / len(citations)
     hits = s2_output.structured_result.get("retrieval_output", {}).get("hits")
-    if not isinstance(hits, list) or not hits:
+    if not citations or not isinstance(hits, list) or not hits:
         return 0.0
-    scores = [float(hit.get("score") or 0.0) for hit in hits if isinstance(hit, Mapping)]
-    if not scores:
+    ranked_hits = [hit for hit in hits if isinstance(hit, Mapping) and hit.get("chunk_id")]
+    max_score = max((float(hit.get("score") or 0.0) for hit in ranked_hits), default=0.0)
+    if not ranked_hits or max_score <= 0:
         return 0.0
-    max_score = max(scores)
-    return 1.0 if max_score > 0 else 0.0
+    by_chunk = {str(hit["chunk_id"]): (rank, hit) for rank, hit in enumerate(ranked_hits, start=1)}
+    values: list[float] = []
+    for citation in citations:
+        matched = by_chunk.get(str(getattr(citation, "chunk_id", "")))
+        if matched is None:
+            continue
+        rank, hit = matched
+        rank_score = 1.0 / log2(rank + 1)
+        relative_score = float(hit.get("score") or 0.0) / max_score
+        values.append((rank_score + relative_score) / 2.0)
+    return sum(values) / len(citations) if values else 0.0
 
 
 _EVIDENCE_SUFFIX_RE = re.compile(r"\s*[（(](?:evidence|证据)\s*[:：].*?[)）]\s*$", re.IGNORECASE)
@@ -324,15 +359,88 @@ def _complete_sentence_ratio(answer: str) -> float:
     return complete / len(lines)
 
 
-def _completeness(v4_output: SkillOutput, answer: str) -> float:
-    sections = set(v4_output.structured_result.get("section_keys") or [])
-    required = {"conclusion"}
-    if "engineering_meaning" in sections or "premises" in sections or "next_action" in sections:
-        required.add("engineering_meaning")
-    section_score = len(required & sections) / len(required)
-    cited = 1.0 if v4_output.citations else 0.0
-    substantive = 1.0 if len(answer.strip()) >= 40 else 0.5 if answer.strip() else 0.0
-    return (section_score + cited + substantive) / 3.0
+def _question_intent(query: str) -> str:
+    if _contains_any(query, ("公式", "计算", "推导", "formula", "equation", "calculated")):
+        return "formula"
+    if _contains_any(query, ("gb/t", "iso ", "api ", "标准", "适用范围", "covered by", "scope")):
+        return "standards"
+    if _contains_any(query, ("流程", "步骤", "规划", "workflow", "procedure", "steps")):
+        return "workflow"
+    if _contains_any(query, ("什么是", "定义", "what is", "define", "mean")):
+        return "definition"
+    if _contains_any(query, ("区别", "比较", "不同", "compare", "difference", "differ", " versus ", " vs ")):
+        return "comparison"
+    if _contains_any(query, ("判断", "诊断", "区分", "diagnos", "distinguish", "determine")):
+        return "diagnosis"
+    if _contains_any(query, ("为什么", "为何", "机理", "why", "mechanism", "cause")):
+        return "mechanism"
+    return "general"
+
+
+def _intent_completeness(query: str, answer: str) -> tuple[float, str, list[str], list[str]]:
+    intent = _question_intent(query)
+    checks: list[tuple[str, bool]]
+    if intent == "definition":
+        definition = _contains_any(
+            answer,
+            ("是指", "定义为", "指的是", "refers to", "is defined", "means", "角域", "angular-domain"),
+        )
+        purpose = _contains_any(answer, ("用于", "作用", "适用于", "used for", "allows", "enables"))
+        checks = [("definition_statement", definition), ("purpose", purpose)]
+    elif intent == "mechanism":
+        causal = _contains_any(answer, ("因为", "由于", "导致", "接近", "because", "due to", "causes", "approaches"))
+        natural = _contains_any(answer, ("固有频率", "自然频率", "natural frequency"))
+        excitation = _contains_any(answer, ("激励频率", "转频", "excitation frequency", "forcing frequency"))
+        checks = [("causal_link", causal), ("excitation_natural_frequency_relation", natural and excitation)]
+    elif intent == "comparison":
+        contrast = _contains_any(answer, ("区别", "相比", "而", "versus", "whereas", "compared", "difference"))
+        entities = _contains_any(answer, ("不平衡", "unbalance")) and _contains_any(
+            answer, ("不对中", "misalignment")
+        )
+        checks = [("contrast", contrast), ("both_entities", entities)]
+    elif intent == "diagnosis":
+        dimensions = sum(
+            _contains_any(answer, aliases)
+            for aliases in (
+                ("相位", "phase"),
+                ("倍频", "谐波", "harmonic"),
+                ("轴向", "axial"),
+                ("测量", "检查", "measure", "check"),
+            )
+        )
+        checks = [("multiple_diagnostic_dimensions", dimensions >= 2), ("decision_action", dimensions >= 3)]
+    elif intent == "workflow":
+        actions = sum(
+            _contains_any(answer, aliases)
+            for aliases in (
+                ("工况", "operating condition"),
+                ("测点", "measurement point"),
+                ("采集", "collect"),
+                ("比较", "compare"),
+                ("复核", "verify"),
+            )
+        )
+        checks = [("ordered_measurement_actions", actions >= 3), ("verification_step", actions >= 4)]
+    elif intent == "standards":
+        checks = [
+            ("scope", _contains_any(answer, ("适用于", "额定", "applies to", "rated", "scope"))),
+            ("specified_method", _contains_any(answer, ("分析评定", "测量验证", "analysis", "measurement verification"))),
+        ]
+    elif intent == "formula":
+        equation = re.search(r"(?:[A-Za-zΑ-Ωα-ω]\w*\s*=|=\s*[^=])", answer) is not None
+        variables = _contains_any(answer, ("式中", "其中", "表示", "where", "denotes", "represents"))
+        checks = [("equation", equation), ("variable_definitions", variables)]
+    else:
+        # Unknown intent cannot satisfy a hard completeness gate by length alone.
+        checks = [("recognized_intent", False)]
+    required = [name for name, _covered in checks]
+    covered = [name for name, is_covered in checks if is_covered]
+    return len(covered) / len(required), intent, required, covered
+
+
+def _completeness(query: str, answer: str) -> float:
+    score, _intent, _required, _covered = _intent_completeness(query, answer)
+    return score
 
 
 def _retrieval_provenance(s2_output: SkillOutput) -> tuple[str | None, int]:
@@ -350,18 +458,36 @@ def _answer_quality(
     faithfulness_status: str,
 ) -> dict[str, Any]:
     answer = _answer_text(answer_output)
+    coverage, query_aspects, covered_query_aspects = _query_aspect_coverage(query, answer)
+    completeness, intent, required_slots, covered_slots = _intent_completeness(query, answer)
     subscores = {
-        "question_coverage": _bounded(_query_coverage(query, answer)),
+        "question_coverage": _bounded(coverage),
         "evidence_relevance": _bounded(_evidence_relevance(s2_output, answer_output.citations)),
-        "completeness": _bounded(_completeness(answer_output, answer)),
+        "completeness": _bounded(completeness),
         "readability": _bounded(_complete_sentence_ratio(answer)),
     }
     score = _bounded(sum(subscores.values()) / len(subscores))
+    gate_reasons: list[str] = []
+    if faithfulness_status != "ok":
+        gate_reasons.append(f"faithfulness_status={faithfulness_status}")
+    if score < ANSWER_QUALITY_THRESHOLD:
+        gate_reasons.append(f"score<{ANSWER_QUALITY_THRESHOLD}")
+    if subscores["completeness"] < 1.0:
+        gate_reasons.append("completeness<1.0")
+    gate_status = "pass" if not gate_reasons else "blocked"
     return {
-        "schema_version": "r3.answer_quality.v1",
+        "schema_version": "phase5.answer_quality.v2",
         "score": score,
+        "threshold": ANSWER_QUALITY_THRESHOLD,
         "subscores": subscores,
         "faithfulness_status": faithfulness_status,
+        "gate_status": gate_status,
+        "gate_reasons": gate_reasons,
+        "intent": intent,
+        "query_aspects": query_aspects,
+        "covered_query_aspects": covered_query_aspects,
+        "required_slots": required_slots,
+        "covered_slots": covered_slots,
         "citation_count": len(answer_output.citations),
     }
 

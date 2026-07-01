@@ -73,7 +73,14 @@ function renderAnswerMeta(structured, output) {
   answerMeta.innerHTML = "";
   const quality = structured.answer_quality || {};
   if (typeof quality.score === "number") {
-    addChip(answerMeta, `heuristic ${quality.score.toFixed(2)}`);
+    addChip(answerMeta, `diagnostic ${quality.score.toFixed(2)}`);
+  }
+  if (quality.gate_status) {
+    addChip(
+      answerMeta,
+      `quality ${quality.gate_status}`,
+      quality.gate_status === "pass" ? "ok" : "warn"
+    );
   }
   if (quality.faithfulness_status) {
     addChip(answerMeta, `faithful ${quality.faithfulness_status}`, quality.faithfulness_status === "ok" ? "ok" : "warn");

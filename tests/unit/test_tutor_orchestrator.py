@@ -4,7 +4,10 @@ from pathlib import Path
 
 from vibration_agent.orchestrator import TutorOrchestrator, handle_query, is_in_scope
 from vibration_agent.orchestrator.tutor import (
+    _answer_quality,
     _complete_sentence_ratio,
+    _evidence_relevance,
+    _intent_completeness,
     _merge_warnings,
     _query_coverage,
     _token_cost,
@@ -314,7 +317,7 @@ def test_tutor_orchestrator_exposes_answer_quality_score():
             status="ok",
             summary="V4 ok",
             structured_result={
-                "answer": "## Conclusion\nCritical speed amplifies rotor response.",
+                "answer": "## Conclusion\nCritical speed means resonance and is used for analysis.",
                 "section_keys": ["conclusion"],
             },
             citations=[Citation(chunk_id="c1", doc_id="doc1", pages=[1], confidence=0.9)],
@@ -327,12 +330,18 @@ def test_tutor_orchestrator_exposes_answer_quality_score():
         style_skill=v4,
     )
 
-    output = orchestrator.handle_query("critical speed", constraints={"scope": "in_scope"}, task_id="t1")
+    output = orchestrator.handle_query(
+        "What is critical speed and what is it used for?",
+        constraints={"scope": "in_scope"},
+        task_id="t1",
+    )
 
     quality = output.structured_result["answer_quality"]
-    assert quality["schema_version"] == "r3.answer_quality.v1"
+    assert quality["schema_version"] == "phase5.answer_quality.v2"
     assert quality["citation_count"] == 1
-    assert quality["subscores"]["evidence_relevance"] == 0.9
+    assert quality["subscores"]["evidence_relevance"] == 1.0
+    assert quality["gate_status"] == "pass"
+    assert quality["threshold"] == 0.75
     assert 0.0 <= quality["score"] <= 1.0
 
 
@@ -355,8 +364,10 @@ def test_tutor_orchestrator_attaches_answer_quality_on_insufficient_retrieval():
 
     assert output.status == "insufficient"
     quality = output.structured_result["answer_quality"]
-    assert quality["schema_version"] == "r3.answer_quality.v1"
+    assert quality["schema_version"] == "phase5.answer_quality.v2"
     assert quality["faithfulness_status"] == "not_run"
+    assert quality["gate_status"] == "blocked"
+    assert "faithfulness_status=not_run" in quality["gate_reasons"]
     assert quality["citation_count"] == 0
     assert 0.0 <= quality["score"] <= 1.0
     assert output.structured_result["retrieval_source"] == "file_chunks"
@@ -382,6 +393,141 @@ def test_complete_sentence_ratio_ignores_evidence_tag_suffix():
         "2. 增大刚度会提高临界转速。 (evidence: doc_p2)"
     )
     assert _complete_sentence_ratio(answer) == 1.0
+
+
+def test_intent_completeness_rejects_keyword_repetition_without_mechanism():
+    score, intent, required, covered = _intent_completeness(
+        "Why do amplitude and phase change near critical speed?",
+        "Critical speed amplitude phase. Critical speed amplitude phase.",
+    )
+
+    assert intent == "mechanism"
+    assert score == 0.0
+    assert required == ["causal_link", "excitation_natural_frequency_relation"]
+    assert covered == []
+
+
+def test_answer_quality_blocks_keyword_repetition_at_threshold_boundary():
+    s2 = SkillOutput(
+        status="ok",
+        structured_result={
+            "retrieval_output": {"hits": [{"chunk_id": "c1", "score": 1.0}]}
+        },
+    )
+    answer = SkillOutput(
+        status="ok",
+        summary="Critical speed amplitude phase. Critical speed amplitude phase.",
+        citations=[Citation(chunk_id="c1", doc_id="doc1")],
+    )
+
+    quality = _answer_quality(
+        "Why do amplitude and phase change near critical speed?",
+        s2_output=s2,
+        answer_output=answer,
+        faithfulness_status="ok",
+    )
+
+    assert quality["score"] == 0.75
+    assert quality["subscores"]["completeness"] == 0.0
+    assert quality["gate_status"] == "blocked"
+    assert "completeness<1.0" in quality["gate_reasons"]
+
+
+def test_answer_quality_blocks_complete_faithful_answer_below_threshold():
+    s2 = SkillOutput(
+        status="ok",
+        structured_result={
+            "retrieval_output": {"hits": [{"chunk_id": "different", "score": 1.0}]}
+        },
+    )
+    answer = SkillOutput(
+        status="ok",
+        summary="Critical speed means resonance and is used for analysis",
+        citations=[Citation(chunk_id="c1", doc_id="doc1")],
+    )
+
+    quality = _answer_quality(
+        "What is critical speed and what is it used for?",
+        s2_output=s2,
+        answer_output=answer,
+        faithfulness_status="ok",
+    )
+
+    assert quality["subscores"]["completeness"] == 1.0
+    assert quality["score"] < quality["threshold"]
+    assert quality["gate_status"] == "blocked"
+    assert "score<0.75" in quality["gate_reasons"]
+
+
+def test_intent_completeness_requires_formula_and_variable_definitions():
+    score, intent, required, covered = _intent_completeness(
+        "How is the influence vector calculated?",
+        "Use the calibration weight and influence vector from equation 16-23.",
+    )
+
+    assert intent == "formula"
+    assert score == 0.0
+    assert required == ["equation", "variable_definitions"]
+    assert covered == []
+
+
+def test_intent_detection_prefers_primary_definition_and_workflow_forms():
+    _score, definition_intent, _required, _covered = _intent_completeness(
+        "What is order analysis and why is it used for variable-speed machinery?",
+        "Order analysis is defined here.",
+    )
+    _score, workflow_intent, _required, _covered = _intent_completeness(
+        "What measurement workflow should be used for vibration fault diagnosis?",
+        "Collect and compare measurements.",
+    )
+
+    assert definition_intent == "definition"
+    assert workflow_intent == "workflow"
+
+
+def test_evidence_relevance_uses_cited_hit_rank_and_score_not_citation_confidence():
+    s2 = SkillOutput(
+        status="ok",
+        structured_result={
+            "retrieval_output": {
+                "hits": [
+                    {"chunk_id": "top", "score": 1.0},
+                    {"chunk_id": "weak", "score": 0.1},
+                ]
+            }
+        },
+    )
+    citations = [Citation(chunk_id="weak", doc_id="doc1", confidence=1.0)]
+
+    relevance = _evidence_relevance(s2, citations)
+
+    assert 0.0 < relevance < 0.5
+
+
+def test_evidence_relevance_is_zero_without_citations():
+    s2 = SkillOutput(
+        status="ok",
+        structured_result={
+            "retrieval_output": {"hits": [{"chunk_id": "top", "score": 1.0}]}
+        },
+    )
+
+    assert _evidence_relevance(s2, []) == 0.0
+
+
+def test_general_intent_cannot_pass_completeness_by_answer_length():
+    score, intent, required, covered = _intent_completeness(
+        "Tell me about this rotating-machine observation",
+        (
+            "This is a long evidence-bound engineering answer with more than "
+            "forty characters but no recognized request intent."
+        ),
+    )
+
+    assert intent == "general"
+    assert score == 0.0
+    assert required == ["recognized_intent"]
+    assert covered == []
 
 
 def test_tutor_orchestrator_runs_v3_for_extreme_query_without_blocking_answer():

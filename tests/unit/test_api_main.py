@@ -102,6 +102,8 @@ def test_operator_ui_assets_reference_frozen_query_contract():
     assert "output.warnings" in response.text
     assert "structured.supervisor_status" in response.text
     assert "structured.supervisor_cost" in response.text
+    assert "diagnostic" in response.text
+    assert "quality.gate_status" in response.text
     assert 'fetch("/health"' in response.text
     assert "renderDiagnostics" in response.text
 

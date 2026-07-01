@@ -84,7 +84,7 @@ Additive artifacts:
 - `tests/fixtures/rag_qa/questions.json` defines
   `phase5.rag_qa.questions.v1`: stable case ids, bilingual intent coverage,
   expected doc/page/chunk evidence, key-fact aliases, human completeness rubric,
-  evidence boundary, and diagnostic hints.
+  and evidence boundary.
 - `scripts/rag_qa_eval.py` emits `phase5.rag_qa.report.v2`: per-case chain output
   and aggregate recall@5/@10, completeness, V2 faithfulness, sentence
   completeness, latency, V2 status counts, multi-label miss counts, mutually
@@ -111,3 +111,102 @@ Execution boundary:
 Compatibility: additive evaluation-only contract; no runtime consumer changes.
 Data migration: none. Rollback: remove the Obj1 evaluator, fixtures, baseline,
 and tests; the Phase-4 runtime remains unchanged.
+
+### Obj2 - Calibration checkpoint contract (2026-06-30)
+
+Status: additive checkpoint; awaiting operator-run calibration.
+
+- `phase5.rag_qa.questions.v2` adds required `usability_label` and
+  `usability_reason` fields to each frozen question.
+- `phase5.rag_qa.report.v3` adds each case's raw production `answer_quality`
+  object so score and subscore calibration does not reconstruct hidden values.
+- `phase5.answer_quality_calibration.report.v1` records label/V2 distributions,
+  candidate-threshold confusion matrices, and the proposed rule that a usable
+  classification requires both threshold passage and `v2_status == ok`.
+- The final machine-readable report is versioned at
+  `tests/fixtures/eval/answer_quality/obj2_calibration.json`; a regression test
+  requires exact equality with a fresh deterministic run.
+- These are evaluation-only additions. No production threshold, score formula,
+  V2 behavior, API response, or UI contract changes at this checkpoint.
+- The v3 full-corpus report and calibration output are operator-run prerequisites
+  for the next Obj2 implementation decision. A missing/stale report fails loud.
+- Calibration also validates each nested `answer_quality.schema_version`; an
+  outer report v3 containing old v1 scores is rejected and must be regenerated.
+- Scope/degraded early returns with no score are accepted only when V2 is not
+  `ok`; they are recorded as `not_scored` and remain blocked. A V2-`ok` case
+  without a score fails loud.
+
+Rollback: remove the v2 labels and calibration runner and restore report v2.
+No runtime or stored corpus migration is required.
+
+### Obj2 - Diagnostic score v2, pre-threshold implementation (2026-07-01)
+
+Status: implementation in progress; threshold remains unapproved.
+
+- `answer_quality.schema_version` changes from `r3.answer_quality.v1` to
+  `phase5.answer_quality.v2`.
+- `question_coverage` becomes bilingual query-aspect coverage rather than raw
+  query-token overlap. `completeness` becomes intent-specific required-slot
+  coverage for definition, mechanism, comparison, diagnosis, workflow,
+  standards, and formula answers.
+- `evidence_relevance` uses cited chunk rank and score from S2 retrieval hits;
+  citation confidence is no longer accepted as a retrieval-relevance proxy.
+- Additive fields expose detected intent, required/covered slots, `gate_status`,
+  and `gate_reasons`. `faithfulness_status != ok` always yields `blocked`.
+- The operator labels the numeric value `diagnostic` and renders `gate_status`;
+  it does not display a pass state before threshold approval.
+- Faithful answers remain `diagnostic_only`; no pass threshold is introduced
+  until the operator reruns Obj1/Obj2 calibration and the result is reviewed.
+
+Compatibility: existing score/subscore and faithfulness keys remain present,
+but score values are intentionally not numerically comparable with v1.
+Rollback: restore the v1 scoring helpers and schema marker. No data migration or
+corpus change is required.
+
+### Obj2 - Completeness hard gate recalibration checkpoint (2026-07-01)
+
+Status: threshold approval pending operator recalibration.
+
+- The first score-v2 calibration found zero-error score+V2 candidates at 0.75
+  and 0.80. A regression then proved that keyword repetition can score exactly
+  0.75 while satisfying none of the intent slots.
+- The gate now blocks `faithfulness_status != ok` and incomplete intent slots.
+  Faithful, complete answers remain `diagnostic_only`; no production pass or
+  threshold is exposed until calibration is rerun with this full rule.
+- Candidate ranking now uses decision margin after minimizing false allows and
+  false blocks, instead of selecting the highest zero-error threshold.
+
+Residual risk: calibration contains one usable and thirteen unusable answers.
+Every new human-labeled usable case must rerun calibration; threshold promotion
+requires explicit review of the updated confusion matrix and decision margin.
+
+### Obj2 - Final calibrated acceptance gate (2026-07-01)
+
+Status: implemented and final operator regression passed.
+
+- Operator calibration under the complete score+V2+completeness rule selected
+  threshold `0.75` with decision margin `0.044`, accuracy 1.0, false allow 0,
+  false block 0, usable recall 1.0, and unusable block rate 1.0.
+- `gate_status=pass` now requires score >= 0.75, V2 status `ok`, and completeness
+  1.0. Every failed condition is listed in `gate_reasons`; the threshold is
+  exposed as `answer_quality.threshold`.
+- The operator colors only explicit `gate_status=pass` as pass. A numeric score
+  alone never implies acceptance.
+
+Residual risk: the positive calibration population contains one case. The gate
+is approved for the current Obj1 fixture, not as a universal statistical claim.
+New labeled positives require recalibration before changing this threshold.
+
+Post-review hardening:
+
+- Unknown/general intent is fail-closed for completeness; answer length alone
+  cannot satisfy the hard gate.
+- Empty citations have a direct zero-relevance regression test.
+- Current consumer audit found no numeric-score acceptance consumer. The
+  operator uses `gate_status`; eval/calibration code treats the score as input
+  and applies the full gate rule explicitly.
+
+Final verification: Obj1 report v3/score v2 regenerated; answer-quality
+calibration accuracy 1.0 with zero false allows/blocks; legacy V2 calibration
+12/12 passed; retrieval fixture recall@5/@10 1.0; canonical non-large suite
+562 passed with one registered large-corpus deselection.

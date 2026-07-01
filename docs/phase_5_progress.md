@@ -1,12 +1,11 @@
 # Phase 5 Progress
 
-Updated: 2026-06-30
+Updated: 2026-07-01
 
 ## Status
 
-Phase 5 is active. Obj0 and Obj1 are complete; the Obj1 baseline is ready for
-user review before Obj2 is released. Phase 4, including its R1-R3 local
-iteration, is formally closed
+Phase 5 is active. Obj0-Obj2 are complete and Obj3 is cleared to start. Phase 4,
+including its R1-R3 local iteration, is formally closed
 (`docs/phase_4_progress.md`, Obj0-18). Phase 5 exists to systematically close
 the gaps that the R1-R3 iteration exposed on the real corpus. Shared, remote,
 public, and multi-user deployment are deferred indefinitely and are not part of
@@ -49,7 +48,7 @@ regression target.
 
 0. Phase-5 baseline and governance: complete
 1. Real-question evaluation harness and baseline scorecard: complete
-2. Answer-quality calibration and V2 hard gate: planned
+2. Answer-quality calibration and V2 hard gate: complete
 3. Multilingual retrieval formalization and reindex tooling: planned
 4. Independent lexical + ANN lanes, bilingual expansion, fusion: planned
 5. Evidence selection, adjacent-passage expansion, reranking: planned
@@ -233,7 +232,157 @@ committed; additive fields, migration-recorded.
 
 Dependencies: Obj1.
 
-Status: planned.
+Status: complete.
+
+Implementation Notes:
+
+- Added explicit `usable` / `unusable` labels and review reasons to all 14 Obj1
+  cases. The frozen baseline contains 1 minimally usable and 13 unusable
+  answers; the imbalance is retained rather than manufacturing positive cases.
+- Upgraded the Obj1 report contract to v3 so every case preserves the production
+  `answer_quality` score and subscores required for calibration.
+- Added `scripts/answer_quality_calibration.py`. It reads only the labeled
+  questions and frozen report, evaluates candidate thresholds, emits confusion
+  matrices, and models the proposed hard rule that `v2_status == ok` is required
+  for an answer to be classified usable.
+- No production score, threshold, V2 behavior, schema, or API response has been
+  changed at this checkpoint.
+
+Checkpoint Verification:
+
+- Focused deterministic tests for the Obj1 report and Obj2 calibration runner:
+  11 passed.
+- Broader focused regression covering the evaluator, legacy V2 calibration,
+  Tutor-Orchestrator, and citation checker: 63 passed.
+- The calibration runner rejects the existing report v2 and requires a fresh v3
+  full-corpus run. This is intentional fail-loud behavior, not a test failure.
+
+Blocking Prerequisite:
+
+- The user must generate the v3 Obj1 baseline and Obj2 threshold report under
+  `run_logs/`. Their confusion matrix determines whether the current score can
+  be calibrated, which threshold candidates remain viable, and what production
+  scoring changes are justified.
+- Development paused at this checkpoint; no threshold, score replacement, or
+  V2 hard gate was implemented before the operator result was reviewed.
+
+Operator Calibration Result (2026-07-01):
+
+- The v3 run completed for all 14 cases. The old score is not calibratable:
+  the usable case scored 0.871, while unusable cases scored as high as 0.897
+  and 0.866. Thresholds 0.75-0.85 produced two false allows; thresholds 0.90+
+  blocked the only usable case.
+- No threshold was approved. The result justified replacing token-overlap,
+  citation-confidence, and generic section-presence scoring before another
+  calibration run.
+
+Score v2 Implementation:
+
+- Added bilingual query-aspect coverage, intent-specific answer slots, and
+  retrieval-hit rank/score relevance. Repeated keywords no longer satisfy a
+  mechanism answer, formula answers require an equation and variable
+  definitions, and missing citations receive zero evidence relevance.
+- Added `gate_status`: any V2 status other than `ok`, or any incomplete intent
+  rubric, is `blocked`; faithful complete answers remain `diagnostic_only` until
+  a threshold is approved.
+- Updated operator telemetry to label the score `diagnostic` and display the
+  gate status without a pass state.
+- Focused regression covering scoring, V2, API/operator, logging, evaluator,
+  and calibration: 103 passed. Additional stale-score-schema calibration gate:
+  46 focused tests passed after the guard was added.
+
+Next Blocking Prerequisite:
+
+- Regenerate the full Obj1 baseline with `phase5.answer_quality.v2`, then rerun
+  Obj2 calibration. The calibration runner rejects old inner score schemas even
+  when the outer report is already v3.
+- Threshold selection and final hard-gate promotion remain paused pending that
+  operator result.
+
+Recalibration Run Note (2026-07-01):
+
+- The score-v2 full baseline completed successfully for all 14 cases with
+  fingerprint `45a0609b75ca771efc23dc5ca778652bdf698c971221755b879fdc981730ee5f`.
+- Calibration then stopped because two standards scope early-returns correctly
+  had no score, while the schema guard initially required a score on every case.
+- The guard now accepts unscored cases only when V2 is not `ok`, records them as
+  `not_scored`, and keeps them blocked. A V2-`ok` unscored case still fails loud.
+  Focused regression: 14 passed.
+- The full baseline does not need to be repeated; only calibration must be rerun.
+
+Updated Calibration Review (2026-07-01):
+
+- The fixed calibration completed with zero errors at thresholds 0.75 and 0.80:
+  usable 0.812, highest unusable 0.706, V2 statuses ok 6 / insufficient 6 /
+  unknown 2.
+- A required regression then showed that keyword repetition can score exactly
+  0.75 while intent completeness is zero. The production gate therefore added
+  completeness as a hard prerequisite, which changes the calibration contract.
+- Threshold approval remains paused. Candidate ranking now maximizes decision
+  margin after minimizing false allows/blocks. The existing score-v2 baseline
+  already contains completeness, so only the lightweight calibration command
+  must be rerun.
+- Focused regression after the rule change: 108 passed.
+
+Final Gate Implementation (2026-07-01):
+
+- Final calibration under score + V2 + completeness selected threshold 0.75:
+  decision margin 0.044, accuracy 1.0, false allow 0, false block 0, usable
+  recall 1.0, and unusable block rate 1.0.
+- Implemented `gate_status=pass` only when score >= 0.75, V2 is `ok`, and all
+  intent completeness slots are covered. The operator renders only this explicit
+  status as pass and never infers acceptance from the numeric score.
+- Focused implementation regression, including legacy V2 calibration assets:
+  112 passed.
+
+Final Validation Prerequisite:
+
+- Required operator checks were the final full baseline/calibration, legacy V2
+  calibration, retrieval eval, and canonical non-large suite. All were run and
+  passed before Obj2 was marked complete.
+
+Final Validation Result (2026-07-01):
+
+- Final Obj1 baseline: 14 cases, report v3, score v2. The sole labeled usable
+  case is the sole `pass`; 11 scored cases are `blocked`; two scope early-return
+  cases are `not_scored` with V2 `unknown` and cannot pass.
+- Final answer-quality calibration: threshold 0.75, decision margin 0.044,
+  accuracy 1.0, false allow 0, false block 0, usable recall 1.0, unusable block
+  rate 1.0.
+- Legacy V2 calibration: 12/12 passed, supported precision/recall 1.0,
+  unsupported block rate 1.0, false allow 0, false block 0.
+- Retrieval fixture regression: recall@5 1.0, recall@10 1.0, no missing
+  evidence case; no retrieval implementation changed in Obj2.
+- Canonical non-large suite: 562 passed, 1 deselected. The deselected case is
+  the registered `large_corpus` test.
+
+Residual Risk:
+
+- Human calibration has one usable and thirteen unusable cases. Threshold 0.75
+  is accepted for the current fixture, not as a universal statistical claim.
+- Every new labeled usable answer must rerun calibration; a threshold change
+  requires a new migration and cannot be inferred from the numeric score alone.
+
+Post-Review Hardening:
+
+- Added the durable, machine-readable calibration report at
+  `tests/fixtures/eval/answer_quality/obj2_calibration.json` and a deterministic
+  equality regression. Obj2 no longer relies on prose plus ignored run logs to
+  satisfy the committed-report DoD.
+- Unknown/general intent now fails completeness instead of passing by answer
+  length. Added direct regressions for this path and for empty citations yielding
+  zero evidence relevance.
+- Audited current `answer_quality` consumers: operator acceptance reads
+  `gate_status`; no runtime consumer treats `score >= threshold` alone as pass.
+- The single-positive calibration risk remains accepted and requires
+  recalibration as Obj3-Obj6 add new labeled usable answers.
+- Post-review focused regression: 115 passed. No full-corpus rerun was required
+  because the scoring change affects only previously unrecognized general
+  intent, which is absent from the 14-case calibration fixture.
+
+Next Objective Gate:
+
+- Obj2 is complete. Obj3 is cleared to start.
 
 ## Obj3 - Multilingual retrieval formalization and reindex tooling
 
