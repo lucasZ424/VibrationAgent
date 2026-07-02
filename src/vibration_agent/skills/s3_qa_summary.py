@@ -68,14 +68,16 @@ def _s2_context(payload: SkillInput) -> tuple[list[Any], bool]:
     if payload.retrieval_results:
         candidates.extend(payload.retrieval_results)
         saw_hits_without_text = True
-    for key in ("retrieval_context", "evidence", "chunks"):
+    for key in ("retrieval_context", "evidence"):
         value = payload.context.get(key)
         if isinstance(value, list):
             candidates.extend(value)
     s2_result = payload.context.get("s2_result")
     if isinstance(s2_result, Mapping):
         structured = s2_result.get("structured_result") if isinstance(s2_result.get("structured_result"), Mapping) else s2_result
-        value = structured.get("retrieval_context") if isinstance(structured, Mapping) else None
+        value = structured.get("evidence_context") if isinstance(structured, Mapping) else None
+        if not isinstance(value, list):
+            value = structured.get("retrieval_context") if isinstance(structured, Mapping) else None
         has_retrieval_context = isinstance(value, list) and bool(value)
         if isinstance(value, list):
             candidates.extend(value)
@@ -84,6 +86,10 @@ def _s2_context(payload: SkillInput) -> tuple[list[Any], bool]:
         if isinstance(hits, list) and not has_retrieval_context:
             candidates.extend(hits)
             saw_hits_without_text = True
+    if not candidates:
+        value = payload.context.get("chunks")
+        if isinstance(value, list):
+            candidates.extend(value)
     return candidates, saw_hits_without_text
 
 
@@ -175,7 +181,7 @@ def _body_text(text: str) -> str:
     return stripped
 
 
-_FINAL_PUNCTUATION_RE = re.compile(r"[。！？!?；;…\.][\"'”’）】》]*$")
+_FINAL_PUNCTUATION_RE = re.compile(r"[。！？!?；;…\.．][\"'”’）】》]*$")
 _SECTION_NUMBER_RE = re.compile(r"^\d+(?:\.\d+)+$")
 _STRUCTURAL_LINE_RE = re.compile(
     r"^(?:\d+(?:\.\d+)*\s+\S|第.+[章节条部分](?:\s|$)|[（(]\d+[)）]|[-•·]\s+|"
@@ -314,7 +320,7 @@ def _sentences(text: str) -> list[str]:
     for block, is_structural in _reflow_units(_body_text(text)):
         if is_structural:
             continue
-        parts.extend(re.split(r"(?<=[。！？!?；;…])\s*|(?<=\.)\s+", block))
+        parts.extend(re.split(r"(?<=[。！？!?；;…．])\s*|(?<=\.)\s+", block))
     cleaned = [re.sub(r"\s+", " ", part).strip() for part in parts]
     return [part for part in cleaned if len(part) >= 2 and not _CROSS_CHUNK_ORPHAN_RE.match(part)]
 

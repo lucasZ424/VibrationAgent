@@ -15,6 +15,13 @@ rerank:
   enabled: false                   # turn on after phase-0 wiring is working
   model: null
 
+evidence_selection:
+  enabled: false                   # Obj5 candidate; promote only after completeness/V2 gate
+  seed_chunks: 10
+  max_chunks: 12
+  token_budget: 6000
+  adjacent_window: 1
+
 source_priority:                   # ties broken by rank; multiplier applied pre-rerank
   standard: 5
   textbook: 4

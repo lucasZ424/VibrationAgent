@@ -204,6 +204,51 @@ def test_s3_accepts_s2_result_handoff_shape_and_relative_confidence():
     assert output.citations[0].confidence == 1.0
 
 
+def test_s3_prefers_obj5_selected_evidence_over_raw_retrieval_noise():
+    # WHY: Obj5 must change the evidence handed to synthesis without redefining
+    # Obj4 retrieval hits or allowing raw distractors back into the answer.
+    payload = SkillInput(
+        task_id="obj5-handoff",
+        user_query="阻尼比如何影响振动？",
+        context={
+            "chunks": [_evidence("corpus-leak", "This full corpus row must remain S2-only.")],
+            "s2_result": {
+                "structured_result": {
+                    "retrieval_context": [_evidence("noise", "临界转速附近响应放大。")],
+                    "evidence_context": [_evidence("selected", "阻尼比越大，振动衰减越快。")],
+                }
+            }
+        },
+    )
+
+    output = QASummarySkill().run(payload)
+
+    assert [claim["chunk_id"] for claim in output.structured_result["claims"]] == ["selected"]
+    assert output.structured_result["evidence_count"] == 1
+
+
+def test_s3_splits_ocr_fullwidth_periods_into_complete_claims():
+    # WHY: OCR English commonly uses U+FF0E; treating it as plain text merges a
+    # whole abstract into one unreadable claim and understates sentence quality.
+    output = QASummarySkill().run(
+        SkillInput(
+            task_id="fullwidth-period",
+            user_query="measurement result",
+            context={
+                "retrieval_context": [
+                    _evidence("ocr", "The measurement is feasible．The result is confirmed．", language="en")
+                ]
+            },
+            constraints={"max_claims": 2},
+        )
+    )
+
+    assert [claim["text"] for claim in output.structured_result["claims"]] == [
+        "The measurement is feasible．",
+        "The result is confirmed．",
+    ]
+
+
 def test_s3_critical_speed_outcome_question_rejects_definition_only_evidence():
     # WHY: a user asking what happens at/after critical speed needs mechanism or
     # response evidence; returning a definition note is worse than insufficient.

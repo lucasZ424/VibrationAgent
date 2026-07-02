@@ -312,3 +312,43 @@ Review hardening:
   `python scripts/build_corpus_standard_catalog.py` before restarting the service.
   Body-text references are intentionally excluded so a cited, non-ingested
   standard does not widen the scope boundary.
+
+### Obj5 - Deterministic evidence-selection candidate (2026-07-02)
+
+Status: default-off candidate awaiting Obj1 completeness/V2 validation.
+
+- Retrieval output additively exposes `evidence_context` and
+  `evidence_selection`; Obj4 `hits` and `retrieval_context` retain their existing
+  meaning.
+- `EVIDENCE_SELECTION_ENABLED=true` enables bounded seed selection, same-document
+  adjacency, duplicate removal, and the configured evidence token/chunk limits.
+- S2/S3 use selected evidence and citations only when the candidate is enabled.
+  Model reranking remains disabled and is explicitly rejected by the Obj5 gate.
+- The first candidate exposed that unconditional adjacency can increase keyword
+  completeness with unusable OCR fragments. Expansion now requires a verifiable
+  boundary signal, and promotion also requires sentence completeness not below
+  the Obj4 value of 0.902.
+- OCR U+FF0E fullwidth periods are now treated consistently as sentence endings
+  by S3 extraction, evidence boundary detection, and answer readability scoring.
+- V2 now recognizes deterministic S3 inline evidence tags in addition to square
+  bracket refs and retains citations for every referenced S2-visible chunk.
+  Obj5 promotion requires `citation_alignment_rate == 1.0`.
+- Under Obj5, V2 validates against `evidence_context`, matching the evidence S3
+  actually consumed; when absent, it retains the prior `retrieval_context`
+  behavior.
+- S3 no longer treats a raw `context.chunks` corpus as answer evidence when an S2
+  handoff exists. This fixes a full-corpus leakage in local evaluation and
+  invalidates historical full-chain answer-quality comparisons; retrieval recall
+  remains independently valid. Obj5 promotion uses a corrected selector-off/on
+  paired baseline.
+- After the corrected pair rejected the six-seed candidate, the selector budget
+  was revised to preserve raw top10 (`seed_chunks=10`, `max_chunks=12`, token
+  budget 6000). Adjacent expansion requires continuity signals on both sides of
+  the chunk boundary.
+- The conservative candidate was metric-identical to selector-off and therefore
+  remains disabled. Generic keyword-aspect diversification was tested, regressed
+  representative cases, and was removed; promotion now depends on a separately
+  evaluated reranking strategy rather than gate relaxation.
+
+Compatibility: additive output/config fields. Rollback:
+`EVIDENCE_SELECTION_ENABLED=false`; no reindex or corpus mutation is required.

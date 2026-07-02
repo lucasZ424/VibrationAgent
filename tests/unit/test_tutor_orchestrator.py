@@ -401,6 +401,12 @@ def test_complete_sentence_ratio_ignores_evidence_tag_suffix():
     assert _complete_sentence_ratio(answer) == 1.0
 
 
+def test_complete_sentence_ratio_accepts_ocr_fullwidth_period():
+    answer = "1. The measurement is feasible． (evidence: c1)"
+
+    assert _complete_sentence_ratio(answer) == 1.0
+
+
 def test_intent_completeness_rejects_keyword_repetition_without_mechanism():
     score, intent, required, covered = _intent_completeness(
         "Why do amplitude and phase change near critical speed?",

@@ -10,6 +10,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -53,6 +54,10 @@ MISS_PRIORITY = (
     "pass",
 )
 QueryRunner = Callable[[Mapping[str, Any]], SkillOutput]
+_INLINE_EVIDENCE_REF_RE = re.compile(
+    r"(?:\(evidence\s*:\s*|（证据\s*[:：]\s*)([A-Za-z0-9_.:/#-]+)[)）]",
+    re.IGNORECASE,
+)
 
 
 def load_questions(path: Path = DEFAULT_QUESTIONS) -> dict[str, Any]:
@@ -127,6 +132,7 @@ def run_rag_qa_eval(
     query_runner: QueryRunner,
     corpus_count: int | None = None,
     git_commit: str | None = None,
+    evidence_selection_config: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     active = dict(questions or load_questions())
     _validate_questions(active)
@@ -144,6 +150,7 @@ def run_rag_qa_eval(
         "baseline_id": active.get("baseline_id"),
         "corpus": {**dict(active.get("corpus") or {}), "actual_chunk_count": corpus_count},
         "retrieval_config": dict(active.get("retrieval_config") or {}),
+        "evidence_selection_config": dict(evidence_selection_config or {}),
         "evaluation_contract": {
             "evidence_match_rule": "exact_chunk_id OR same_doc_id_with_page_overlap",
             "miss_counts_are_multi_label": True,
@@ -162,6 +169,9 @@ def run_rag_qa_eval(
                 sum(case["v2_status"] == "ok" for case in cases) / len(cases), 3
             ),
             "sentence_completeness_rate": _mean(cases, "sentence_completeness"),
+            "citation_alignment_rate": round(
+                sum(case["citation_alignment_ok"] for case in cases) / len(cases), 3
+            ),
             "latency_ms": {
                 "total": round(sum(case["latency_ms"] for case in cases), 3),
                 "mean": round(sum(case["latency_ms"] for case in cases) / len(cases), 3),
@@ -203,6 +213,8 @@ def _run_case(case: Mapping[str, Any], *, query_runner: QueryRunner) -> dict[str
     subscores = quality.get("subscores") if isinstance(quality.get("subscores"), Mapping) else {}
     v2_status = str(quality.get("faithfulness_status") or "unknown")
     citations = [citation.model_dump(mode="json") for citation in output.citations]
+    answer_refs = {match.group(1) for match in _INLINE_EVIDENCE_REF_RE.finditer(answer)}
+    citation_ids = {str(citation.get("chunk_id")) for citation in citations}
     boundary = case["evidence_boundary"]
     allowed_docs = set(boundary["allowed_doc_ids"])
     boundary_ok = all(str(citation.get("doc_id")) in allowed_docs for citation in citations)
@@ -226,6 +238,7 @@ def _run_case(case: Mapping[str, Any], *, query_runner: QueryRunner) -> dict[str
         "completeness": completeness,
         "sentence_completeness": round(float(subscores.get("readability") or 0.0), 3),
         "evidence_boundary_ok": boundary_ok,
+        "citation_alignment_ok": answer_refs <= citation_ids,
         "latency_ms": round(latency_ms, 3),
         "warnings": list(output.warnings),
     }
@@ -373,6 +386,14 @@ def main(argv: list[str] | None = None) -> int:
         questions=load_questions(args.questions),
         query_runner=reporting_runner,
         corpus_count=len(chunks),
+        evidence_selection_config={
+            "enabled": settings.retrieval.evidence_selection_enabled,
+            "seed_chunks": settings.retrieval.evidence_seed_chunks,
+            "max_chunks": settings.retrieval.evidence_max_chunks,
+            "token_budget": settings.retrieval.evidence_token_budget,
+            "adjacent_window": settings.retrieval.evidence_adjacent_window,
+            "rerank_enabled": settings.retrieval.rerank_enabled,
+        },
     )
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(

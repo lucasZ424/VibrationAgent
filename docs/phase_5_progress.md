@@ -1,10 +1,10 @@
 # Phase 5 Progress
 
-Updated: 2026-07-01
+Updated: 2026-07-02
 
 ## Status
 
-Phase 5 is active. Obj0-Obj4 are complete and Obj5 is cleared to start. Phase 4,
+Phase 5 is active. Obj0-Obj4 are complete and Obj5 is at its operator validation checkpoint. Phase 4,
 including its R1-R3 local iteration, is formally closed
 (`docs/phase_4_progress.md`, Obj0-18). Phase 5 exists to systematically close
 the gaps that the R1-R3 iteration exposed on the real corpus. Shared, remote,
@@ -51,7 +51,7 @@ regression target.
 2. Answer-quality calibration and V2 hard gate: complete
 3. Multilingual retrieval formalization and reindex tooling: complete
 4. Independent lexical + ANN lanes, bilingual expansion, fusion: complete
-5. Evidence selection, adjacent-passage expansion, reranking: planned
+5. Evidence selection, adjacent-passage expansion, reranking: in progress
 6. Controlled LLM synthesis lane (default-off, replay-first): planned
 7. Corpus and taxonomy quality pass: planned
 8. Backend reliability and operator ergonomics: planned
@@ -578,7 +578,138 @@ faithfulness rate does not drop; deterministic and reproducible.
 
 Dependencies: Obj1, Obj4.
 
-Status: planned.
+Status: in progress; deterministic candidate implemented default-off, operator
+Obj1 validation required.
+
+Implementation Notes (2026-07-02):
+
+- Added a deterministic evidence selector after Obj4 fusion. Raw `hits` and
+  `retrieval_context` remain unchanged for retrieval attribution; selected S3
+  input is exposed separately as `evidence_context` and `evidence_selection`.
+- Selection keeps bounded fused-rank seeds, expands only verifiable
+  `doc_id + chunk_index` neighbors, removes exact/near duplicate text, and
+  enforces hard chunk/token limits. Every row retains chunk/page/source identity
+  plus seed/adjacent selection reason.
+- S2 citations and S3 now follow selected evidence when enabled. The old handoff
+  remains intact when `EVIDENCE_SELECTION_ENABLED=false` (the checked-in default).
+- Model reranking remains disabled so this scorecard measures only deterministic
+  selection and adjacency.
+- Added `phase5.obj5_evidence_gate.v1`: candidate requires unchanged corpus,
+  recall@10 >= 0.607, completeness > 0.339, V2 faithfulness >= 0.500, selector
+  enabled, model reranker disabled, and sentence completeness >= 0.902.
+
+Verification:
+
+- Focused S2/S3/S4/V2/orchestrator/eval tests after fifth-result refinement: 167 passed.
+
+First Candidate Result and Refinement (2026-07-02):
+
+- The 4436-chunk run preserved recall@10 at 0.607 and improved measured
+  completeness 0.339 -> 0.387 and V2 faithfulness 0.500 -> 0.571.
+- Sentence completeness regressed 0.902 -> 0.888. Inspection localized the
+  failure to the English workflow case: unconditional adjacency injected noisy
+  OCR abstract/neighbor passages and inflated keyword completeness while making
+  the answer less usable. The initial gate therefore produced a false approval.
+- The gate now rejects sentence-completeness regression. Adjacency now requires
+  a boundary signal: a continuation-style prefix for previous context or a
+  missing terminal sentence marker for following context. Complete seed chunks
+  do not expand.
+- Re-evaluating the old JSON with the corrected gate returns ineligible solely
+  on `sentence_completeness_preserved=false`. A fresh Obj1 run is required.
+
+Second Candidate Result and OCR Sentence Fix (2026-07-02):
+
+- The boundary-trigger retry reproduced completeness 0.387, V2 0.571, and
+  sentence completeness 0.888; the corrected gate rejected it as intended.
+- The low sentence score includes a pre-existing OCR behavior concentrated in
+  English evidence: U+FF0E fullwidth periods were neither sentence boundaries
+  nor valid terminal punctuation, causing whole abstracts to become one claim.
+- S3 extraction, selector boundary detection, and answer readability scoring now
+  consistently recognize U+FF0E. The retry report predates this fix and cannot
+  be used for promotion; a third candidate run is required.
+
+Third Candidate Result and Citation Alignment Fix (2026-07-02):
+
+- The third candidate passed the numeric gate: recall@10 0.607, completeness
+  0.387, V2 0.571, sentence completeness 0.923, and mean latency 4.128s.
+- Structural review found 8/14 final answers whose inline evidence tags were not
+  fully represented in final citations. V2 recognized only `[chunk_id]`, while
+  deterministic S3 emits `(evidence: chunk_id)` / `（证据：chunk_id）`; S4 can
+  narrow structured claims while retaining the original conclusion text.
+- V2 now recognizes deterministic inline evidence tags and preserves a citation
+  for every referenced S2-visible chunk. The eval reports
+  `citation_alignment_rate`; Obj5 promotion requires 1.000.
+- The third report predates this contract fix and is not promotable. A fourth
+  candidate run is the current blocking prerequisite.
+
+Fourth Candidate Result and V2 Visibility Fix (2026-07-02):
+
+- Citation alignment reached 1.000, but V2 marked all 14 cases insufficient,
+  reducing completeness to 0.054 and faithfulness to 0.000; the gate rejected
+  the candidate.
+- Root cause: S3 consumes Obj5 `evidence_context`, while V2 still validated only
+  Obj4 `retrieval_context`. Legitimate selected/adjacent chunks were therefore
+  treated as invisible.
+- V2 now uses `evidence_context` when present and falls back to
+  `retrieval_context` for the default-off/legacy path. Retrieval hits remain an
+  additional identity fallback. A fifth candidate run is required.
+
+Fifth Candidate Result and Full-Corpus Handoff Leak Fix (2026-07-02):
+
+- The fifth run still produced 14 V2-insufficient cases. A one-case diagnostic
+  exposed `s3.evidence_count=4382`: the eval passes all 4436 chunks to S2 through
+  `context.chunks`, and S3 also consumed that raw corpus as fallback evidence
+  even though an S2 handoff existed.
+- S3 now consumes direct/S2 evidence first and uses `context.chunks` only when no
+  retrieval handoff exists. S4 and V2 both use `evidence_context` when present.
+  The same diagnostic now reports evidence_count 6, V2 unsupported [], status
+  ok, and three aligned citations.
+- This leak affected historical full-chain completeness/V2/readability metrics,
+  including the Obj4 answer-quality floor. Obj4 retrieval recall@10 0.607 remains
+  valid because retrieval hits were scored independently; the old 0.339/0.500/
+  0.902 answer-quality floor is no longer comparable.
+- The next prerequisite is a paired run on the corrected code: selector-off
+  corrected baseline followed by selector-on candidate. The Obj5 gate now
+  requires baseline selector disabled, corpus parity, and complete citation
+  alignment on both reports.
+
+Corrected Pair Result and Conservative Selector Revision (2026-07-02):
+
+- Corrected selector-off established the valid floor: completeness 0.708,
+  V2 1.000, sentence completeness 0.890, citation alignment 1.000, recall@10
+  0.607. The selector-on candidate regressed to 0.697/1.000/0.888/1.000 and was
+  rejected.
+- The regression came from retaining only six seeds while adding loosely
+  triggered neighbors. The selector now retains raw top10, permits at most two
+  additions under a 6000-token budget, and requires two-sided boundary
+  continuity before adding an adjacent chunk.
+- Targeted off/on checks for the three changed cases now have identical
+  completeness, readability, V2 status, citation alignment, and citation ids.
+  The corrected selector-off report remains comparable; only a revised
+  selector-on run is required.
+
+Conservative Candidate Result and Rerank Decision (2026-07-02):
+
+- The revised selector exactly matched corrected-off on all 14 cases:
+  completeness 0.708, V2 1.000, sentence completeness 0.890, citation alignment
+  1.000, and recall@10 0.607. The gate correctly rejected it because there was
+  no strict completeness improvement. It remains default-off.
+- Offline miss analysis found no uncovered Obj1 key fact in a raw top10
+  neighbor at offset +/-1, so adjacent expansion cannot demonstrate an Obj1
+  completeness gain on this fixture.
+- Ten cases do contain uncovered fact aliases inside raw top10 itself, proving
+  the remaining Obj5 opportunity is claim/evidence reranking. A trial generic
+  query-aspect keyword diversification regressed representative comparison and
+  standards cases and was removed.
+- Next development slice: evaluate a stronger deterministic semantic/structural
+  reranker against the corrected-off baseline. Do not rerun the current selector
+  or promote it by relaxing the gate.
+
+Blocking Prerequisite:
+
+- Implement and locally unit-test a stronger reranking candidate before another
+  operator Obj1 run. Obj6 remains blocked until Obj5 passes the corrected paired
+  gate and canonical non-large suite.
 
 ## Obj6 - Controlled LLM synthesis lane (default-off, replay-first)
 

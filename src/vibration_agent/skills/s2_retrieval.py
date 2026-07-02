@@ -190,6 +190,7 @@ class RetrievalSkill(Skill):
 
         hits = result.get("hits", []) if isinstance(result.get("hits"), list) else []
         retrieval_context = result.get("retrieval_context", []) if isinstance(result.get("retrieval_context"), list) else []
+        evidence_context = result.get("evidence_context", []) if isinstance(result.get("evidence_context"), list) else retrieval_context
         status = result.get("status") if result.get("status") in {"ok", "insufficient", "fail"} else "insufficient"
         return SkillOutput(
             status=status,
@@ -201,13 +202,26 @@ class RetrievalSkill(Skill):
                     for key in ("normalized_query", "intent", "hits", "status", "warnings")
                 },
                 "retrieval_context": retrieval_context,
+                "evidence_context": evidence_context,
+                "evidence_selection": result.get("evidence_selection"),
                 "detected_terms": result.get("detected_terms", []),
                 "detected_symbols": result.get("detected_symbols", []),
                 "retrieval_source": result.get("retrieval_source"),
                 "chunk_paths": [str(path) for path in chunk_paths],
                 "chunks_dir": str(chunks_dir) if chunks_dir is not None else None,
             },
-            citations=_citations_from_hits(hits, retrieval_context),
+            citations=_citations_from_hits(
+                [
+                    {
+                        "chunk_id": row.get("chunk_id"),
+                        "doc_id": row.get("doc_id"),
+                        "pages": row.get("pages") or [],
+                        "score": row.get("score") or 0.0,
+                    }
+                    for row in evidence_context
+                ],
+                evidence_context,
+            ),
             warnings=list(result.get("warnings", [])),
             handoff_recommendation="Pass retrieval_context to S3." if status == "ok" else "Run S1 ingestion or broaden the query.",
         )

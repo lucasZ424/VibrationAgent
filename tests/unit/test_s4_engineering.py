@@ -83,6 +83,26 @@ def test_s4_engineering_analysis_uses_visible_cited_evidence_and_passes_v2():
     assert checked.structured_result["unsupported_claims"] == []
 
 
+def test_s4_uses_obj5_selected_evidence_instead_of_raw_retrieval_context():
+    selected = {"chunk_id": "c2", "doc_id": "d1", "pages": [3], "text": "Damping reduces response.", "score": 0.8}
+    s2 = _s2()
+    s2["structured_result"]["evidence_context"] = [selected]
+    s3 = {
+        "status": "ok",
+        "structured_result": {
+            "answer": "Damping reduces response (evidence: c2).",
+            "claims": [{"text": "Damping reduces response.", "chunk_id": "c2", "doc_id": "d1", "pages": [3]}],
+            "synthesis_mode": "deterministic",
+        },
+        "citations": [{"chunk_id": "c2", "doc_id": "d1", "pages": [3]}],
+    }
+
+    output = EngineeringAnalysisSkill().run(_payload(s2=s2, s3=s3))
+
+    assert output.status == "ok"
+    assert output.structured_result["claims"][0]["chunk_id"] == "c2"
+
+
 def test_s4_deterministic_framing_uses_threaded_chinese_language():
     claim = "临界转速附近转子响应会被放大。"
     output = EngineeringAnalysisSkill().run(

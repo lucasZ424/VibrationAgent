@@ -94,6 +94,11 @@ class RetrievalSettings(BaseModel):
     final_top_k: int = Field(default=10, ge=1)
     fusion_method: str = "rrf"
     rerank_enabled: bool = False
+    evidence_selection_enabled: bool = False
+    evidence_seed_chunks: int = Field(default=10, ge=1)
+    evidence_max_chunks: int = Field(default=12, ge=1)
+    evidence_token_budget: int = Field(default=6000, ge=1)
+    evidence_adjacent_window: int = Field(default=1, ge=0, le=2)
     source_priority: dict[str, int] = Field(
         default_factory=lambda: {
             "standard": 5,
@@ -424,6 +429,14 @@ def load(workspace: Path | None = None) -> Settings:
             final_top_k=int(retrieval_top_k.get("final", 10)),
             fusion_method=str(retrieval_fusion.get("method", "rrf")),
             rerank_enabled=bool(rerank_section.get("enabled", False)),
+            evidence_selection_enabled=_env_bool(
+                "EVIDENCE_SELECTION_ENABLED",
+                bool((retrieval_yaml.get("evidence_selection") or {}).get("enabled", False)),
+            ),
+            evidence_seed_chunks=int((retrieval_yaml.get("evidence_selection") or {}).get("seed_chunks", 10)),
+            evidence_max_chunks=int((retrieval_yaml.get("evidence_selection") or {}).get("max_chunks", 12)),
+            evidence_token_budget=int((retrieval_yaml.get("evidence_selection") or {}).get("token_budget", 6000)),
+            evidence_adjacent_window=int((retrieval_yaml.get("evidence_selection") or {}).get("adjacent_window", 1)),
             source_priority=dict(retrieval_yaml.get("source_priority", {})) or RetrievalSettings().source_priority,
         ),
         embeddings=EmbeddingSettings(

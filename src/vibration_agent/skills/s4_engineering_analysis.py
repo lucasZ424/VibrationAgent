@@ -100,7 +100,9 @@ def _s2_visible_rows(payload: SkillInput) -> Mapping[str, Mapping[str, Any]]:
     structured = s2_result.get("structured_result")
     s2_structured = structured if isinstance(structured, Mapping) else s2_result
     rows: dict[str, Mapping[str, Any]] = {}
-    retrieval_context = s2_structured.get("retrieval_context")
+    retrieval_context = s2_structured.get("evidence_context")
+    if not isinstance(retrieval_context, list):
+        retrieval_context = s2_structured.get("retrieval_context")
     if isinstance(retrieval_context, list):
         for row in retrieval_context:
             if isinstance(row, Mapping) and row.get("chunk_id"):

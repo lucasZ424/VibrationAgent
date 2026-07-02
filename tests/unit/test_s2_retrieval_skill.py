@@ -11,6 +11,7 @@ from vibration_agent.retrieval.query_normalize import (
     standard_identifiers_from_sources,
 )
 from vibration_agent.retrieval.rerank import run as rerank_run
+from vibration_agent.knowledge.evidence import select_evidence_candidates
 from vibration_agent.schemas import SkillInput
 from vibration_agent.skills import RetrievalSkill
 from vibration_agent.agent import AgentSkillRegistry
@@ -149,6 +150,105 @@ def test_query_normalize_expands_critical_speed_outcome_questions():
     assert "critical speed" in result["normalized_query"]
     assert "共振" in result["normalized_query"]
     assert "响应放大" in result["normalized_query"]
+
+
+def test_evidence_selector_recovers_same_doc_boundary_neighbors_without_cross_doc_leakage():
+    # WHY: a retrieved boundary fragment may need its preceding definition and
+    # following result, but a numerically adjacent chunk in another document is unrelated.
+    seed = {**_chunk("seed", "当转子通过临界转速时", doc_id="d1"), "chunk_index": 2}
+    previous = {**_chunk("previous", "临界转速对应转子共振状态", doc_id="d1"), "chunk_index": 1}
+    following = {**_chunk("following", "则振幅达到最大并发生显著相位变化。", doc_id="d1"), "chunk_index": 3}
+    other_doc = {**_chunk("other", "不相关标准条文。", doc_id="d2"), "chunk_index": 3}
+
+    selected, report, warnings = select_evidence_candidates(
+        [{"chunk": seed, "score": 1.0, "lanes": ["bm25", "dense"]}],
+        [previous, seed, following, other_doc],
+        seed_chunks=1,
+        max_chunks=3,
+        token_budget=100,
+        adjacent_window=1,
+    )
+
+    assert [item["chunk"]["chunk_id"] for item in selected] == ["seed", "previous", "following"]
+    assert selected[1]["selection_reason"] == "same_doc_adjacent_to:seed"
+    assert "other" not in report["selected_chunk_ids"]
+    assert warnings == []
+
+
+def test_evidence_selector_deduplicates_and_enforces_hard_token_budget():
+    # WHY: repeated OCR passages and oversized candidates must not silently expand S3 input.
+    first = {**_chunk("first", "阻尼越大，振动衰减越快。"), "token_estimate": 20}
+    duplicate = {**_chunk("duplicate", "阻尼越大，振动衰减越快。"), "token_estimate": 20}
+    over_budget = {**_chunk("large", "临界转速响应。"), "token_estimate": 40}
+
+    selected, report, warnings = select_evidence_candidates(
+        [{"chunk": first}, {"chunk": duplicate}, {"chunk": over_budget}],
+        [first, duplicate, over_budget],
+        seed_chunks=3,
+        max_chunks=3,
+        token_budget=30,
+        adjacent_window=0,
+    )
+
+    assert [item["chunk"]["chunk_id"] for item in selected] == ["first"]
+    assert report["token_estimate"] == 20
+    assert report["dropped_duplicate"] == 1
+    assert report["dropped_budget"] == 1
+    assert "30-token budget" in warnings[0]
+
+
+def test_evidence_selector_without_verifiable_position_does_not_invent_neighbors():
+    seed = _chunk("seed", "完整证据。")
+    seed.pop("chunk_index")
+    neighbor = {**_chunk("neighbor", "同文档但位置不可验证。"), "chunk_index": 2}
+
+    selected, _, _ = select_evidence_candidates(
+        [{"chunk": seed}], [seed, neighbor], seed_chunks=1, max_chunks=3, token_budget=100, adjacent_window=1
+    )
+
+    assert [item["chunk"]["chunk_id"] for item in selected] == ["seed"]
+
+
+def test_evidence_selector_does_not_expand_a_complete_seed():
+    # WHY: unconditional adjacency injects unrelated OCR passages and can game
+    # keyword completeness while reducing answer usability.
+    seed = {**_chunk("seed", "该段已经给出完整的测量结论。"), "chunk_index": 2}
+    neighbors = [
+        {**_chunk("previous", "上一页摘要。"), "chunk_index": 1},
+        {**_chunk("following", "下一节无关内容。"), "chunk_index": 3},
+    ]
+
+    selected, _, _ = select_evidence_candidates(
+        [{"chunk": seed}], [*neighbors, seed], seed_chunks=1, max_chunks=3, token_budget=100, adjacent_window=1
+    )
+
+    assert [item["chunk"]["chunk_id"] for item in selected] == ["seed"]
+
+
+def test_obj5_selection_expands_s3_evidence_without_redefining_obj4_hits():
+    # WHY: Obj5 quality gains must remain attributable to evidence hand-off, not
+    # silently alter the frozen Obj4 retrieval scorecard.
+    from vibration_agent.config import load
+
+    settings = load()
+    settings.retrieval.final_top_k = 1
+    settings.retrieval.evidence_selection_enabled = True
+    settings.retrieval.evidence_seed_chunks = 1
+    settings.retrieval.evidence_max_chunks = 3
+    settings.retrieval.evidence_token_budget = 100
+    chunks = [
+        {**_chunk("previous", "前置定义"), "chunk_index": 1},
+        {**_chunk("seed", "当 boundaryterm 当前片段"), "chunk_index": 2},
+        {**_chunk("following", "则后续工程结果。"), "chunk_index": 3},
+    ]
+
+    result = search("boundaryterm", chunks=chunks, settings=settings)
+
+    assert [hit["chunk_id"] for hit in result["hits"]] == ["seed"]
+    assert [row["chunk_id"] for row in result["retrieval_context"]] == ["seed"]
+    assert [row["chunk_id"] for row in result["evidence_context"]] == ["seed", "previous", "following"]
+    assert result["evidence_selection"]["selected_count"] == 3
+    assert "intent:engineering" in result["evidence_context"][0]["selection_reason"]
 
 
 def test_hybrid_search_returns_retrieval_output_with_reasons():
@@ -317,6 +417,14 @@ def test_independent_runtime_lanes_are_promoted_with_env_rollback(monkeypatch):
     assert load().retrieval.independent_lanes_enabled is False
 
 
+def test_obj5_evidence_selector_is_default_off_with_explicit_env_candidate(monkeypatch):
+    from vibration_agent.config import load
+
+    assert load().retrieval.evidence_selection_enabled is False
+    monkeypatch.setenv("EVIDENCE_SELECTION_ENABLED", "true")
+    assert load().retrieval.evidence_selection_enabled is True
+
+
 def test_bm25_indexes_qdrant_source_title_for_standard_lookup():
     chunks = [
         {
@@ -449,6 +557,32 @@ def test_retrieval_skill_reads_chunks_jsonl_and_returns_relative_citations(tmp_p
     assert output.structured_result["retrieval_context"][0]["chunk_id"] == "c1"
     assert output.citations[0].chunk_id == "c1"
     assert output.citations[0].pages == [3]
+
+
+def test_retrieval_skill_citations_follow_selected_evidence_not_raw_hits():
+    # WHY: adjacent evidence can support S3 claims even though it must not be
+    # counted as a newly retrieved Obj4 hit.
+    seed = _chunk("seed", "边界片段", pages=[2])
+    neighbor = _chunk("neighbor", "完整结果。", pages=[3])
+
+    def runner(*args, **kwargs):
+        del args, kwargs
+        return {
+            "status": "ok",
+            "hits": [{"chunk_id": "seed", "doc_id": "doc1", "pages": [2], "score": 1.0}],
+            "retrieval_context": [{**seed, "score": 1.0}],
+            "evidence_context": [{**seed, "score": 1.0}, {**neighbor, "score": 0.8}],
+            "evidence_selection": {"selected_count": 2},
+            "warnings": [],
+        }
+
+    output = RetrievalSkill(runner=runner).run(
+        SkillInput(task_id="obj5", user_query="边界问题", context={"chunks": [seed, neighbor]})
+    )
+
+    assert output.structured_result["retrieval_output"]["hits"][0]["chunk_id"] == "seed"
+    assert [citation.chunk_id for citation in output.citations] == ["seed", "neighbor"]
+    assert output.structured_result["evidence_selection"] == {"selected_count": 2}
     assert output.citations[0].confidence == 1.0
 
 

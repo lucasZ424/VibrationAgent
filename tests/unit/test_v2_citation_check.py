@@ -70,6 +70,55 @@ def test_v2_accepts_claims_citing_visible_retrieved_chunks():
     assert output.citations[0].chunk_id == "c1"
 
 
+def test_v2_preserves_citations_for_all_deterministic_inline_evidence_refs():
+    # WHY: S4 can narrow structured claims while retaining S3's conclusion text;
+    # every inline evidence tag must still be represented in final citations.
+    rows = [_row("c1"), _row("c2", "Damping reduces rotor response.")]
+    s3 = _s3(
+        answer=(
+            "Critical speed amplifies rotor response (evidence: c1). "
+            "Damping reduces rotor response (evidence: c2)."
+        ),
+        claims=[{"text": "Critical speed amplifies rotor response.", "chunk_id": "c1", "doc_id": "doc1"}],
+        mode="deterministic",
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=_s2(rows)))
+
+    assert output.status == "ok"
+    assert output.structured_result["citation_check"]["visible_answer_refs"] == ["c1", "c2"]
+    assert [citation.chunk_id for citation in output.citations] == ["c1", "c2"]
+
+
+def test_v2_treats_obj5_selected_neighbor_as_visible_evidence():
+    # WHY: S3 consumes evidence_context under Obj5, so V2 must validate against
+    # that same handoff rather than reject an adjacent chunk absent from raw hits.
+    s2 = _s2([_row("seed")])
+    s2["structured_result"]["evidence_context"] = [
+        _row("seed"),
+        _row("neighbor", "Damping reduces rotor response."),
+    ]
+    s3 = _s3(
+        answer="Damping reduces rotor response (evidence: neighbor).",
+        claims=[
+            {
+                "text": "Damping reduces rotor response.",
+                "chunk_id": "neighbor",
+                "doc_id": "doc1",
+                "pages": [1],
+            }
+        ],
+        citations=[{"chunk_id": "neighbor", "doc_id": "doc1", "pages": [1]}],
+        mode="deterministic",
+    )
+
+    output = CitationCheckSkill().run(_payload(s3, s2=s2))
+
+    assert output.status == "ok"
+    assert output.structured_result["citation_check"]["visible_chunk_ids"] == ["neighbor", "seed"]
+    assert [citation.chunk_id for citation in output.citations] == ["neighbor"]
+
+
 def test_v2_ignores_numeric_paper_reference_markers_in_supported_claims():
     # WHY: bibliography markers such as [29] are source text, not Agent chunk citations.
     row = _row(text="Order analysis is required for non-stationary vibration signals [29].")

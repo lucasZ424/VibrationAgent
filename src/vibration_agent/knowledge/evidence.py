@@ -7,11 +7,172 @@ perform claim extraction or model-based citation checking yet.
 from __future__ import annotations
 
 import logging
-from typing import Any, Iterable, Mapping
+import re
+from difflib import SequenceMatcher
+from math import ceil
+from typing import Any, Iterable, Mapping, Sequence
 
 from vibration_agent.schemas import Citation, DocumentAsset
 
 logger = logging.getLogger(__name__)
+_FINAL_SENTENCE_RE = re.compile(r"[。！？!?；;.…．][\"'”’）】》]*$")
+_PREVIOUS_CONTEXT_PREFIXES = (
+    "当",
+    "因此",
+    "所以",
+    "并且",
+    "同时",
+    "其中",
+    "则",
+    "而",
+    "从而",
+    "when ",
+    "therefore ",
+    "and ",
+    "also ",
+)
+
+
+def _evidence_text(chunk: Mapping[str, Any]) -> str:
+    return str(chunk.get("text") or chunk.get("api_context") or "").strip()
+
+
+def _evidence_tokens(chunk: Mapping[str, Any]) -> int:
+    value = chunk.get("token_estimate")
+    return max(1, int(value)) if value not in (None, "") else max(1, ceil(len(_evidence_text(chunk)) / 4))
+
+
+def _dedupe_text(value: str) -> str:
+    return re.sub(r"\W+", "", value.casefold())
+
+
+def _is_duplicate(value: str, selected: list[str]) -> bool:
+    normalized = _dedupe_text(value)
+    if not normalized:
+        return True
+    for existing in selected:
+        if normalized == existing:
+            return True
+        shorter, longer = sorted((normalized, existing), key=len)
+        if len(shorter) >= 80 and shorter in longer:
+            return True
+        if min(len(normalized), len(existing)) >= 120 and SequenceMatcher(None, normalized, existing).ratio() >= 0.94:
+            return True
+    return False
+
+
+def _starts_continuation(text: str) -> bool:
+    stripped = text.strip()
+    return stripped.casefold().startswith(_PREVIOUS_CONTEXT_PREFIXES) or bool(
+        stripped and stripped[0].isascii() and stripped[0].islower()
+    )
+
+
+def _ends_incomplete(text: str) -> bool:
+    return not bool(_FINAL_SENTENCE_RE.search(text.strip()))
+
+
+def _adjacent_offsets(text: str, window: int) -> tuple[int, ...]:
+    offsets: list[int] = []
+    for distance in range(1, window + 1):
+        if _starts_continuation(text):
+            offsets.append(-distance)
+        if _ends_incomplete(text):
+            offsets.append(distance)
+    return tuple(offsets)
+
+
+def _is_continuous_neighbor(seed_text: str, neighbor_text: str, offset: int) -> bool:
+    if offset < 0:
+        return _starts_continuation(seed_text) and _ends_incomplete(neighbor_text)
+    return _ends_incomplete(seed_text) and _starts_continuation(neighbor_text)
+
+
+def select_evidence_candidates(
+    candidates: Sequence[Mapping[str, Any]],
+    corpus: Sequence[Mapping[str, Any]],
+    *,
+    seed_chunks: int,
+    max_chunks: int,
+    token_budget: int,
+    adjacent_window: int,
+    intent: str = "unknown",
+) -> tuple[list[dict[str, Any]], dict[str, Any], list[str]]:
+    """Select bounded, traceable evidence without changing retrieval ranking."""
+
+    by_position: dict[tuple[str, int], dict[str, Any]] = {}
+    for chunk in corpus:
+        if chunk.get("doc_id") and chunk.get("chunk_index") is not None:
+            by_position[(str(chunk["doc_id"]), int(chunk["chunk_index"]))] = dict(chunk)
+
+    selected: list[dict[str, Any]] = []
+    selected_ids: set[str] = set()
+    selected_texts: list[str] = []
+    used_tokens = 0
+    dropped_budget = 0
+    dropped_duplicate = 0
+
+    def add(candidate: Mapping[str, Any], *, kind: str, seed_id: str | None = None) -> None:
+        nonlocal used_tokens, dropped_budget, dropped_duplicate
+        if len(selected) >= max_chunks:
+            return
+        chunk = candidate.get("chunk") if isinstance(candidate.get("chunk"), Mapping) else candidate
+        chunk_id = str(chunk.get("chunk_id") or "")
+        text = _evidence_text(chunk)
+        if not chunk_id or chunk_id in selected_ids or _is_duplicate(text, selected_texts):
+            dropped_duplicate += 1
+            return
+        tokens = _evidence_tokens(chunk)
+        if used_tokens + tokens > token_budget:
+            dropped_budget += 1
+            return
+        item = dict(candidate)
+        item["chunk"] = dict(chunk)
+        item["selection_kind"] = kind
+        if kind == "seed":
+            lanes = "+".join(str(value) for value in item.get("lanes", []) or []) or "unknown"
+            pages = chunk.get("pages") or []
+            item["selection_reason"] = (
+                f"fused_rank_seed;intent:{intent};lanes:{lanes};"
+                f"source:{chunk.get('source_type') or 'unknown'};pages:{pages}"
+            )
+        else:
+            item["selection_reason"] = f"same_doc_adjacent_to:{seed_id}"
+        item["selection_token_estimate"] = tokens
+        selected.append(item)
+        selected_ids.add(chunk_id)
+        selected_texts.append(_dedupe_text(text))
+        used_tokens += tokens
+
+    seeds = [dict(candidate) for candidate in candidates[: min(seed_chunks, max_chunks)]]
+    for candidate in seeds:
+        add(candidate, kind="seed")
+    if adjacent_window:
+        for seed in seeds:
+            chunk = seed.get("chunk") if isinstance(seed.get("chunk"), Mapping) else seed
+            if not chunk.get("doc_id") or chunk.get("chunk_index") is None:
+                continue
+            seed_id = str(chunk.get("chunk_id") or "")
+            index = int(chunk["chunk_index"])
+            for offset in _adjacent_offsets(_evidence_text(chunk), adjacent_window):
+                neighbor = by_position.get((str(chunk["doc_id"]), index + offset))
+                if neighbor is not None and _is_continuous_neighbor(_evidence_text(chunk), _evidence_text(neighbor), offset):
+                    add({"chunk": neighbor, "score": seed.get("score", 0.0), "lanes": []}, kind="adjacent", seed_id=seed_id)
+
+    warnings: list[str] = []
+    if dropped_budget:
+        warnings.append(f"Evidence selector dropped {dropped_budget} chunk(s) over the {token_budget}-token budget.")
+    report = {
+        "selected_chunk_ids": [str(item["chunk"]["chunk_id"]) for item in selected],
+        "selected_count": len(selected),
+        "token_estimate": used_tokens,
+        "token_budget": token_budget,
+        "max_chunks": max_chunks,
+        "dropped_budget": dropped_budget,
+        "dropped_duplicate": dropped_duplicate,
+        "intent": intent,
+    }
+    return selected, report, warnings
 
 
 def _as_asset(value: DocumentAsset | dict[str, Any]) -> DocumentAsset:

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from vibration_agent.config import Settings, load
+from vibration_agent.knowledge.evidence import select_evidence_candidates
 from vibration_agent.schemas import RetrievalHit, RetrievalOutput
 from vibration_agent.storage import qdrant
 
@@ -394,6 +395,8 @@ def _context_from_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "source_filename": _source_filename(chunk),
         "source_title": _source_title(chunk),
         "topic": chunk.get("topic"),
+        "chunk_index": chunk.get("chunk_index"),
+        "token_estimate": chunk.get("token_estimate"),
         "score": round(float(candidate.get("score") or 0.0), 6),
         "reason": _reason(candidate),
         "retrieval_lanes": lanes,
@@ -403,6 +406,9 @@ def _context_from_candidate(candidate: Mapping[str, Any]) -> dict[str, Any]:
         "source_priority": candidate.get("source_priority", 0),
         "text": chunk.get("api_context") or chunk.get("text") or "",
         "assets": chunk.get("assets", []),
+        "selection_kind": candidate.get("selection_kind"),
+        "selection_reason": candidate.get("selection_reason"),
+        "selection_token_estimate": candidate.get("selection_token_estimate"),
     }
 
 
@@ -526,6 +532,20 @@ def search(
     else:
         candidates = candidates[:final_top_k]
 
+    evidence_candidates = candidates
+    evidence_selection = None
+    if active_settings.retrieval.evidence_selection_enabled:
+        evidence_candidates, evidence_selection, selection_warnings = select_evidence_candidates(
+            candidates,
+            corpus,
+            seed_chunks=active_settings.retrieval.evidence_seed_chunks,
+            max_chunks=active_settings.retrieval.evidence_max_chunks,
+            token_budget=active_settings.retrieval.evidence_token_budget,
+            adjacent_window=active_settings.retrieval.evidence_adjacent_window,
+            intent=str(normalized["intent_hint"]),
+        )
+        warnings.extend(selection_warnings)
+
     hits = [_hit_from_candidate(candidate) for candidate in candidates]
     if not hits:
         warnings.insert(0, "Weak recall: no matching chunks found.")
@@ -560,6 +580,8 @@ def search(
             ),
         },
         "retrieval_context": [_context_from_candidate(candidate) for candidate in candidates],
+        "evidence_context": [_context_from_candidate(candidate) for candidate in evidence_candidates],
+        "evidence_selection": evidence_selection,
     }
 
 

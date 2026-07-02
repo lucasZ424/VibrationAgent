@@ -9,12 +9,17 @@ import re
 from collections.abc import Mapping
 from typing import Any
 
+from vibration_agent.knowledge.evidence import citation_from_evidence
 from vibration_agent.retrieval.bm25 import tokenize
 from vibration_agent.schemas import Citation, SkillInput, SkillOutput
 
 from .base import Skill
 
 _REF_RE = re.compile(r"\[([A-Za-z0-9_.:/#-]+)\]")
+_INLINE_EVIDENCE_REF_RE = re.compile(
+    r"(?:\(evidence\s*:\s*|（证据\s*[:：]\s*)([A-Za-z0-9_.:/#-]+)[)）]",
+    re.IGNORECASE,
+)
 _NUMERIC_BIBLIOGRAPHY_REF_RE = re.compile(r"\d+(?:-\d+)*")
 _NUMBER_RE = re.compile(r"(?<![A-Za-z])[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?%?")
 _NUMBER_UNIT_RE = re.compile(
@@ -109,7 +114,9 @@ def _s2_structured(payload: SkillInput) -> Mapping[str, Any]:
 def _visible_rows(payload: SkillInput) -> dict[str, dict[str, Any]]:
     rows: dict[str, dict[str, Any]] = {}
     structured = _s2_structured(payload)
-    candidates = structured.get("retrieval_context")
+    candidates = structured.get("evidence_context")
+    if not isinstance(candidates, list):
+        candidates = structured.get("retrieval_context")
     if isinstance(candidates, list):
         for row in candidates:
             if isinstance(row, Mapping) and row.get("chunk_id"):
@@ -171,11 +178,12 @@ def _derivation_steps(structured: Mapping[str, Any]) -> list[dict[str, Any]]:
 
 
 def _visible_refs(answer: str) -> set[str]:
-    return {
+    bracket_refs = {
         reference
         for match in _REF_RE.finditer(answer or "")
         if not _NUMERIC_BIBLIOGRAPHY_REF_RE.fullmatch(reference := match.group(1))
     }
+    return bracket_refs | {match.group(1) for match in _INLINE_EVIDENCE_REF_RE.finditer(answer or "")}
 
 
 def _claim_tokens(text: str) -> set[str]:
@@ -461,6 +469,17 @@ class CitationCheckSkill(Skill):
             citation = citations_by_chunk.get(chunk_id) or _citation_from_claim(claim)
             if citation and citation.chunk_id not in {item.chunk_id for item in supported_citations}:
                 supported_citations.append(citation)
+        # Retain a citation for every referenced, S2-visible chunk so deterministic
+        # inline evidence tags stay aligned -- but only when the answer is not
+        # blocked. A faithfulness-blocked (insufficient) answer must not surface
+        # supporting citations (frozen V2 contract).
+        if not unsupported:
+            cited_ids = {item.chunk_id for item in supported_citations}
+            for chunk_id in sorted(refs):
+                row = visible_rows.get(chunk_id)
+                if row is not None and chunk_id not in cited_ids:
+                    supported_citations.append(citation_from_evidence(row))
+                    cited_ids.add(chunk_id)
 
         checked = {
             **structured,

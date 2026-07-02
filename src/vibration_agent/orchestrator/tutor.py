@@ -356,7 +356,7 @@ def _complete_sentence_ratio(answer: str) -> float:
     complete = 0
     for line in lines:
         candidate = _EVIDENCE_SUFFIX_RE.sub("", line).rstrip()
-        if re.search(r"[。！？!?；;…\.][\"'”’）】》]*$", candidate):
+        if re.search(r"[。！？!?；;…\.．][\"'”’）】》]*$", candidate):
             complete += 1
     return complete / len(lines)
 
