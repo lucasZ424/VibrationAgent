@@ -1,6 +1,6 @@
 # Phase 5 Migrations
 
-Updated: 2026-06-30
+Updated: 2026-07-06
 
 ## Purpose
 
@@ -352,3 +352,195 @@ Status: default-off candidate awaiting Obj1 completeness/V2 validation.
 
 Compatibility: additive output/config fields. Rollback:
 `EVIDENCE_SELECTION_ENABLED=false`; no reindex or corpus mutation is required.
+
+### Obj6A - Replay-first S3 client activation (2026-07-03)
+
+Status: complete; replay gate and canonical non-large regression passed.
+
+- The existing default-off `S3_LLM_ENABLED` flag now wires the normal
+  `TutorOrchestrator` S3 path instead of requiring manual skill injection.
+- With S3 enabled and `LLM_LIVE_ENABLED=false`, S3 uses `ReplayClient` from the
+  configured replay directory. A replay miss remains visible and falls back to
+  deterministic extraction.
+- A live OpenAI client is constructed only when both flags are explicitly true.
+  Construction is lazy-imported and uses the existing per-task/session
+  `BudgetGuard`; pytest's provider guard remains authoritative.
+- Prompt `s3_qa_summary.v1`, schema `s3.v1`, evidence allowlist, max output,
+  request hash, usage, and cost contracts are unchanged.
+- `phase5.obj6a.requests.v1` records the four semantic hard-case request files
+  and stable hashes. `phase5.obj6a.gate.v1` requires global completeness gain,
+  hard-case gain, V2 1.0, readability >= 0.890, citation alignment 1.0, corpus
+  parity, and unchanged recall@10.
+- Prompt `s3_qa_summary.v2` fixes output-language routing: a substantive English
+  query requests English even when retrieved evidence is predominantly Chinese;
+  language-neutral summary controls still inherit the evidence language. The
+  prompt-version change intentionally invalidates v1 replay hashes.
+- Manual capture now persists a response only after task-specific schema
+  validation. Truncated or provider-level incomplete objects fail loud and do
+  not become replay fixtures; valid raw usage and cost metadata remain stored.
+- Prompt `s3_qa_summary.v3` separates user-facing language from the V2 support
+  anchor: the answer follows query language, while each `claims[].text` must be
+  a short source-language quotation from its cited evidence. Every factual
+  answer sentence must map to a visible chunk and support-anchor claim. V2 is
+  not weakened to accept unverifiable translated lexical overlap.
+- Answer-quality readability now strips trailing V2-visible `[chunk_id]`
+  references before checking sentence-final punctuation, matching its existing
+  handling of deterministic `(evidence: chunk_id)` tags. The scoring threshold
+  and sentence text are unchanged.
+- For `synthesis_mode=llm` only, V4 reflows support-anchor whitespace and adds
+  display punctuation in non-conclusion/evidence sections. Structured claims
+  and citations remain unchanged for V2; deterministic rendering and the
+  corrected Obj2 baseline are unaffected.
+- S4 additively records `source_synthesis_mode` before applying its own analysis
+  mode. V2 preserves this provenance and V4 uses it to recognize an LLM S3
+  answer after deterministic S4 framing; V2 strictness still follows the active
+  `synthesis_mode` contract.
+
+Compatibility: no response-schema change. Both flags remain default-off.
+Rollback: set `S3_LLM_ENABLED=false`; no corpus or reindex change is required.
+
+Final validation:
+
+- Promoted replay: prompt `s3_qa_summary.v3`, four comparison/diagnosis hard
+  cases, completeness 0.804, V2 1.000, sentence completeness 0.921, citation
+  alignment 1.000, and recall@10 0.607.
+- Every Obj6A gate passed, including semantic hard-case gain and no complete
+  case regression. The clean-environment canonical non-large suite passed with
+  619 passed and 1 deselected in 13.00s.
+- Obj6A remains default-off and independently attributable. No Opus supervisor
+  result is included in this scorecard.
+
+Post-review solidification:
+
+- `tests/fixtures/rag_qa/post_r3_baseline.json` now stores the corrected fixed-S3
+  selector-off floor used by Obj6A instead of the pre-leak-fix report.
+- `tests/fixtures/eval/answer_quality/obj2_calibration.json` was regenerated from
+  that same baseline. Production threshold 0.75 remains zero-error under the
+  complete score+V2+completeness rule; no threshold or runtime behavior changed.
+- The report's ranker prefers 0.85 on decision margin, while 0.75 retains the
+  same zero-error confusion matrix under the hard gate. This migration records
+  the measurement only and does not promote a threshold change.
+- Obj6A gate thresholds, including readability, are read from the committed
+  baseline. Prompt-v1/v2 captures are diagnostic-only; prompt-v3 is promoted.
+
+Threshold 0.75 is PROVISIONAL (2026-07-03 decision):
+
+- 0.75's score margin on the corrected baseline is negative (-0.041); the
+  calibrator's max-margin rule selects 0.85. 0.75 is zero-error only because the
+  hard `completeness == 1.0` condition blocks the higher-scoring unusable cases
+  (formula_zh 0.791, standards_zh 0.748, mechanism_en 0.725). The wording
+  "calibration selects/retains 0.75" is retired.
+- Human re-review is complete under the complete-usable standard. The stale
+  pre-fix reasons were refreshed, no labels flipped, and the label set remains
+  1 usable / 13 unusable.
+- Decision: keep 0.75 provisional, backstopped by the completeness hard gate;
+  mark the Obj2 calibration provisional. Migrating to 0.85 on a single positive
+  label would be brittle, so threshold promotion is deferred until Obj6 produces
+  more complete-usable positives and the expanded calibration still supports 0.85
+  without lowering usable recall. Obj6B may proceed independently. See
+  docs/issue_log_p5/issues_obj6a.txt #4/#5.
+
+### Obj6B - Supervisor correction contract verification (2026-07-06)
+
+Status: complete in isolation. Local schema/replay/capture, replay gate, and
+manual live Opus correction evidence are all recorded; combined-chain quality is
+not claimed by this migration.
+
+- The existing `SupervisorCorrectionResponse` contract is now covered directly:
+  a `status=ok` correction must provide either top-level `answer` or a
+  `structured_result` update. An empty `ok` correction raises validation, returns
+  the deterministic answer with `supervisor_status=fallback`, and does not count
+  as an approved correction.
+- `structured_result.answer`-only corrections remain valid and update the final
+  answer and nested V4 answer consistently.
+- Manual capture validation rejects malformed supervisor corrections before
+  replay fixture write, matching the Obj6A capture rule that transport success is
+  not a valid replay unless the task schema validates.
+- Supervisor approval/fallback annotations now preserve `supervisor_residual_risk`.
+  Manual E2E summaries expose `supervisor_corrections` and residual risk so the
+  required Obj6 live Opus run records status, usage/cost, remaining risk, and
+  errors in one run log.
+- Focused verification passed: `tests/unit/test_supervisor_loop.py`,
+  `tests/unit/test_manual_live_lane.py`, and `tests/unit/test_llm_replay.py`
+  reported 31 passed.
+- `scripts/obj6b_supervisor_eval.py` adds a replay-only Obj6B gate. It writes the
+  current supervisor review/correction request hashes to `tests/fixtures/llm/obj6b/`
+  and verifies reject -> correct -> approve through `ReplayClient`.
+- Promoted local replay report:
+  `run_logs/obj6b_supervisor_replay_final_20260706_141221.json`; all checks
+  passed, with `supervisor_status=approved`, two supervisor invocations, one
+  correction, residual risk recorded, and supervisor token cost 60.
+- The first live correction attempt revealed a prompt/schema gap rather than a
+  runtime defect: Opus returned a correction-shaped review object with
+  `status="revised"`. Runtime rejected it and fell back. The review/correction
+  prompt now enumerates allowed statuses, forbids revised answers in review
+  payloads, and tells correction not to use `status="revised"`. This is guarded
+  by `tests/unit/test_supervisor_loop.py`.
+- Final live Opus correction gate:
+  `run_logs/obj6b_live_correction_20260706_140930.json`; all checks passed, with
+  `supervisor_status=approved`, two review invocations, one correction, residual
+  risk recorded, token cost 14,213, and captured review/correction fixture hashes
+  under `tests/fixtures/llm/obj6b/`.
+- Final local non-large regression after Obj6B live/schema changes:
+  `run_logs/obj6b_final_nonlarge_20260706_141053.json`, 625 passed and
+  1 warning in 17.51s.
+
+Compatibility: no runtime default changes; supervisor remains opt-in and
+default-off unless explicitly triggered. Rollback is the existing supervisor
+fallback path; no corpus, retrieval, or S3 behavior changed.
+
+### Obj6 - Combined-chain replay/live gate and threshold retake (2026-07-06)
+
+Status: combined replay/live gate passed; default-off runtime contract retained.
+
+- `phase5.obj6.combined_report.v1` evaluates Obj6A S3 replay and Obj6B
+  supervisor together on the 14-case Obj1 fixture. The supervisor lane is
+  triggered only for the four semantic hard cases and every supervised answer is
+  rechecked by V2 after the correction/approval loop.
+- `phase5.obj6.combined_gate.v1` extends the Obj6A quality gate with two
+  hard-case supervisor checks: every hard case must have
+  `supervisor_status=approved`, and every hard case must have
+  `combined_chain.post_supervisor_v2_status=ok`.
+- `scripts/answer_quality_calibration.py` now accepts both
+  `phase5.rag_qa.report.v3` and `phase5.obj6.combined_report.v1` baselines. For
+  combined reports it prefers `combined_chain.post_supervisor_v2_status` over
+  the row-level `v2_status`, preventing threshold calibration from ignoring the
+  post-supervisor faithfulness gate.
+- Supervisor review issue normalization now treats nonnumeric `issues[].line`
+  values as textual locations and preserves them in `recommendation` rather
+  than failing Pydantic validation. Correction application also unwraps a
+  nested correction JSON object when a provider returns it as the `answer`
+  string. Malformed corrections still fail visibly and fall back.
+- Replay fixture writing still redacts secrets and local paths, but no longer
+  truncates long response strings. Metadata prompts may be truncated for size;
+  replay responses remain byte-complete so long corrected answers can replay.
+- Anthropic request timeout is raised from 30s to 120s in `configs/llm.yaml`.
+  The change is scoped to live Anthropic calls and was required by the combined
+  supervisor prompt size; replay and default-off behavior are unchanged.
+
+Validation:
+
+- Final live combined gate:
+  `run_logs/obj6_combined_live_gate_20260706_152132.json`, eligible true.
+  Candidate metrics were recall@10 0.607, completeness 0.804, V2 1.000,
+  sentence completeness 0.921, citation alignment 1.000, with all four hard
+  cases supervisor-approved and post-supervisor V2 `ok`.
+- Final promoted replay gate:
+  `run_logs/obj6_combined_replay_promoted_gate_20260706_152530.json`, eligible
+  true with the same acceptance metrics using fixtures under
+  `tests/fixtures/llm/obj6_combined/`.
+- Threshold retake:
+  `run_logs/obj6_combined_answer_quality_calibration_20260706_153015.json`.
+  With current labels still 1 usable / 13 unusable, 0.75 and 0.85 both produce
+  three false allows, while 0.95 blocks the sole labeled usable case. No
+  threshold migration is approved. The three now-pass-like hard cases require
+  explicit human label re-review before any threshold decision changes.
+- Final non-large regression:
+  `run_logs/obj6_combined_final_nonlarge_20260706_153100.log`, 631 passed,
+  1 registered large-corpus deselection, exit code 0.
+
+Compatibility: no default model path is enabled by this migration. Obj6 remains
+default-off and replay-first; disabling `S3_LLM_ENABLED` or omitting
+`use_opus`/supervisor constraints restores deterministic extraction and normal
+supervisor bypass. No corpus, retrieval, API response, or database migration is
+required.

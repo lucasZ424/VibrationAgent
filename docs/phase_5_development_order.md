@@ -543,10 +543,13 @@ Status: planned | in_progress | blocked | complete
 6. 每个被修复的真实 miss 变成永久标注回归项（项目长期纪律）。
 7. issue log 是用户 review artifact；实现 agent 不主动生成 / 编辑，除非用户显式要求。
 8. 远程 / 共享 / 公开 / 多用户能力无限期 defer，不得进入五阶段 contract 或 eval gate。
-9. 大规模 corpus、reindex、full eval 和 manual live 验证由用户运行；实现 agent 提供写入
-   `run_logs/` 的 CLI，不主动执行，除非用户明确授权本次运行。
-10. 若某项验证结果决定下一步实现方案或 threshold，该验证即为硬前置：实现 agent 在
-    可运行 checkpoint 完成后暂停，等待用户结果，不在同一轮提前开发后续部分。
+9. 大规模 corpus、reindex、full eval 的运行权限交回实现 agent；agent 可在判断为必要时
+   主动执行，并必须把 stdout/stderr/summary 写入 `run_logs/` 以便 error trace。manual live
+   仍受显式 live/capture flag、provider key、预算和网络审批约束，但不再因为“由用户运行”
+   这条流程纪律而默认暂停。
+10. 若某项验证结果决定下一步实现方案或 threshold，该验证即为硬前置：实现 agent 先运行
+    并审核 `run_logs/` 结果，只有结果失败、歧义、成本/网络权限受限或用户显式要求复核时
+    才暂停；不得在未审核结果前提前开发下游生产 contract。
 11. PowerShell 验证命令读取 JSON 时必须使用 `Get-Content -Raw -Encoding UTF8`；大型 JSON
     优先用 Python `json.load(..., encoding="utf-8")` 提取关键字段，不依赖系统默认代码页。
 
@@ -555,14 +558,15 @@ Status: planned | in_progress | blocked | complete
 - Fast CI：只运行 deterministic/replay tests；禁止 live provider、外部网络和真实 corpus reindex。
 - Eval gate：Obj1 scorecard 是 Obj2–Obj8 的共同量尺；每个目标保存 before/after 报告。
 - Focused tests：每个目标先运行受影响模块、schema、fallback 和 failure-path tests。
-- Prerequisite checkpoint：当评测输出决定后续设计时，只完成 fixture/runner/focused tests，
-  向用户提供 `run_logs/` CLI；收到并审核结果前不得修改下游生产 contract。
+- Prerequisite checkpoint：当评测输出决定后续设计时，agent 先运行或生成必要验证并写入
+  `run_logs/`，随后审核结果；审核完成前不得修改下游生产 contract。
 - Full regression：目标放行前运行 full non-large suite、V2 calibration、retrieval eval 和
   `rag_qa_eval`；任何 skipped/deselected case 必须解释。
 - Storage integration：涉及 ingestion/reindex 时验证 Postgres/Qdrant roundtrip、幂等和 parity；
   服务不可用时只能 clean skip 或 fail loud，不能伪报通过。
-- Manual live：仅 Obj6 通过显式命令运行 GPT/Opus，记录 provider/model/status/usage/cost；
-  manual live 结果不替代 replay regression。
+- Manual live：仅通过显式命令运行 GPT/Opus；记录 provider/model/status/usage/cost/
+  residual risk。manual live 结果不替代 replay regression，但 Obj6 的 GPT/Opus manual
+  live 验收仍是该 objective 的验收证据之一。
 - Corpus mutation：Obj7 每次变化都生成新的 corpus snapshot 和完整 scorecard，不覆盖旧基线。
 - Documentation gate：每个 contract/config/default 变化先更新 migrations，再更新 progress 和 freeze。
 
