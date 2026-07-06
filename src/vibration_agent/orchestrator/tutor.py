@@ -292,6 +292,14 @@ _QUERY_ASPECTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("scope", ("scope", "covered", "适用", "范围")),
     ("formula", ("formula", "equation", "calculate", "公式", "计算")),
 )
+# PROVISIONAL (2026-07-03). On the corrected fixed-S3 baseline this threshold is
+# still zero-error but its score margin is negative (-0.041); the calibrator's own
+# max-margin rule now selects 0.85. 0.75 is retained only because the hard
+# completeness==1.0 condition blocks the higher-scoring unusable cases. Do NOT
+# describe this as "calibration selects 0.75". Human re-review refreshed the
+# corrected-answer usability reasons without flipping labels; threshold promotion
+# is deferred until Obj6 adds more complete-usable positives. See
+# docs/issue_log_p5/issues_obj6a.txt #4/#5 and the Obj6A migration note.
 ANSWER_QUALITY_THRESHOLD = 0.75
 
 
@@ -344,6 +352,7 @@ def _evidence_relevance(s2_output: SkillOutput, citations: list[Any]) -> float:
 
 
 _EVIDENCE_SUFFIX_RE = re.compile(r"\s*[（(](?:evidence|证据)\s*[:：].*?[)）]\s*$", re.IGNORECASE)
+_CHUNK_REF_SUFFIX_RE = re.compile(r"(?:\s*\[[A-Za-z0-9_.:/#-]+\])+\s*$")
 
 
 def _complete_sentence_ratio(answer: str) -> float:
@@ -355,7 +364,8 @@ def _complete_sentence_ratio(answer: str) -> float:
     # fragment.
     complete = 0
     for line in lines:
-        candidate = _EVIDENCE_SUFFIX_RE.sub("", line).rstrip()
+        candidate = _CHUNK_REF_SUFFIX_RE.sub("", line).rstrip()
+        candidate = _EVIDENCE_SUFFIX_RE.sub("", candidate).rstrip()
         if re.search(r"[。！？!?；;…\.．][\"'”’）】》]*$", candidate):
             complete += 1
     return complete / len(lines)
@@ -494,6 +504,24 @@ def _answer_quality(
     }
 
 
+def _configured_s3_client(settings: Any | None) -> Any | None:
+    if settings is None or not settings.llm.s3_enabled:
+        return None
+    if not settings.llm.live_enabled:
+        from ..llm.replay import ReplayClient
+
+        return ReplayClient(settings.llm.replay_dir)
+
+    from ..llm.budget import BudgetGuard
+    from ..llm.openai_client import OpenAIClient
+
+    return OpenAIClient(
+        settings.llm.openai,
+        allow_live=True,
+        budget_guard=BudgetGuard.from_settings(settings.llm),
+    )
+
+
 class TutorOrchestrator:
     """Minimal Phase-0 orchestrator for evidence-bound tutoring answers."""
 
@@ -515,7 +543,14 @@ class TutorOrchestrator:
         settings: Any | None = None,
     ) -> None:
         self.retrieval_skill = retrieval_skill or RetrievalSkill()
-        self.qa_summary_skill = qa_summary_skill or QASummarySkill(settings=settings)
+        if qa_summary_skill is None:
+            s3_settings = settings or load()
+            self.qa_summary_skill = QASummarySkill(
+                settings=s3_settings,
+                llm_client=_configured_s3_client(s3_settings),
+            )
+        else:
+            self.qa_summary_skill = qa_summary_skill
         self.engineering_analysis_skill = engineering_analysis_skill or EngineeringAnalysisSkill()
         self.formula_derivation_skill = formula_derivation_skill or FormulaDerivationSkill()
         self.normalizer_skill = normalizer_skill or TermSymbolUnitNormalizerSkill()

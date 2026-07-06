@@ -407,6 +407,14 @@ def test_complete_sentence_ratio_accepts_ocr_fullwidth_period():
     assert _complete_sentence_ratio(answer) == 1.0
 
 
+def test_complete_sentence_ratio_ignores_visible_chunk_ref_suffix():
+    # WHY: Obj6 LLM answers use V2's visible [chunk_id] syntax; the citation
+    # follows sentence punctuation and must not turn a complete sentence into a fragment.
+    answer = "Rotor unbalance is dominated by 1X response. [doc_p1]"
+
+    assert _complete_sentence_ratio(answer) == 1.0
+
+
 def test_intent_completeness_rejects_keyword_repetition_without_mechanism():
     score, intent, required, covered = _intent_completeness(
         "Why do amplitude and phase change near critical speed?",

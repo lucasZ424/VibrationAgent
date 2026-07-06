@@ -323,6 +323,37 @@ def test_v4_compacts_page_ranges_in_evidence_lines():
     assert "doc1 (pp.4-17, documented)" in output.structured_result["answer"]
 
 
+def test_v4_reflows_llm_support_anchors_for_display_only():
+    # WHY: Obj6 support anchors preserve OCR/source-language fragments for V2,
+    # but the final Evidence section must not expose visual line wraps as fragments.
+    claim = "不对中常产生一倍频\n和二倍频振动"
+    payload = SkillInput(
+        task_id="t1",
+        user_query="How is misalignment identified?",
+        context={
+            "s3_result": {
+                "status": "ok",
+                "structured_result": {
+                    "language": "en",
+                    "synthesis_mode": "deterministic",
+                    "source_synthesis_mode": "llm",
+                    "answer": "Misalignment may produce 1X and 2X response. [c1]",
+                    "engineering_meaning": f"Limited to this evidence: {claim}",
+                    "claims": [{"text": claim, "chunk_id": "c1", "doc_id": "doc1", "pages": [2]}],
+                },
+                "citations": [{"chunk_id": "c1", "doc_id": "doc1", "pages": [2]}],
+            }
+        },
+    )
+
+    output = OutputStyleSkill().run(payload)
+
+    answer = output.structured_result["answer"]
+    assert "Limited to this evidence: 不对中常产生一倍频 和二倍频振动." in answer
+    assert "doc1 (p.2, documented): 不对中常产生一倍频 和二倍频振动." in answer
+    assert payload.context["s3_result"]["structured_result"]["claims"][0]["text"] == claim
+
+
 def test_v4_accepts_direct_context_without_s3_result_key():
     payload = SkillInput(
         task_id="t1",

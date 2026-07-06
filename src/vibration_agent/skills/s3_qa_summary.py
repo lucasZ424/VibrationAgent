@@ -25,7 +25,7 @@ from .base import Skill
 
 _SUPPORTED_MODES = {"whole_doc_summary", "section_summary", "qa"}
 _DEFAULT_MAX_CLAIMS = {"qa": 4, "section_summary": 5, "whole_doc_summary": 6}
-_PROMPT_VERSION = "s3_qa_summary.v1"
+_PROMPT_VERSION = "s3_qa_summary.v3"
 _SCHEMA_VERSION = "s3.v1"
 S3Runner = Callable[[list[dict[str, Any]], SkillInput, str, str], tuple[str, list[dict[str, Any]], list[str]]]
 S3LlmClient = Any
@@ -432,6 +432,9 @@ def _evidence_prompt(
             "Return JSON only. Do not include markdown fences.",
             "Schema: {\"status\":\"ok|insufficient\",\"answer\":\"...\",\"claims\":[{\"text\":\"...\",\"chunk_id\":\"...\",\"doc_id\":\"...\",\"pages\":[1],\"evidence_type\":\"documented\"}],\"warnings\":[]}",
             "Every claim must include text, chunk_id, doc_id, pages, and evidence_type.",
+            "Write the answer in the requested language.",
+            "claims[].text is a support anchor: copy a short direct quotation from its evidence block, preserving the source language; never translate it.",
+            "Every factual answer sentence must have a visible [chunk_id] and a corresponding support-anchor claim.",
             "Every claim must cite a visible [chunk_id] from the supplied evidence in the answer.",
             "Use only chunk_id values present in the supplied evidence blocks.",
             "If evidence is insufficient, return insufficient instead of filling gaps.",
@@ -799,6 +802,12 @@ def _has_cjk(text: str) -> bool:
     return any("\u4e00" <= char <= "\u9fff" for char in text)
 
 
+def _llm_output_language(query: str) -> str:
+    if _has_cjk(query):
+        return "zh"
+    return "en"
+
+
 class QASummarySkill(Skill):
     name = "s3_qa_summary"
 
@@ -837,7 +846,7 @@ class QASummarySkill(Skill):
                     rows=rows,
                     payload=payload,
                     mode=mode,
-                    language=language,
+                    language=_llm_output_language(payload.user_query),
                 )
             except Exception as exc:  # noqa: BLE001 - LLM path must degrade to deterministic S3
                 llm_warnings.append(
@@ -851,7 +860,7 @@ class QASummarySkill(Skill):
                         structured_result={
                             "task_id": payload.task_id,
                             "mode": mode,
-                            "language": language,
+                            "language": _llm_output_language(payload.user_query),
                             "answer": llm.answer,
                             "claims": [_claim_record(claim) for claim in llm.claims],
                             "assets": _dedupe_assets(llm.claims),

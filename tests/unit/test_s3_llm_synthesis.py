@@ -97,11 +97,27 @@ def test_s3_llm_synthesis_ok_requires_visible_chunk_citations():
     assert output.structured_result["claims"][0]["chunk_id"] == "c1"
     assert output.citations[0].chunk_id == "c1"
     assert client.calls[0]["model"].startswith("openai:")
-    assert client.calls[0]["prompt_version"] == "s3_qa_summary.v1"
+    assert client.calls[0]["prompt_version"] == "s3_qa_summary.v3"
     assert client.calls[0]["schema_version"] == "s3.v1"
     assert client.calls[0]["reasoning_effort"] == "high"
     assert client.calls[0]["text_verbosity"] == "high"
     assert "Every claim must include" in client.calls[0]["prompt"]
+    assert "support anchor" in client.calls[0]["prompt"]
+    assert "never translate it" in client.calls[0]["prompt"]
+
+
+def test_s3_llm_uses_query_language_when_evidence_is_cross_lingual():
+    # WHY: an English user question must not ask the model for Chinese output
+    # merely because retrieval returned more Chinese evidence; V2 then compares
+    # translated claims against English evidence and correctly blocks them.
+    client = FakeLlmClient({"status": "insufficient", "answer": "", "claims": []})
+
+    QASummarySkill(llm_client=client).run(
+        _payload(evidence=[_evidence(text="不平衡通常表现为一倍频振动。")])
+    )
+
+    assert client.calls[0]["language"] == "en"
+    assert "language: en" in client.calls[0]["prompt"]
 
 
 def test_s3_replay_response_with_visible_claim_passes_v2(tmp_path):
@@ -200,6 +216,25 @@ def test_default_tutor_orchestrator_keeps_s3_deterministic(monkeypatch):
 
     assert output.status == "ok"
     assert output.structured_result["skill_results"]["s3"]["synthesis_mode"] == "deterministic"
+
+
+def test_s3_enabled_tutor_uses_replay_before_live(tmp_path, monkeypatch):
+    # WHY: enabling Obj6A in normal runtime must exercise reproducible replay
+    # without constructing a provider or silently behaving as an unwired flag.
+    monkeypatch.setenv("S3_LLM_ENABLED", "true")
+    monkeypatch.setenv("LLM_LIVE_ENABLED", "false")
+    monkeypatch.setenv("LLM_REPLAY_DIR", str(tmp_path))
+
+    output = TutorOrchestrator(
+        retrieval_skill=StaticRetrievalSkill(),
+    ).handle_query(
+        "What happens near critical speed?",
+        constraints={"scope": "in_scope", "s4_enabled": False},
+        task_id="t1",
+    )
+
+    assert output.structured_result["skill_results"]["s3"]["synthesis_mode"] == "deterministic"
+    assert any("ReplayMissError" in warning for warning in output.warnings)
 
 
 def test_s3_llm_disabled_uses_deterministic_path_without_calling_client():

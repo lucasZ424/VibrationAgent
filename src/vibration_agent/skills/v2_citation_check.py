@@ -75,6 +75,7 @@ _UNSUPPORTED_SAFE_KEYS = (
     "answer_language",
     "query_language",
     "synthesis_mode",
+    "source_synthesis_mode",
     "token_cost",
     "cost",
     "evidence_count",

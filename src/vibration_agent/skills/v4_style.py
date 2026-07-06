@@ -5,6 +5,7 @@ engineering answer template without adding new domain claims.
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -266,7 +267,16 @@ def _evidence_type_label(evidence_type: str, language: str) -> str:
     return _EVIDENCE_TYPE_LABELS.get(language, _EVIDENCE_TYPE_LABELS["zh"]).get(evidence_type, evidence_type)
 
 
-def _evidence_lines(citations: list[Citation], claims: list[Mapping[str, Any]], language: str) -> list[str]:
+def _display_sentence(value: str, language: str) -> str:
+    text = " ".join(value.split())
+    if text and not re.search(r"[。！？!?；;…\.．][\"'”’）】》]*$", text):
+        text += "。" if language == "zh" else "."
+    return text
+
+
+def _evidence_lines(
+    citations: list[Citation], claims: list[Mapping[str, Any]], language: str, *, normalize_claims: bool = False
+) -> list[str]:
     claim_by_chunk: dict[str, str] = {}
     assets_by_chunk: dict[str, list[str]] = {}
     for claim in claims:
@@ -287,6 +297,8 @@ def _evidence_lines(citations: list[Citation], claims: list[Mapping[str, Any]], 
         source_label = citation.source_filename or citation.source_title or citation.doc_id
         base = f"- {source_label} ({_pages_label(citation.pages, language)}, {evidence_type})"
         claim_text = claim_by_chunk.get(citation.chunk_id)
+        if claim_text and normalize_claims:
+            claim_text = _display_sentence(claim_text, language)
         asset_ids = assets_by_chunk.get(citation.chunk_id, [])
         if claim_text:
             line = f"{base}: {claim_text}"
@@ -317,6 +329,10 @@ class OutputStyleSkill(Skill):
         upstream_status = source.get("status")
         warnings = list(source.get("warnings") or []) if isinstance(source.get("warnings"), list) else []
         language = _language(source, structured, payload.context)
+        llm_mode = "llm" in {
+            structured.get("synthesis_mode"),
+            structured.get("source_synthesis_mode"),
+        }
 
         content_sections: list[tuple[str, str]] = []
         section_keys: list[str] = []
@@ -328,6 +344,8 @@ class OutputStyleSkill(Skill):
                 summary = _clean_text(source.get("summary"))
                 if summary and not summary.startswith(_STATUS_PREFIXES_TO_IGNORE):
                     body = summary
+            if body and llm_mode and key != "conclusion":
+                body = _display_sentence(body, language)
             if body:
                 content_sections.append((_title(key, language), body))
                 section_keys.append(key)
@@ -336,7 +354,7 @@ class OutputStyleSkill(Skill):
         claims = _claim_records(structured)
         assets = _asset_records(structured, claims)
         formula_renders, formula_warnings = normalize_formula_renders(structured.get("formula_renders"), assets)
-        evidence = _evidence_lines(citations, claims, language)
+        evidence = _evidence_lines(citations, claims, language, normalize_claims=llm_mode)
         if evidence:
             content_sections.append((_title("evidence", language), "\n".join(evidence)))
             section_keys.append("evidence")
