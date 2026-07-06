@@ -90,6 +90,18 @@ def test_obj2_calibration_fails_loud_on_stale_obj1_report():
         run_calibration(questions=_questions(), baseline=baseline)
 
 
+def test_obj2_calibration_accepts_obj6_combined_report_post_supervisor_v2():
+    baseline = _baseline()
+    baseline["schema_version"] = "phase5.obj6.combined_report.v1"
+    baseline["cases"][0]["combined_chain"] = {"post_supervisor_v2_status": "insufficient"}
+
+    report = run_calibration(questions=_questions(), baseline=baseline, thresholds=[0.5])
+    usable = next(row for row in report["cases"] if row["case_id"] == "usable")
+
+    assert usable["v2_status"] == "insufficient"
+    assert report["threshold_candidates"][0]["confusion"]["false_block"] == 1
+
+
 def test_obj2_calibration_fails_loud_on_stale_answer_quality_schema():
     baseline = _baseline()
     baseline["cases"][0]["answer_quality"]["schema_version"] = "r3.answer_quality.v1"

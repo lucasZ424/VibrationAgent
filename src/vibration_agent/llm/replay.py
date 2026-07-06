@@ -158,8 +158,8 @@ def write_fixture(fixture_dir: str | Path, request: LlmRequest, response: Mappin
     path = fixture_path(fixture_dir, request.request_hash)
     path.parent.mkdir(parents=True, exist_ok=True)
     fixture = LlmFixture(
-        metadata=_redact(fixture_metadata(request)),
-        response=_redact(dict(response)),
+        metadata=_redact(fixture_metadata(request), truncate_long_strings=True),
+        response=_redact(dict(response), truncate_long_strings=False),
     )
     path.write_text(
         json.dumps(fixture.model_dump(mode="json"), ensure_ascii=False, indent=2, sort_keys=True),
@@ -193,7 +193,7 @@ def _split_model_ref(value: str) -> tuple[str, str]:
     return provider, model
 
 
-def _redact(value: Any) -> Any:
+def _redact(value: Any, *, truncate_long_strings: bool) -> Any:
     if isinstance(value, dict):
         redacted: dict[str, Any] = {}
         for key, item in value.items():
@@ -201,12 +201,12 @@ def _redact(value: Any) -> Any:
             if _is_secret_key(lowered):
                 redacted[key] = "[REDACTED]"
             else:
-                redacted[key] = _redact(item)
+                redacted[key] = _redact(item, truncate_long_strings=truncate_long_strings)
         return redacted
     if isinstance(value, list):
-        return [_redact(item) for item in value]
+        return [_redact(item, truncate_long_strings=truncate_long_strings) for item in value]
     if isinstance(value, str):
-        if len(value) > 4000:
+        if truncate_long_strings and len(value) > 4000:
             return f"{value[:4000]}...[TRUNCATED]"
         if "Bearer " in value:
             return "Bearer [REDACTED]"

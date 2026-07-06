@@ -212,6 +212,21 @@ def test_recording_client_preserves_token_count_fields():
     assert '"token_cost": 15' in fixture_text
 
 
+def test_write_fixture_preserves_long_response_answer_for_replay():
+    # WHY: Obj6 combined supervisor corrections can be long; truncating the
+    # captured response makes replay apply a broken answer.
+    fixture_dir = _case_dir("long_response")
+    request = _request(request_body={"prompt": "x" * 5000})
+    long_answer = "answer " * 900
+
+    write_fixture(fixture_dir, request, {"answer": long_answer})
+    payload = json.loads((fixture_dir / f"{request.request_hash}.json").read_text(encoding="utf-8"))
+
+    assert payload["metadata"]["request_body"]["prompt"].endswith("...[TRUNCATED]")
+    assert payload["response"]["answer"] == long_answer
+    assert "...[TRUNCATED]" not in payload["response"]["answer"]
+
+
 def test_recording_client_redacts_local_absolute_paths():
     fixture_dir = _case_dir("path_redaction")
     request = _request(

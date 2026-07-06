@@ -19,6 +19,10 @@ from scripts.rag_qa_eval import DEFAULT_BASELINE, DEFAULT_QUESTIONS, load_questi
 
 DEFAULT_OUTPUT = ROOT / "run_logs" / "obj2_answer_quality_calibration.json"
 DEFAULT_THRESHOLDS = tuple(round(index / 20, 2) for index in range(21))
+SUPPORTED_BASELINE_SCHEMAS = {
+    "phase5.rag_qa.report.v3",
+    "phase5.obj6.combined_report.v1",
+}
 
 
 def load_baseline(path: Path = DEFAULT_BASELINE) -> dict[str, Any]:
@@ -34,8 +38,10 @@ def run_calibration(
     baseline: Mapping[str, Any],
     thresholds: Sequence[float] = DEFAULT_THRESHOLDS,
 ) -> dict[str, Any]:
-    if baseline.get("schema_version") != "phase5.rag_qa.report.v3":
-        raise ValueError("Obj2 calibration requires a freshly generated phase5.rag_qa.report.v3 baseline.")
+    baseline_schema = str(baseline.get("schema_version") or "")
+    if baseline_schema not in SUPPORTED_BASELINE_SCHEMAS:
+        supported = " or ".join(sorted(SUPPORTED_BASELINE_SCHEMAS))
+        raise ValueError(f"Obj2 calibration requires a freshly generated {supported} baseline.")
     question_rows = questions.get("cases")
     baseline_rows = baseline.get("cases")
     if not isinstance(question_rows, list) or not isinstance(baseline_rows, list):
@@ -76,7 +82,7 @@ def run_calibration(
 def _case_row(case_id: str, label: str, result: Mapping[str, Any]) -> dict[str, Any]:
     quality = result.get("answer_quality")
     quality = quality if isinstance(quality, Mapping) else {}
-    v2_status = str(result.get("v2_status") or "unknown")
+    v2_status = _case_v2_status(result)
     score_schema = quality.get("schema_version")
     if quality and score_schema != "phase5.answer_quality.v2":
         raise ValueError(f"{case_id} requires phase5.answer_quality.v2; rerun the Obj1 baseline.")
@@ -91,6 +97,14 @@ def _case_row(case_id: str, label: str, result: Mapping[str, Any]) -> dict[str, 
         "v2_status": v2_status,
         "subscores": dict(quality.get("subscores") or {}),
     }
+
+
+def _case_v2_status(result: Mapping[str, Any]) -> str:
+    combined = result.get("combined_chain") if isinstance(result.get("combined_chain"), Mapping) else {}
+    post_supervisor = combined.get("post_supervisor_v2_status")
+    if isinstance(post_supervisor, str) and post_supervisor:
+        return post_supervisor
+    return str(result.get("v2_status") or "unknown")
 
 
 def _threshold_result(rows: Sequence[Mapping[str, Any]], threshold: float) -> dict[str, Any]:

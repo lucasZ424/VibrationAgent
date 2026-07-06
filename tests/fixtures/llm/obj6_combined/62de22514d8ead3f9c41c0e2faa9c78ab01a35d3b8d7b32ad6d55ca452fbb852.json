@@ -1,0 +1,1633 @@
+{
+  "metadata": {
+    "max_tokens": 4096,
+    "model": "claude-opus-4-8",
+    "prompt_version": "supervisor_review.v1",
+    "provider": "anthropic",
+    "reasoning_effort": null,
+    "request_body": {
+      "candidate": {
+        "citations": [
+          {
+            "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+            "confidence": 0.8026076843028832,
+            "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+            "evidence_type": "documented",
+            "pages": [
+              32
+            ],
+            "snippet": "使激励减至最小，这要求从转子特定位置上添加或去掉质量。在转子转速通过每个机器固有频率时，振 动相位将明显变化。而在固定的转速下，任意测点的振动通常是恒定的 旋转机器振动的另一个常见原因是轴或轴承的不对中。有两种类型的不对中:内部的和外部的 内部不对中是在部件中心线不同心时产生。电动机中空气间隙不均匀是内部不对中的一个例子。外部 不对中较为常见，且在两台或多台…",
+            "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+            "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则"
+          },
+          {
+            "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+            "confidence": 0.7922218368054847,
+            "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+            "evidence_type": "documented",
+            "pages": [
+              278,
+              279
+            ],
+            "snippet": "联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴 相对振动分量，这些分量存在于机器的整个速度范围内。振动可能会传递到外壳，但只有轴 相对振动测量才能揭示出慢滚动速度时的转动效应。由于轴每次旋转时，相邻轴承的载荷交 替增加，因此产生2X分量。 错位的联轴器孔或弯轴（角不对中）可产生1X或2X振动。非圆形的联轴器会产生振 摆，看起来像…",
+            "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+            "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年"
+          },
+          {
+            "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+            "confidence": 0.5374523046787325,
+            "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+            "evidence_type": "documented",
+            "pages": [
+              251,
+              252,
+              253
+            ],
+            "snippet": "振摆始终包括机械振摆和电学振摆。其主要特征是，只要探头的圆周路径不变，即使降 至慢滚动速度，振幅也是恒定的。尽管不平衡力与转子速度的平方成比例，也不会在慢滚动 速度条件下产生任何可检测到的1X动态响应。 232 旋转机械诊断技术 -3X 1X 2X 2.0 划痕 6 ( 1.0 0.5 MuiM V MMAM w Mhnm 0 -30 -20 -10 0 1…",
+            "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+            "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年"
+          },
+          {
+            "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+            "confidence": 0.9607010957171133,
+            "doc_id": "vold_kalman_e0e977fa",
+            "evidence_type": "documented",
+            "pages": [
+              22
+            ],
+            "snippet": "移。平行偏角综合不对中时，两转子轴心线相互交错位移。根据理论分析可知，单纯的平行不 对中将产生振动频率为转子工频两倍的径向振动，而纯粹的偏角不对中则由于附加弯矩作用产 生振动频率与转子工频相同的轴向振动。然而在实际情况中所碰到的轴系不对中，很少有单一 的平行不对中或偏角不对中。通常是两者同时存在的平行偏角综合不对中，即各转子轴线之内 既有径向位移又有偏角位移…",
+            "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+            "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)"
+          },
+          {
+            "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+            "confidence": 1.0,
+            "doc_id": "vold_kalman_e0e977fa",
+            "evidence_type": "documented",
+            "pages": [
+              22,
+              23
+            ],
+            "snippet": "（2）振动频率的特征：转子不对中相当于在联轴器端输入某种激励。根据理论及实验研究 的结果表明，对刚性联轴器及齿轮联轴器，其径向激振频率除旋转频率 rf （由角度不对中引起） 外，主要以旋转频率的二倍频2 rf 或四倍频4 rf 为主，尚伴有高次倍频 r nf ( 6,8, ) n = L 。轴向 振动的频谱成分中，以一倍频幅值较大。 （3）转速跟踪幅值动态变…",
+            "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+            "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)"
+          },
+          {
+            "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+            "confidence": 0.8501295680385236,
+            "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+            "evidence_type": "documented",
+            "pages": [
+              33,
+              34
+            ],
+            "snippet": "在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响 应中相位角有明显大的变化。转子不平衡也是最常见的激励，它在机 器的非旋转系统中能产生机器的共振响应。对于电机，另一个主要激 一时 励是2x，它由转子感应在定子上的电磁力引起 最常见的是1x，但 低速时轻微摩擦可使之磨合，然而，在高速时摩抹有可能使振动突变， 很快上升到要求停机的幅值 有时摩擦是由…",
+            "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+            "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则"
+          }
+        ],
+        "handoff_recommendation": "Return structured_result.answer to the user.",
+        "status": "ok",
+        "structured_result": {
+          "answer": "## 结论\n不能只凭“1X径向振动”直接判定为转子转子不平衡，因为不对中也常产生或改变1X、2X、3X径向振动分量，且联轴器处平行不对中通常会产生1X和2X轴相对振动分量。[gbt_19873_1_2005_1_57afcb1a_p0032_00050][donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384] 判别时先看慢滚或很低速数据：转子不平衡导致的1X在低速时消失，而由转动/耦合问题导致的1X在慢滚动速度下会继续存在，因此“低速消失”更支持转子不平衡，“慢滚仍存在”更支持不对中或联轴器几何问题。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343] 再看频谱或阶次中是否伴随2X、4X或更高倍频：综合不对中会激励二倍频径向振动和一倍频轴向振动，精密诊断主要分析FFT或功率谱中的2fr或4fr成分。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看轴向振动和相位：轴向振动往往是不对中的征兆，联轴器两侧轴向振动基本180°反相时更支持不对中。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看转速和负荷趋势：不对中振动幅值对转速变化不敏感、对负荷变化敏感且一般随负荷增加而升高；转子不平衡作为常见激励在机器共振转速时会放大，并且转子通过临界转速时1X相位角有明显大的变化。[vold_kalman_e0e977fa_p0022_00030][gbt_19873_1_2005_1_57afcb1a_p0033_00054] 还可用波形和轴心轨迹辅助判断：畸变正弦波、香蕉形双环椭圆轴心轨迹和正进动是资料列出的不对中图形特征。[vold_kalman_e0e977fa_p0022_00030] 实用结论是：若1X径向为主、慢滚或低速时消失，并在升降速通过临界转速时呈现明显1X相位变化，优先按转子转子不平衡排查；若1X径向同时伴随明显2X/4X径向、1X轴向、联轴器两侧轴向180°反相、幅值随负荷增加而升高或慢滚仍有转动相关1X，优先按不对中排查。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343][gbt_19873_1_2005_1_57afcb1a_p0033_00054][vold_kalman_e0e977fa_p0022_00030]\n\n## 工程意义\n工程意义仅限于所引证据：不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。\n\n## 适用前提\n仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0032_00050, donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384, donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343, vold_kalman_e0e977fa_p0022_00029, vold_kalman_e0e977fa_p0022_00030, gbt_19873_1_2005_1_57afcb1a_p0033_00054。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第32页, 已记录): 不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第278-279页, 已记录): 联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴相对振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第251-253页, 已记录): 转子不平衡导致的1X振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22页, 已记录): 最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22-23页, 已记录): 精密诊断时主要以分析FFT 谱或功率谱中的二倍频（2 rf ）或四倍频（4 rf ）成分来判断。\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33-34页, 已记录): 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。转子转子不平衡也是最常见的激励。",
+          "answer_quality": {
+            "citation_count": 6,
+            "covered_query_aspects": [
+              "domain_term_0",
+              "domain_term_1",
+              "domain_term_2",
+              "direction"
+            ],
+            "covered_slots": [
+              "multiple_diagnostic_dimensions",
+              "decision_action"
+            ],
+            "faithfulness_status": "ok",
+            "gate_reasons": [],
+            "gate_status": "pass",
+            "intent": "diagnosis",
+            "query_aspects": [
+              "domain_term_0",
+              "domain_term_1",
+              "domain_term_2",
+              "direction"
+            ],
+            "required_slots": [
+              "multiple_diagnostic_dimensions",
+              "decision_action"
+            ],
+            "schema_version": "phase5.answer_quality.v2",
+            "score": 0.919,
+            "subscores": {
+              "completeness": 1.0,
+              "evidence_relevance": 0.678,
+              "question_coverage": 1.0,
+              "readability": 1.0
+            },
+            "threshold": 0.75
+          },
+          "chain": [
+            {
+              "skill": "s2_retrieval",
+              "status": "ok",
+              "summary": "S2 retrieval ok: 10 hit(s)."
+            },
+            {
+              "skill": "s3_qa_summary",
+              "status": "ok",
+              "summary": "S3 qa LLM ok: 10 claim(s) from 6 chunk(s)."
+            },
+            {
+              "skill": "s4_engineering_analysis",
+              "status": "ok",
+              "summary": "S4 engineering analysis ok: 10 cited claim(s)."
+            },
+            {
+              "skill": "v2_citation_check",
+              "status": "ok",
+              "summary": "V2 citation check ok: 10 claim(s)."
+            },
+            {
+              "skill": "v4_style",
+              "status": "ok",
+              "summary": "V4 style ok: 6 section(s), 6 citation(s)."
+            },
+            {
+              "skill": "v3_reviewer",
+              "status": "ok",
+              "summary": "V3 reviewer ok: no advisory issues."
+            }
+          ],
+          "retrieval_hits": 10,
+          "retrieval_source": "file_chunks",
+          "reviewer_notes": [],
+          "scope": "in_scope",
+          "skill_results": {
+            "s2": {
+              "chunk_paths": [],
+              "chunks_dir": null,
+              "detected_symbols": [],
+              "detected_terms": [
+                "rotor_unbalance",
+                "synchronous_response",
+                "misalignment"
+              ],
+              "evidence_context": [
+                {
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "chunk_index": null,
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "lane_contributions": {
+                    "bm25": 0.023904,
+                    "dense": 0.024905
+                  },
+                  "lane_scores": {
+                    "bm25": 191.4898035904114,
+                    "dense": 0.7534302
+                  },
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "reason": "bm25+dense match; matched: 径向, 向振, 振动, 向振动; topic: 2.2.1 转子不平衡; source priority 2",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.049009,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_priority": 2,
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "source_type": "paper",
+                  "text": "（2）振动频率的特征：转子不对中相当于在联轴器端输入某种激励。根据理论及实验研究\n\n的结果表明，对刚性联轴器及齿轮联轴器，其径向激振频率除旋转频率\nrf （由角度不对中引起）\n\n外，主要以旋转频率的二倍频2\nrf 或四倍频4\nrf 为主，尚伴有高次倍频\nr\nnf (\n6,8,\n)\nn =\nL 。轴向\n\n振动的频谱成分中，以一倍频幅值较大。\n\n（3）转速跟踪幅值动态变化特征：实验表明，不对中振动幅值对转速的变化不敏感，因此\n\n影响不太明显；振动对负荷的变化比较敏感，一般振动幅值随负荷的增加而升高。）\n\n（4）图形特征：振动信号的原始时间波形为畸变的正弦波；典型的轴心轨迹为香蕉形（双\n\n环椭圆），正进动；\n\n（5）相位特征：在相位上，联轴器两侧的轴向振动基本上是 180°反相的。\n\n转子不对中的诊断方法简单总结如下：\n\n根据不对中的振动特征，简易诊断时可以将轴向振动为标志进行判断，而精密诊断时主要\n\n9\n\n旋转机械阶比分析研究与软件实现\n\n以分析FFT 谱或功率谱中的二倍频（2\nrf ）或四倍频（4\nrf ）成分来判断。",
+                  "token_estimate": null,
+                  "topic": "2.2.1 转子不平衡"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                  "chunk_index": null,
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "lane_contributions": {
+                    "bm25": 0.026393,
+                    "dense": 0.02049
+                  },
+                  "lane_scores": {
+                    "bm25": 238.42604203734507,
+                    "dense": 0.72228825
+                  },
+                  "pages": [
+                    22
+                  ],
+                  "reason": "bm25+dense match; matched: 径向, 向振, 振动, 径向振; topic: 2.2.1 转子不平衡; source priority 2",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.047083,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_priority": 2,
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "source_type": "paper",
+                  "text": "移。平行偏角综合不对中时，两转子轴心线相互交错位移。根据理论分析可知，单纯的平行不\n\n对中将产生振动频率为转子工频两倍的径向振动，而纯粹的偏角不对中则由于附加弯矩作用产\n\n生振动频率与转子工频相同的轴向振动。然而在实际情况中所碰到的轴系不对中，很少有单一\n\n的平行不对中或偏角不对中。通常是两者同时存在的平行偏角综合不对中，即各转子轴线之内\n\n既有径向位移又有偏角位移。因此，当转子旋转时，就会有一个两倍于工频的附加径向力作用\n\n于比较靠近联轴器的径向轴承上，同时还会有一个频率与工频相同的附加轴向力作用于止推轴\n\n承上面，因而最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。\n\n一般轴系不对中会造成转子的附加弯曲以及对轴承的附加载荷，致使各轴承之间的负荷重\n\n新分配，严重时便会导致轴承损坏，引起强烈振动。另一方面，随着联轴器两侧轴承负荷的变\n\n化，可能会造成系统临界转速的改变，不平衡影响增加，从而引发联轴器疲劳。当轴承变化较\n\n大时，对于滑动轴承还可能会引起油膜失稳。\n\n轴不对中所具有的特征如下[29][32]：\n\n（1）振动形态的特征：由平行不对中主要引起转子的径向振动，而角度不对中除了引起径\n\n向振动外，还引起轴向振动。实际上发生的多为综合不对中，因此轴向振动往往是存在不对中\n\n的一些征兆。\n\n（2）振动频率的特征：转子不对中相当于在联轴器端输入某种激励。根据理论及实验研究\n\n的结果表明，对刚性联轴器及齿轮联轴器，其径向激振频率除旋转频率\nrf （由角度不对中引起）",
+                  "token_estimate": null,
+                  "topic": "2.2.1 转子不平衡"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+                  "chunk_index": null,
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "lane_contributions": {
+                    "bm25": 0.014771,
+                    "dense": 0.026393
+                  },
+                  "lane_scores": {
+                    "bm25": 93.01717892281573,
+                    "dense": 0.7914263
+                  },
+                  "pages": [
+                    33,
+                    34
+                  ],
+                  "reason": "bm25+dense match; matched: 1x, 振动, 转子, 子不; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.041664,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_priority": 5,
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "source_type": "standard",
+                  "text": "在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响\n应中相位角有明显大的变化。转子不平衡也是最常见的激励，它在机\n器的非旋转系统中能产生机器的共振响应。对于电机，另一个主要激\n\n一时\n\n励是2x，它由转子感应在定子上的电磁力引起\n\n最常见的是1x，但\n\n低速时轻微摩擦可使之磨合，然而，在高速时摩抹有可能使振动突变，\n\n很快上升到要求停机的幅值\n有时摩擦是由于机器加载过快，或者机\n\n摩擦\n\n是也有Ix的倍频1\n次谐波频率及固有\n\n颇率\n\n器的热状态突然变化而引起口另外，在其他情况下，摩攘也可能由于转\n动部件和固定部件之问的间隙太小或者在运行期间部件移位而引起\n\nGB/T 19873.1-2005/ISO 13373-1;2002\n\n表C.2 祸轮机器扭转振动最常见的原因及引起的振动特征\n\n原\n因\n特征振动频率\n备\n注\n\n输电网路电气故障，包括电路断\n\n扭转固有频率及电气系统频率的\n\n电器动作\n\n多倍频\n瞬态响应。轴有多模态扭转响应、阻尼轻微\n\n发电机内部电气故障，终端短路\n扭转固有频率及电气系统频率的\n\n多倍频\n瞬态响应。轴有多模态扭转响应、阻尼轻微\n\n发电机非同期合闸\n扭转固有频率及电气系统频率\n瞬态响应。轴有多模态扭转响应，阻尼轻微\n\n计划中的线路开关事件\n扭转固有频率及电气系统频率的\n多倍频\n瞬态响应。轴有多模态扭转响应，阻尼轻微\n\n负荷波动，例如在电厂附近有电\n弧炉而引起\n有扭转固有频率的响应\n瞬态响应。轴有多模态扭转响应，阻尼轻微\n\n输电系统相不平衡或线路失调\n二倍电系统频率的强迫稳态响应\n二倍电系统频率附近的机械模态，可能包括轴\n扭转振动和汽轮机叶片弯曲振动的桐合\n\n由于电网中(串联电容补偿线路)电气共振或直",
+                  "token_estimate": null,
+                  "topic": "一\n、、\n四\nO :;一一:一一"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00053",
+                  "chunk_index": null,
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "lane_contributions": {
+                    "bm25": 0.01915,
+                    "dense": 0.02187
+                  },
+                  "lane_scores": {
+                    "bm25": 115.97584960788218,
+                    "dense": 0.72907317
+                  },
+                  "pages": [
+                    33
+                  ],
+                  "reason": "bm25+dense match; matched: 1x, 向振, 振动, 向振动; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.04152,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_priority": 5,
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "source_type": "standard",
+                  "text": "域。振动读数通常是非称定的而且随时间增大.可能有必要用其他技\n术表征这种类型的故障\n\n2x\n在Zx的激励与转子临界转速重合时，振动达到峰值。在固定转速下\n振动幅值恒定.在大型机器上采用补偿槽使这种激励最小\n\n刚度不对称(例如发\n电机/电动机转子中\n的轴向绕组槽)\n\n转子弯曲\n\n(参见热不对称)\n\nIx、2x 或较高阶\n谐波\n\n最普遍的是Ix的变化。如果转子在联轴器附近弯曲，经常观察到高\n的zx轴向振动。在固定转速下.转子振动值恒定\n\n1x、2x 或较高阶\n\n2x矢量增大表示横向裂纹向临界增长。也会产生Ix或较高阶谐波\n\n裂纹转子\n\n谐波\n\n矢量的变化\n\n在各次启停时，振动幅值可能不稳定、不一致。有时也可观察到次谐波\n\n转子部件松动\n\n频率\n\n1x 和转速频率的\n谐波\n\n在低转速及转子临界转速时振动幅值可能异常或过大。转速一定时振\n\n轴颈偏心或不圆\n\n1x，而对于非圆轴颈\n有转速频率的谐波\n\n动幅值恒定\n\n热不对称\nIx\n\n由转子通风不均匀、绕组短路或部件紧固力不均匀引起。使转子弯成\n弓形，其振动特性与不平衡相同\n\n齿轮缺陷\n相应于齿轮啮合/旋\n转频率谐波及相关的\n\n要求用具有高频响应的传感器检测。若1个齿有缺陷，则是1x及倍\n频。若多个齿磨损，则是齿轮啮合频率并具有边频带和倍频\n\n边频带的高频\n\n以激励频率振动，例\n如在转速等于转子/\n\n共振\n\n支承系统固有频率之\n\n在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响\n应中相位角有明显大的变化。转子不平衡也是最常见的激励，它在机\n器的非旋转系统中能产生机器的共振响应。对于电机，另一个主要激\n\n一时\n\n励是2x，它由转子感应在定子上的电磁力引起\n\n最常见的是1x，但",
+                  "token_estimate": null,
+                  "topic": "一\n、、\n四\nO :;一一:一一"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "chunk_index": null,
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "lane_contributions": {
+                    "bm25": 0.016437,
+                    "dense": 0.022398
+                  },
+                  "lane_scores": {
+                    "bm25": 101.12623959973648,
+                    "dense": 0.7313073
+                  },
+                  "pages": [
+                    32
+                  ],
+                  "reason": "bm25+dense match; matched: 径向, 向振, 振动, 径向振; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.039335,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_priority": 5,
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "source_type": "standard",
+                  "text": "使激励减至最小，这要求从转子特定位置上添加或去掉质量。在转子转速通过每个机器固有频率时，振\n动相位将明显变化。而在固定的转速下，任意测点的振动通常是恒定的\n\n旋转机器振动的另一个常见原因是轴或轴承的不对中。有两种类型的不对中:内部的和外部的\n内部不对中是在部件中心线不同心时产生。电动机中空气间隙不均匀是内部不对中的一个例子。外部\n\n不对中较为常见，且在两台或多台机器韧合在一起的轴中心线偏心或角度偏移时产生。不对中在旋转\n机器中引起附加力，它表现为振动。不对中常产生(或改变)一倍频(1\nX)、二倍频(2X)或三倍频(3X)\n\n的径向振动分量，并且取决于不对中的严重程度，甚至有更高倍频分量〔转速频率的倍数分量，记为2X,\n3X,4X等)产生。\n\nC.2 横向振动\n\n表C.\n\n1包括了上述的和其他的与旋转频率有关的机器横向振动常见原因，并且给出了预计的振动\n频率特性的信息及帮助评定振动问题的其他意见，然而，必须认识到，也要考虑存在其他的频率的可能\n\n在机器振动状态监测程序的开始，建议将所有可能的振动源与运行和设计特性联系在一起考虑，列\n出一张预计的振动分量表。此表应包括旋转频率及其谐波、油膜涡动和油膜振荡频率、叶片/导叶通过\n\n频率、齿啮合频率、滚动元件频率等。此表与基线离散频谱(见7.4)以及监测方法的建立、报警限值、数\n\n据采样时间、诊断等一起使用。\n\n振动频谱分析对帮助评价振动问题提供了极其重要的信息。其他的决定因素包括:由于转速变化\n或其他原因引起的振动相位差的量。振动幅值的稳定性和可重复性，相对于机器转子轴线的主要振动分",
+                  "token_estimate": null,
+                  "topic": "一\n、、\n四\nO :;一一:一一"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "chunk_index": null,
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "lane_contributions": {
+                    "bm25": 0.014297,
+                    "dense": 0.024129
+                  },
+                  "lane_scores": {
+                    "bm25": 89.9066342948688,
+                    "dense": 0.7457882
+                  },
+                  "pages": [
+                    278,
+                    279
+                  ],
+                  "reason": "bm25+dense match; matched: 1x, 出现, 径向, 向振; source priority 4",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.038826,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_priority": 4,
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "source_type": "book",
+                  "text": "联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴\n相对振动分量，这些分量存在于机器的整个速度范围内。振动可能会传递到外壳，但只有轴\n相对振动测量才能揭示出慢滚动速度时的转动效应。由于轴每次旋转时，相邻轴承的载荷交\n替增加，因此产生2X分量。\n\n错位的联轴器孔或弯轴（角不对中）可产生1X或2X振动。非圆形的联轴器会产生振\n摆，看起来像是轴位移，但其实并不是。\n\n如果轴不对中，圆盘和膜片联轴器会产生轴向“上下”运动（轴向振动）。这种轴向强\n迫振动会激励转子系统的轴向共振频率。轴向振动还会耦合为横向（径向）振动。正常运\n转的齿式联轴器在轴向的适应性更好，不对中时产生轴向振动的可能性很小。\n\n*应力和磨损\n不对中造成的载荷增大和位置变化可影响机器的关键部件。过多的载荷会产生大应力，\n从而导致轴、联轴器和轴承出现低频疲劳或高频疲劳。不对中的转子可能与密封圈接触，从\n而磨损或损坏密封圈或轴，并降低效率。\n\n不对中会磨损、损坏或锁住挠性联轴器，还会导致挠性联轴器和刚性联轴器出现疲劳\n失效。\n\n不对中造成的大轴承载荷会引起油膜轴承中的巴氏合金层过热、磨损和疲劳。不对\n中也会极大地降低滚动轴承的使用寿命，而轴承的使用寿命则是径向载荷的强函数。点\n接触球轴承的Lo寿命（在这段时间内，此类轴承中有10%将失效）与其承受载荷的立方\n成反比。\n\n第20章大泾向载荷与不对中\n259\n*异常的平均轴心位置\n在没有齿轮载荷且主要径向载荷是重力的机器中，载荷正常的普通圆柱形液体动压轴承\n的转子位置角通常介于30°～45°之间，偏心率的范围为0.6~0.8。开机或关机期间，在流\n体支撑楔的作用下，轴心线将以典型的方式移动（图20-5）。\n\n记住，方位角由相对于施加径向载荷\n的轴位置决定（第6章）。在重力载荷起\n假定载荷的\n异常运行位置\n假定径向载荷\n主导作用的卧式机器中，希望方位角等于\n位置角。如果出现作用在另一个方向的有\n效径向载荷，位置角将不等于方位角。齿\n轮啮合力可以很容易地克服重力，并将齿\n轮移动到不同于期望的卧式机器的位置。",
+                  "token_estimate": null,
+                  "topic": null
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00366",
+                  "chunk_index": null,
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "lane_contributions": {
+                    "bm25": 0.012812,
+                    "dense": 0.019354
+                  },
+                  "lane_scores": {
+                    "bm25": 80.54646226947418,
+                    "dense": 0.7158584
+                  },
+                  "pages": [
+                    265,
+                    266
+                  ],
+                  "reason": "bm25+dense match; matched: 1x, 出现, 振动, 转子; source priority 4",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.032567,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_priority": 4,
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "source_type": "book",
+                  "text": "式（19-4）说明，在远远超过共振转速时，弯曲所致振动为零。但转子的总响应还包\n括第三项，即其他某种不平衡引起的一般响应。图19-4中的1X伯德图显示了同时存在弯\n曲和不平衡的转子系统的响应。不平衡响应显示，速度为零时振幅为零，不平衡相位为0°，\n而弯曲响应的偏心率为20umpp（0.8milpp），高点相位为135°。低速时，总响应主要受弯\n曲影响。超过共振转速时，弯曲开始完成自我平衡并逐渐消失，剩下的只有残余不平衡响\n\n246\n旋转机械诊断技术\n应。鉴于本例中不平衡与弯曲偏心率之间的相位关系，相较只存在不平衡的情况，共振时的\n振幅较低。\n\nO\n不平衡\n45\n90\n135\n9\n弯曲\n180\n00\n总响应\n225\n270\n0\n5001000150020002500300035004000\n频率/（r/min）\n120\n不平衡\n100\n(dd)\n0 0040\n总响应\n弯曲\n20\n0\n5001000150020002500300035004000\n频率/（r/min）\n图19-4存在弯曲和不平衡的转子系统的1X伯德图\n*运行期间的热弯曲\n临时性热弯曲可提高或降低运行速度下的1X振动振幅，具体取决于弯曲与不平衡之间\n的相位关系。发电机线圈短路和感应电动机的转子铜条断路或转子铁心短路均可能在转子上\n产生局部热点，导致临时性热弯曲。\n\n即使新型电动机也可能在槽口、绕组和冷却气流中含有轻度的不对称性，导致受热不均\n和热弯曲。制造商通常会对发电机设置平衡偏移（故意使其略微不平衡以补偿后续热变\n化），使发电机在满载条件下平稳运转。但即使采用这种方法，载荷或激励变化仍可产生温\n度变化，进而出现意想不到的热弯曲，致使1X振动增强。\n\n发电机转子还会随时间逐渐磨损，因为循环往复开机和关机会使内部零件错位。出现这\n种情况时，冷却通路可能部分或完全堵塞，致使转子的温度分布发生变化。因此在工作一段\n时间后，发电机转子可能需要重新调整平衡。",
+                  "token_estimate": null,
+                  "topic": null
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "chunk_index": null,
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "lane_contributions": {
+                    "dense": 0.02594
+                  },
+                  "lane_scores": {
+                    "dense": 0.77648705
+                  },
+                  "pages": [
+                    251,
+                    252,
+                    253
+                  ],
+                  "reason": "dense match; source priority 4",
+                  "retrieval_contribution": "dense",
+                  "retrieval_lanes": [
+                    "dense"
+                  ],
+                  "score": 0.02634,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_priority": 4,
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "source_type": "book",
+                  "text": "振摆始终包括机械振摆和电学振摆。其主要特征是，只要探头的圆周路径不变，即使降\n至慢滚动速度，振幅也是恒定的。尽管不平衡力与转子速度的平方成比例，也不会在慢滚动\n速度条件下产生任何可检测到的1X动态响应。\n\n232\n旋转机械诊断技术\n-3X\n1X\n2X\n2.0\n划痕\n6\n(\n1.0\n0.5\nMuiM\nV\nMMAM\nw\nMhnm\n0\n-30\n-20\n-10\n0\n10\n20\n30\n反向\n正向\n进动频率/kcpm\n图18-3径向轨迹和全频谱显示出探头观测区中轴的划痕产生的影响\n随着轴旋转，划痕首次通过X传感器下方时，迅速在轨迹中产生方向\n远离X传感器的负向电压尖峰。划痕随后通过Y传感器的下方，在轨\n迹中产生另一个方向远离Y传感器的尖峰。在全频谱中，1X频率由\n1X转子动态响应和每转一次的划痕响应共同组成。划痕响应继续保持\n慢滚动速度，锐利的划痕产生丰富的谐波谱\n*转子弯曲\n弯曲的转子会产生1X振动，但不同于不平衡的是，它会在慢滚动速度条件下产生1X\n响应。\n\n机器运转时会发生转子热弯曲。如果转子一侧形成热点，这一侧便会膨胀。由于单侧温\n升，转子会产生弯曲，这将改变1X振动响应。如果去掉局部热源，则除非该区域已超出材\n料的屈服极限，否则热弯曲将会消失（第19章）。\n\n传感器系统中的电噪声\n涡轮发电机组以工频或工频的某个分频运行，具体视发电机的极数而定。双极发电机将\n以3600r/min（60Hz）或3000r/min（50Hz）的速度运转。如果电工频噪声耦合到传感器信\n号线中，则在振动信号中将出现工频分量。这种噪声被误认为是1X转子振动。可以在开机\n或关机时，通过查看频谱级联图来检查（图18-5下图）。转子速度改变时，电噪声谱线的\n频率保持恒定，而1X转子频率随速度发生改变。\n\n第18章不平衡233\n耦合问题\n某些类型的耦合问题会产生1X振动。如果两个刚性耦联机器的转子轴彼此偏离（不平\n行），那么当机器旋转时，曲轴效应将在其中一个机器或两个机器中产生1X振动。偏离中\n心的联轴器孔或偏离中心的联轴器螺栓分布圆也会产生此类1X振动效应。不平衡导致的1X\n振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。",
+                  "token_estimate": null,
+                  "topic": null
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0330_00465",
+                  "chunk_index": null,
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "lane_contributions": {
+                    "dense": 0.025594
+                  },
+                  "lane_scores": {
+                    "dense": 0.769354
+                  },
+                  "pages": [
+                    330,
+                    331
+                  ],
+                  "reason": "dense match; source priority 4",
+                  "retrieval_contribution": "dense",
+                  "retrieval_lanes": [
+                    "dense"
+                  ],
+                  "score": 0.025994,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_priority": 4,
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "source_type": "book",
+                  "text": "监测建议\n一台在开机期间经历剧烈1X振动的蒸汽涡轮机关机了，假定此问题由不平衡引起。连\n续尝试重新起动此设备时，发现设备的1X振动级别不断提高并出现某种2X振动。决定拆\n卸设备，随后在转子中发现了局部轴裂纹。检查所有振动数据后，发现除1X振动振幅较高\n外，尝试开机期间还存在接近40°的显著1X相移。尽管设备能够提供相位监测，但之前没\n有这样做。谨记：如果不去寻找轴裂纹的迹象，那么就无法及时检测到裂纹，也就无法预防\n灾难性后果。\n\n遗憾的是，几乎不可能仅仅只查看单条数据就能明确诊断轴裂纹，即很多时候使用手头\n数据难以作出诊断。但是，如果采纳以下监测建议，那么及时检测到轴裂纹的几率将大大\n提高。\n\n1）在运行速度下，监测直接（未滤波）振动级别及1X和2X振幅和相位并跟踪其趋\n势。趋势可能与手录数据列表（1X和2X振幅和相位）一样简单，而更好的趋势则接近于\n计算机生成的APHT图和极坐标图。此外，应明确定义1X和2X可接受区域，这样才能检\n测振动的显著变化。对于不同载荷条件，可能需要建立不同的可接受区域。这种稳态监测可\n在裂纹达到25%时提供早期预警。\n\n2）机器每次开机或关机时，都应采集数据（形式为1X、2X伯德图和极坐标图），并\n将这些数据与先前数据进行比较。积极寻找通过共振转速时1X和2X行为的显著变化、一\n个或多个共振转速出现下降或其他异常行为，还应关注并调查开机或关机时机器响应的显著\n变化。这种监测可在裂纹达到20%时提供早期预警。\n\n3）应记录1X慢滚动矢量，并将其与先前数据进行比较。随着裂纹的扩大，转子弯曲\n可能会发生变化，而1X慢滚动矢量的振幅和相位也会发生变化。\n\n第24章轴裂纹311\n虽然无法确保万无一失，但对机器进行谨慎周全的监测，可显著提高在发生灾难性破坏\n前检测到裂纹的几率。\n\n兴总结\n轴裂纹是缓慢增长的转子破裂。当转子横截面减小到无法承受对其施加的静态或动态载\n荷时，转子将迅速发生脆性断裂，这是一种灾难性的破坏。",
+                  "token_estimate": null,
+                  "topic": null
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "document_bce240f3_p0010_00017",
+                  "chunk_index": null,
+                  "doc_id": "document_bce240f3",
+                  "lane_contributions": {
+                    "dense": 0.02517
+                  },
+                  "lane_scores": {
+                    "dense": 0.7554425
+                  },
+                  "pages": [
+                    10,
+                    11
+                  ],
+                  "reason": "dense match; topic: 1.2.1 阶次分析; source priority 2",
+                  "retrieval_contribution": "dense",
+                  "retrieval_lanes": [
+                    "dense"
+                  ],
+                  "score": 0.02537,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆).pdf",
+                  "source_priority": 2,
+                  "source_title": "旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆)",
+                  "source_type": "paper",
+                  "text": "1.2.1 阶次分析\n\n对于旋转机械来说，其振动响应中含有频率随转速的变化而线性变化的成分，这\n\n些是由旋转机械的往复运动的周期性而引起的。通常将参考轴的转频（基频）定义为\n\n第一阶次，则第n 次谐波被定义为第n 阶次。阶次关系由结构特点确定，转速参考轴不\n\n同，同一位置的响应与转速之间的阶次关系也不同。阶次O 与振动信号频率\n(Hz)\nf\n的\n\n关系为：\n\n式（1-1）中： n 为参考轴的转速，r/min ；O 为阶次，\n-1\nr 。从式（1-1）可看出阶次\n\n是频率的另一种表达方式，反映转轴每转一圈的振动次数。\n\nt/s\n\nFFT\n\nt/s\n\nf/ z\n\nFFT\n\n/rad\n\nO/\n\n如图1-1 所示，角域采样与时域采样的不同之处在于角域采样以角度为周期，获取\n\n相对于某个参考轴的等角度增量采样数据，这是为了防止转速波动造成每个周期采样\n\n点不同。频谱分析采样方式为时域采样（等时间间隔采样），然后将采集得到的振动信\n\n号经过快速傅里叶变换(fast Fourier transform，FFT)转换到频域，得到该信号的频谱图\n\n并进行下一步分析。频谱分析适用于稳定的振动信号（例如恒速工况下旋转机械产生\n\n的振动信号），若旋转机械的转速发生了改变，其机械特性也随之改变。当旋转机械的\n\n转速接近或超过临界转速时，一般旋转机械会产生共振现象，机械共振现象有利于研\n\n2\n\n第一章 绪论\n\n究者分析旋转机械内部结构，因此机械的振动噪声测试通常需要进行加速或降速测试。\n\n由式（1-1）可以看出，当旋转机械转速变化时，每个阶次分量的频率带宽会随着转速\n\n的变化而变宽，其频谱不是单一谱峰而是一频带（如图1-1 频谱图所示），不能从频谱\n\n上反映信号的阶次分量特征。阶次分析是频谱分析的一种改进方式，其采样方式为角",
+                  "token_estimate": null,
+                  "topic": "1.2.1 阶次分析"
+                }
+              ],
+              "evidence_selection": null,
+              "retrieval_context": [
+                {
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "chunk_index": null,
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "lane_contributions": {
+                    "bm25": 0.023904,
+                    "dense": 0.024905
+                  },
+                  "lane_scores": {
+                    "bm25": 191.4898035904114,
+                    "dense": 0.7534302
+                  },
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "reason": "bm25+dense match; matched: 径向, 向振, 振动, 向振动; topic: 2.2.1 转子不平衡; source priority 2",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.049009,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_priority": 2,
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "source_type": "paper",
+                  "text": "（2）振动频率的特征：转子不对中相当于在联轴器端输入某种激励。根据理论及实验研究\n\n的结果表明，对刚性联轴器及齿轮联轴器，其径向激振频率除旋转频率\nrf （由角度不对中引起）\n\n外，主要以旋转频率的二倍频2\nrf 或四倍频4\nrf 为主，尚伴有高次倍频\nr\nnf (\n6,8,\n)\nn =\nL 。轴向\n\n振动的频谱成分中，以一倍频幅值较大。\n\n（3）转速跟踪幅值动态变化特征：实验表明，不对中振动幅值对转速的变化不敏感，因此\n\n影响不太明显；振动对负荷的变化比较敏感，一般振动幅值随负荷的增加而升高。）\n\n（4）图形特征：振动信号的原始时间波形为畸变的正弦波；典型的轴心轨迹为香蕉形（双\n\n环椭圆），正进动；\n\n（5）相位特征：在相位上，联轴器两侧的轴向振动基本上是 180°反相的。\n\n转子不对中的诊断方法简单总结如下：\n\n根据不对中的振动特征，简易诊断时可以将轴向振动为标志进行判断，而精密诊断时主要\n\n9\n\n旋转机械阶比分析研究与软件实现\n\n以分析FFT 谱或功率谱中的二倍频（2\nrf ）或四倍频（4\nrf ）成分来判断。",
+                  "token_estimate": null,
+                  "topic": "2.2.1 转子不平衡"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                  "chunk_index": null,
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "lane_contributions": {
+                    "bm25": 0.026393,
+                    "dense": 0.02049
+                  },
+                  "lane_scores": {
+                    "bm25": 238.42604203734507,
+                    "dense": 0.72228825
+                  },
+                  "pages": [
+                    22
+                  ],
+                  "reason": "bm25+dense match; matched: 径向, 向振, 振动, 径向振; topic: 2.2.1 转子不平衡; source priority 2",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.047083,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_priority": 2,
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "source_type": "paper",
+                  "text": "移。平行偏角综合不对中时，两转子轴心线相互交错位移。根据理论分析可知，单纯的平行不\n\n对中将产生振动频率为转子工频两倍的径向振动，而纯粹的偏角不对中则由于附加弯矩作用产\n\n生振动频率与转子工频相同的轴向振动。然而在实际情况中所碰到的轴系不对中，很少有单一\n\n的平行不对中或偏角不对中。通常是两者同时存在的平行偏角综合不对中，即各转子轴线之内\n\n既有径向位移又有偏角位移。因此，当转子旋转时，就会有一个两倍于工频的附加径向力作用\n\n于比较靠近联轴器的径向轴承上，同时还会有一个频率与工频相同的附加轴向力作用于止推轴\n\n承上面，因而最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。\n\n一般轴系不对中会造成转子的附加弯曲以及对轴承的附加载荷，致使各轴承之间的负荷重\n\n新分配，严重时便会导致轴承损坏，引起强烈振动。另一方面，随着联轴器两侧轴承负荷的变\n\n化，可能会造成系统临界转速的改变，不平衡影响增加，从而引发联轴器疲劳。当轴承变化较\n\n大时，对于滑动轴承还可能会引起油膜失稳。\n\n轴不对中所具有的特征如下[29][32]：\n\n（1）振动形态的特征：由平行不对中主要引起转子的径向振动，而角度不对中除了引起径\n\n向振动外，还引起轴向振动。实际上发生的多为综合不对中，因此轴向振动往往是存在不对中\n\n的一些征兆。\n\n（2）振动频率的特征：转子不对中相当于在联轴器端输入某种激励。根据理论及实验研究\n\n的结果表明，对刚性联轴器及齿轮联轴器，其径向激振频率除旋转频率\nrf （由角度不对中引起）",
+                  "token_estimate": null,
+                  "topic": "2.2.1 转子不平衡"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+                  "chunk_index": null,
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "lane_contributions": {
+                    "bm25": 0.014771,
+                    "dense": 0.026393
+                  },
+                  "lane_scores": {
+                    "bm25": 93.01717892281573,
+                    "dense": 0.7914263
+                  },
+                  "pages": [
+                    33,
+                    34
+                  ],
+                  "reason": "bm25+dense match; matched: 1x, 振动, 转子, 子不; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.041664,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_priority": 5,
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "source_type": "standard",
+                  "text": "在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响\n应中相位角有明显大的变化。转子不平衡也是最常见的激励，它在机\n器的非旋转系统中能产生机器的共振响应。对于电机，另一个主要激\n\n一时\n\n励是2x，它由转子感应在定子上的电磁力引起\n\n最常见的是1x，但\n\n低速时轻微摩擦可使之磨合，然而，在高速时摩抹有可能使振动突变，\n\n很快上升到要求停机的幅值\n有时摩擦是由于机器加载过快，或者机\n\n摩擦\n\n是也有Ix的倍频1\n次谐波频率及固有\n\n颇率\n\n器的热状态突然变化而引起口另外，在其他情况下，摩攘也可能由于转\n动部件和固定部件之问的间隙太小或者在运行期间部件移位而引起\n\nGB/T 19873.1-2005/ISO 13373-1;2002\n\n表C.2 祸轮机器扭转振动最常见的原因及引起的振动特征\n\n原\n因\n特征振动频率\n备\n注\n\n输电网路电气故障，包括电路断\n\n扭转固有频率及电气系统频率的\n\n电器动作\n\n多倍频\n瞬态响应。轴有多模态扭转响应、阻尼轻微\n\n发电机内部电气故障，终端短路\n扭转固有频率及电气系统频率的\n\n多倍频\n瞬态响应。轴有多模态扭转响应、阻尼轻微\n\n发电机非同期合闸\n扭转固有频率及电气系统频率\n瞬态响应。轴有多模态扭转响应，阻尼轻微\n\n计划中的线路开关事件\n扭转固有频率及电气系统频率的\n多倍频\n瞬态响应。轴有多模态扭转响应，阻尼轻微\n\n负荷波动，例如在电厂附近有电\n弧炉而引起\n有扭转固有频率的响应\n瞬态响应。轴有多模态扭转响应，阻尼轻微\n\n输电系统相不平衡或线路失调\n二倍电系统频率的强迫稳态响应\n二倍电系统频率附近的机械模态，可能包括轴\n扭转振动和汽轮机叶片弯曲振动的桐合\n\n由于电网中(串联电容补偿线路)电气共振或直",
+                  "token_estimate": null,
+                  "topic": "一\n、、\n四\nO :;一一:一一"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00053",
+                  "chunk_index": null,
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "lane_contributions": {
+                    "bm25": 0.01915,
+                    "dense": 0.02187
+                  },
+                  "lane_scores": {
+                    "bm25": 115.97584960788218,
+                    "dense": 0.72907317
+                  },
+                  "pages": [
+                    33
+                  ],
+                  "reason": "bm25+dense match; matched: 1x, 向振, 振动, 向振动; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.04152,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_priority": 5,
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "source_type": "standard",
+                  "text": "域。振动读数通常是非称定的而且随时间增大.可能有必要用其他技\n术表征这种类型的故障\n\n2x\n在Zx的激励与转子临界转速重合时，振动达到峰值。在固定转速下\n振动幅值恒定.在大型机器上采用补偿槽使这种激励最小\n\n刚度不对称(例如发\n电机/电动机转子中\n的轴向绕组槽)\n\n转子弯曲\n\n(参见热不对称)\n\nIx、2x 或较高阶\n谐波\n\n最普遍的是Ix的变化。如果转子在联轴器附近弯曲，经常观察到高\n的zx轴向振动。在固定转速下.转子振动值恒定\n\n1x、2x 或较高阶\n\n2x矢量增大表示横向裂纹向临界增长。也会产生Ix或较高阶谐波\n\n裂纹转子\n\n谐波\n\n矢量的变化\n\n在各次启停时，振动幅值可能不稳定、不一致。有时也可观察到次谐波\n\n转子部件松动\n\n频率\n\n1x 和转速频率的\n谐波\n\n在低转速及转子临界转速时振动幅值可能异常或过大。转速一定时振\n\n轴颈偏心或不圆\n\n1x，而对于非圆轴颈\n有转速频率的谐波\n\n动幅值恒定\n\n热不对称\nIx\n\n由转子通风不均匀、绕组短路或部件紧固力不均匀引起。使转子弯成\n弓形，其振动特性与不平衡相同\n\n齿轮缺陷\n相应于齿轮啮合/旋\n转频率谐波及相关的\n\n要求用具有高频响应的传感器检测。若1个齿有缺陷，则是1x及倍\n频。若多个齿磨损，则是齿轮啮合频率并具有边频带和倍频\n\n边频带的高频\n\n以激励频率振动，例\n如在转速等于转子/\n\n共振\n\n支承系统固有频率之\n\n在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响\n应中相位角有明显大的变化。转子不平衡也是最常见的激励，它在机\n器的非旋转系统中能产生机器的共振响应。对于电机，另一个主要激\n\n一时\n\n励是2x，它由转子感应在定子上的电磁力引起\n\n最常见的是1x，但",
+                  "token_estimate": null,
+                  "topic": "一\n、、\n四\nO :;一一:一一"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "chunk_index": null,
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "lane_contributions": {
+                    "bm25": 0.016437,
+                    "dense": 0.022398
+                  },
+                  "lane_scores": {
+                    "bm25": 101.12623959973648,
+                    "dense": 0.7313073
+                  },
+                  "pages": [
+                    32
+                  ],
+                  "reason": "bm25+dense match; matched: 径向, 向振, 振动, 径向振; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.039335,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_priority": 5,
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "source_type": "standard",
+                  "text": "使激励减至最小，这要求从转子特定位置上添加或去掉质量。在转子转速通过每个机器固有频率时，振\n动相位将明显变化。而在固定的转速下，任意测点的振动通常是恒定的\n\n旋转机器振动的另一个常见原因是轴或轴承的不对中。有两种类型的不对中:内部的和外部的\n内部不对中是在部件中心线不同心时产生。电动机中空气间隙不均匀是内部不对中的一个例子。外部\n\n不对中较为常见，且在两台或多台机器韧合在一起的轴中心线偏心或角度偏移时产生。不对中在旋转\n机器中引起附加力，它表现为振动。不对中常产生(或改变)一倍频(1\nX)、二倍频(2X)或三倍频(3X)\n\n的径向振动分量，并且取决于不对中的严重程度，甚至有更高倍频分量〔转速频率的倍数分量，记为2X,\n3X,4X等)产生。\n\nC.2 横向振动\n\n表C.\n\n1包括了上述的和其他的与旋转频率有关的机器横向振动常见原因，并且给出了预计的振动\n频率特性的信息及帮助评定振动问题的其他意见，然而，必须认识到，也要考虑存在其他的频率的可能\n\n在机器振动状态监测程序的开始，建议将所有可能的振动源与运行和设计特性联系在一起考虑，列\n出一张预计的振动分量表。此表应包括旋转频率及其谐波、油膜涡动和油膜振荡频率、叶片/导叶通过\n\n频率、齿啮合频率、滚动元件频率等。此表与基线离散频谱(见7.4)以及监测方法的建立、报警限值、数\n\n据采样时间、诊断等一起使用。\n\n振动频谱分析对帮助评价振动问题提供了极其重要的信息。其他的决定因素包括:由于转速变化\n或其他原因引起的振动相位差的量。振动幅值的稳定性和可重复性，相对于机器转子轴线的主要振动分",
+                  "token_estimate": null,
+                  "topic": "一\n、、\n四\nO :;一一:一一"
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "chunk_index": null,
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "lane_contributions": {
+                    "bm25": 0.014297,
+                    "dense": 0.024129
+                  },
+                  "lane_scores": {
+                    "bm25": 89.9066342948688,
+                    "dense": 0.7457882
+                  },
+                  "pages": [
+                    278,
+                    279
+                  ],
+                  "reason": "bm25+dense match; matched: 1x, 出现, 径向, 向振; source priority 4",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.038826,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_priority": 4,
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "source_type": "book",
+                  "text": "联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴\n相对振动分量，这些分量存在于机器的整个速度范围内。振动可能会传递到外壳，但只有轴\n相对振动测量才能揭示出慢滚动速度时的转动效应。由于轴每次旋转时，相邻轴承的载荷交\n替增加，因此产生2X分量。\n\n错位的联轴器孔或弯轴（角不对中）可产生1X或2X振动。非圆形的联轴器会产生振\n摆，看起来像是轴位移，但其实并不是。\n\n如果轴不对中，圆盘和膜片联轴器会产生轴向“上下”运动（轴向振动）。这种轴向强\n迫振动会激励转子系统的轴向共振频率。轴向振动还会耦合为横向（径向）振动。正常运\n转的齿式联轴器在轴向的适应性更好，不对中时产生轴向振动的可能性很小。\n\n*应力和磨损\n不对中造成的载荷增大和位置变化可影响机器的关键部件。过多的载荷会产生大应力，\n从而导致轴、联轴器和轴承出现低频疲劳或高频疲劳。不对中的转子可能与密封圈接触，从\n而磨损或损坏密封圈或轴，并降低效率。\n\n不对中会磨损、损坏或锁住挠性联轴器，还会导致挠性联轴器和刚性联轴器出现疲劳\n失效。\n\n不对中造成的大轴承载荷会引起油膜轴承中的巴氏合金层过热、磨损和疲劳。不对\n中也会极大地降低滚动轴承的使用寿命，而轴承的使用寿命则是径向载荷的强函数。点\n接触球轴承的Lo寿命（在这段时间内，此类轴承中有10%将失效）与其承受载荷的立方\n成反比。\n\n第20章大泾向载荷与不对中\n259\n*异常的平均轴心位置\n在没有齿轮载荷且主要径向载荷是重力的机器中，载荷正常的普通圆柱形液体动压轴承\n的转子位置角通常介于30°～45°之间，偏心率的范围为0.6~0.8。开机或关机期间，在流\n体支撑楔的作用下，轴心线将以典型的方式移动（图20-5）。\n\n记住，方位角由相对于施加径向载荷\n的轴位置决定（第6章）。在重力载荷起\n假定载荷的\n异常运行位置\n假定径向载荷\n主导作用的卧式机器中，希望方位角等于\n位置角。如果出现作用在另一个方向的有\n效径向载荷，位置角将不等于方位角。齿\n轮啮合力可以很容易地克服重力，并将齿\n轮移动到不同于期望的卧式机器的位置。",
+                  "token_estimate": null,
+                  "topic": null
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00366",
+                  "chunk_index": null,
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "lane_contributions": {
+                    "bm25": 0.012812,
+                    "dense": 0.019354
+                  },
+                  "lane_scores": {
+                    "bm25": 80.54646226947418,
+                    "dense": 0.7158584
+                  },
+                  "pages": [
+                    265,
+                    266
+                  ],
+                  "reason": "bm25+dense match; matched: 1x, 出现, 振动, 转子; source priority 4",
+                  "retrieval_contribution": "hybrid",
+                  "retrieval_lanes": [
+                    "bm25",
+                    "dense"
+                  ],
+                  "score": 0.032567,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_priority": 4,
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "source_type": "book",
+                  "text": "式（19-4）说明，在远远超过共振转速时，弯曲所致振动为零。但转子的总响应还包\n括第三项，即其他某种不平衡引起的一般响应。图19-4中的1X伯德图显示了同时存在弯\n曲和不平衡的转子系统的响应。不平衡响应显示，速度为零时振幅为零，不平衡相位为0°，\n而弯曲响应的偏心率为20umpp（0.8milpp），高点相位为135°。低速时，总响应主要受弯\n曲影响。超过共振转速时，弯曲开始完成自我平衡并逐渐消失，剩下的只有残余不平衡响\n\n246\n旋转机械诊断技术\n应。鉴于本例中不平衡与弯曲偏心率之间的相位关系，相较只存在不平衡的情况，共振时的\n振幅较低。\n\nO\n不平衡\n45\n90\n135\n9\n弯曲\n180\n00\n总响应\n225\n270\n0\n5001000150020002500300035004000\n频率/（r/min）\n120\n不平衡\n100\n(dd)\n0 0040\n总响应\n弯曲\n20\n0\n5001000150020002500300035004000\n频率/（r/min）\n图19-4存在弯曲和不平衡的转子系统的1X伯德图\n*运行期间的热弯曲\n临时性热弯曲可提高或降低运行速度下的1X振动振幅，具体取决于弯曲与不平衡之间\n的相位关系。发电机线圈短路和感应电动机的转子铜条断路或转子铁心短路均可能在转子上\n产生局部热点，导致临时性热弯曲。\n\n即使新型电动机也可能在槽口、绕组和冷却气流中含有轻度的不对称性，导致受热不均\n和热弯曲。制造商通常会对发电机设置平衡偏移（故意使其略微不平衡以补偿后续热变\n化），使发电机在满载条件下平稳运转。但即使采用这种方法，载荷或激励变化仍可产生温\n度变化，进而出现意想不到的热弯曲，致使1X振动增强。\n\n发电机转子还会随时间逐渐磨损，因为循环往复开机和关机会使内部零件错位。出现这\n种情况时，冷却通路可能部分或完全堵塞，致使转子的温度分布发生变化。因此在工作一段\n时间后，发电机转子可能需要重新调整平衡。",
+                  "token_estimate": null,
+                  "topic": null
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "chunk_index": null,
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "lane_contributions": {
+                    "dense": 0.02594
+                  },
+                  "lane_scores": {
+                    "dense": 0.77648705
+                  },
+                  "pages": [
+                    251,
+                    252,
+                    253
+                  ],
+                  "reason": "dense match; source priority 4",
+                  "retrieval_contribution": "dense",
+                  "retrieval_lanes": [
+                    "dense"
+                  ],
+                  "score": 0.02634,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_priority": 4,
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "source_type": "book",
+                  "text": "振摆始终包括机械振摆和电学振摆。其主要特征是，只要探头的圆周路径不变，即使降\n至慢滚动速度，振幅也是恒定的。尽管不平衡力与转子速度的平方成比例，也不会在慢滚动\n速度条件下产生任何可检测到的1X动态响应。\n\n232\n旋转机械诊断技术\n-3X\n1X\n2X\n2.0\n划痕\n6\n(\n1.0\n0.5\nMuiM\nV\nMMAM\nw\nMhnm\n0\n-30\n-20\n-10\n0\n10\n20\n30\n反向\n正向\n进动频率/kcpm\n图18-3径向轨迹和全频谱显示出探头观测区中轴的划痕产生的影响\n随着轴旋转，划痕首次通过X传感器下方时，迅速在轨迹中产生方向\n远离X传感器的负向电压尖峰。划痕随后通过Y传感器的下方，在轨\n迹中产生另一个方向远离Y传感器的尖峰。在全频谱中，1X频率由\n1X转子动态响应和每转一次的划痕响应共同组成。划痕响应继续保持\n慢滚动速度，锐利的划痕产生丰富的谐波谱\n*转子弯曲\n弯曲的转子会产生1X振动，但不同于不平衡的是，它会在慢滚动速度条件下产生1X\n响应。\n\n机器运转时会发生转子热弯曲。如果转子一侧形成热点，这一侧便会膨胀。由于单侧温\n升，转子会产生弯曲，这将改变1X振动响应。如果去掉局部热源，则除非该区域已超出材\n料的屈服极限，否则热弯曲将会消失（第19章）。\n\n传感器系统中的电噪声\n涡轮发电机组以工频或工频的某个分频运行，具体视发电机的极数而定。双极发电机将\n以3600r/min（60Hz）或3000r/min（50Hz）的速度运转。如果电工频噪声耦合到传感器信\n号线中，则在振动信号中将出现工频分量。这种噪声被误认为是1X转子振动。可以在开机\n或关机时，通过查看频谱级联图来检查（图18-5下图）。转子速度改变时，电噪声谱线的\n频率保持恒定，而1X转子频率随速度发生改变。\n\n第18章不平衡233\n耦合问题\n某些类型的耦合问题会产生1X振动。如果两个刚性耦联机器的转子轴彼此偏离（不平\n行），那么当机器旋转时，曲轴效应将在其中一个机器或两个机器中产生1X振动。偏离中\n心的联轴器孔或偏离中心的联轴器螺栓分布圆也会产生此类1X振动效应。不平衡导致的1X\n振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。",
+                  "token_estimate": null,
+                  "topic": null
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0330_00465",
+                  "chunk_index": null,
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "lane_contributions": {
+                    "dense": 0.025594
+                  },
+                  "lane_scores": {
+                    "dense": 0.769354
+                  },
+                  "pages": [
+                    330,
+                    331
+                  ],
+                  "reason": "dense match; source priority 4",
+                  "retrieval_contribution": "dense",
+                  "retrieval_lanes": [
+                    "dense"
+                  ],
+                  "score": 0.025994,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_priority": 4,
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "source_type": "book",
+                  "text": "监测建议\n一台在开机期间经历剧烈1X振动的蒸汽涡轮机关机了，假定此问题由不平衡引起。连\n续尝试重新起动此设备时，发现设备的1X振动级别不断提高并出现某种2X振动。决定拆\n卸设备，随后在转子中发现了局部轴裂纹。检查所有振动数据后，发现除1X振动振幅较高\n外，尝试开机期间还存在接近40°的显著1X相移。尽管设备能够提供相位监测，但之前没\n有这样做。谨记：如果不去寻找轴裂纹的迹象，那么就无法及时检测到裂纹，也就无法预防\n灾难性后果。\n\n遗憾的是，几乎不可能仅仅只查看单条数据就能明确诊断轴裂纹，即很多时候使用手头\n数据难以作出诊断。但是，如果采纳以下监测建议，那么及时检测到轴裂纹的几率将大大\n提高。\n\n1）在运行速度下，监测直接（未滤波）振动级别及1X和2X振幅和相位并跟踪其趋\n势。趋势可能与手录数据列表（1X和2X振幅和相位）一样简单，而更好的趋势则接近于\n计算机生成的APHT图和极坐标图。此外，应明确定义1X和2X可接受区域，这样才能检\n测振动的显著变化。对于不同载荷条件，可能需要建立不同的可接受区域。这种稳态监测可\n在裂纹达到25%时提供早期预警。\n\n2）机器每次开机或关机时，都应采集数据（形式为1X、2X伯德图和极坐标图），并\n将这些数据与先前数据进行比较。积极寻找通过共振转速时1X和2X行为的显著变化、一\n个或多个共振转速出现下降或其他异常行为，还应关注并调查开机或关机时机器响应的显著\n变化。这种监测可在裂纹达到20%时提供早期预警。\n\n3）应记录1X慢滚动矢量，并将其与先前数据进行比较。随着裂纹的扩大，转子弯曲\n可能会发生变化，而1X慢滚动矢量的振幅和相位也会发生变化。\n\n第24章轴裂纹311\n虽然无法确保万无一失，但对机器进行谨慎周全的监测，可显著提高在发生灾难性破坏\n前检测到裂纹的几率。\n\n兴总结\n轴裂纹是缓慢增长的转子破裂。当转子横截面减小到无法承受对其施加的静态或动态载\n荷时，转子将迅速发生脆性断裂，这是一种灾难性的破坏。",
+                  "token_estimate": null,
+                  "topic": null
+                },
+                {
+                  "assets": [],
+                  "chunk_id": "document_bce240f3_p0010_00017",
+                  "chunk_index": null,
+                  "doc_id": "document_bce240f3",
+                  "lane_contributions": {
+                    "dense": 0.02517
+                  },
+                  "lane_scores": {
+                    "dense": 0.7554425
+                  },
+                  "pages": [
+                    10,
+                    11
+                  ],
+                  "reason": "dense match; topic: 1.2.1 阶次分析; source priority 2",
+                  "retrieval_contribution": "dense",
+                  "retrieval_lanes": [
+                    "dense"
+                  ],
+                  "score": 0.02537,
+                  "selection_kind": null,
+                  "selection_reason": null,
+                  "selection_token_estimate": null,
+                  "source_filename": "旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆).pdf",
+                  "source_priority": 2,
+                  "source_title": "旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆)",
+                  "source_type": "paper",
+                  "text": "1.2.1 阶次分析\n\n对于旋转机械来说，其振动响应中含有频率随转速的变化而线性变化的成分，这\n\n些是由旋转机械的往复运动的周期性而引起的。通常将参考轴的转频（基频）定义为\n\n第一阶次，则第n 次谐波被定义为第n 阶次。阶次关系由结构特点确定，转速参考轴不\n\n同，同一位置的响应与转速之间的阶次关系也不同。阶次O 与振动信号频率\n(Hz)\nf\n的\n\n关系为：\n\n式（1-1）中： n 为参考轴的转速，r/min ；O 为阶次，\n-1\nr 。从式（1-1）可看出阶次\n\n是频率的另一种表达方式，反映转轴每转一圈的振动次数。\n\nt/s\n\nFFT\n\nt/s\n\nf/ z\n\nFFT\n\n/rad\n\nO/\n\n如图1-1 所示，角域采样与时域采样的不同之处在于角域采样以角度为周期，获取\n\n相对于某个参考轴的等角度增量采样数据，这是为了防止转速波动造成每个周期采样\n\n点不同。频谱分析采样方式为时域采样（等时间间隔采样），然后将采集得到的振动信\n\n号经过快速傅里叶变换(fast Fourier transform，FFT)转换到频域，得到该信号的频谱图\n\n并进行下一步分析。频谱分析适用于稳定的振动信号（例如恒速工况下旋转机械产生\n\n的振动信号），若旋转机械的转速发生了改变，其机械特性也随之改变。当旋转机械的\n\n转速接近或超过临界转速时，一般旋转机械会产生共振现象，机械共振现象有利于研\n\n2\n\n第一章 绪论\n\n究者分析旋转机械内部结构，因此机械的振动噪声测试通常需要进行加速或降速测试。\n\n由式（1-1）可以看出，当旋转机械转速变化时，每个阶次分量的频率带宽会随着转速\n\n的变化而变宽，其频谱不是单一谱峰而是一频带（如图1-1 频谱图所示），不能从频谱\n\n上反映信号的阶次分量特征。阶次分析是频谱分析的一种改进方式，其采样方式为角",
+                  "token_estimate": null,
+                  "topic": "1.2.1 阶次分析"
+                }
+              ],
+              "retrieval_output": {
+                "hits": [
+                  {
+                    "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                    "doc_id": "vold_kalman_e0e977fa",
+                    "pages": [
+                      22,
+                      23
+                    ],
+                    "reason": "bm25+dense match; matched: 径向, 向振, 振动, 向振动; topic: 2.2.1 转子不平衡; source priority 2",
+                    "score": 0.049009,
+                    "source_type": "paper"
+                  },
+                  {
+                    "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                    "doc_id": "vold_kalman_e0e977fa",
+                    "pages": [
+                      22
+                    ],
+                    "reason": "bm25+dense match; matched: 径向, 向振, 振动, 径向振; topic: 2.2.1 转子不平衡; source priority 2",
+                    "score": 0.047083,
+                    "source_type": "paper"
+                  },
+                  {
+                    "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+                    "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                    "pages": [
+                      33,
+                      34
+                    ],
+                    "reason": "bm25+dense match; matched: 1x, 振动, 转子, 子不; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                    "score": 0.041664,
+                    "source_type": "standard"
+                  },
+                  {
+                    "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00053",
+                    "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                    "pages": [
+                      33
+                    ],
+                    "reason": "bm25+dense match; matched: 1x, 向振, 振动, 向振动; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                    "score": 0.04152,
+                    "source_type": "standard"
+                  },
+                  {
+                    "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                    "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                    "pages": [
+                      32
+                    ],
+                    "reason": "bm25+dense match; matched: 径向, 向振, 振动, 径向振; topic: 一\n、、\n四\nO :;一一:一一; source priority 5",
+                    "score": 0.039335,
+                    "source_type": "standard"
+                  },
+                  {
+                    "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                    "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                    "pages": [
+                      278,
+                      279
+                    ],
+                    "reason": "bm25+dense match; matched: 1x, 出现, 径向, 向振; source priority 4",
+                    "score": 0.038826,
+                    "source_type": "book"
+                  },
+                  {
+                    "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00366",
+                    "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                    "pages": [
+                      265,
+                      266
+                    ],
+                    "reason": "bm25+dense match; matched: 1x, 出现, 振动, 转子; source priority 4",
+                    "score": 0.032567,
+                    "source_type": "book"
+                  },
+                  {
+                    "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                    "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                    "pages": [
+                      251,
+                      252,
+                      253
+                    ],
+                    "reason": "dense match; source priority 4",
+                    "score": 0.02634,
+                    "source_type": "book"
+                  },
+                  {
+                    "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0330_00465",
+                    "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                    "pages": [
+                      330,
+                      331
+                    ],
+                    "reason": "dense match; source priority 4",
+                    "score": 0.025994,
+                    "source_type": "book"
+                  },
+                  {
+                    "chunk_id": "document_bce240f3_p0010_00017",
+                    "doc_id": "document_bce240f3",
+                    "pages": [
+                      10,
+                      11
+                    ],
+                    "reason": "dense match; topic: 1.2.1 阶次分析; source priority 2",
+                    "score": 0.02537,
+                    "source_type": "paper"
+                  }
+                ],
+                "intent": "engineering",
+                "normalized_query": "设备出现1X径向振动时，怎样判断是转子不平衡还是不对中？ rotor unbalance unbalance 不平衡 转子不平衡 synchronous response 1x 一倍频 同步响应 misalignment 不对中 轴系不对中",
+                "status": "ok",
+                "warnings": []
+              },
+              "retrieval_source": "file_chunks",
+              "task_id": "p5_diagnosis_zh_fault_discrimination"
+            },
+            "s3": {
+              "answer": "不能只凭“1X径向振动”直接判定为转子不平衡，因为不对中也常产生或改变1X、2X、3X径向振动分量，且联轴器处平行不对中通常会产生1X和2X轴相对振动分量。[gbt_19873_1_2005_1_57afcb1a_p0032_00050][donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384] 判别时先看慢滚或很低速数据：不平衡导致的1X在低速时消失，而由转动/耦合问题导致的1X在慢滚动速度下会继续存在，因此“低速消失”更支持不平衡，“慢滚仍存在”更支持不对中或联轴器几何问题。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343] 再看频谱或阶次中是否伴随2X、4X或更高倍频：综合不对中会激励二倍频径向振动和一倍频轴向振动，精密诊断主要分析FFT或功率谱中的2fr或4fr成分。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看轴向振动和相位：轴向振动往往是不对中的征兆，联轴器两侧轴向振动基本180°反相时更支持不对中。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看转速和负荷趋势：不对中振动幅值对转速变化不敏感、对负荷变化敏感且一般随负荷增加而升高；不平衡作为常见激励在机器共振转速时会放大，并且转子通过临界转速时1X相位角有明显大的变化。[vold_kalman_e0e977fa_p0022_00030][gbt_19873_1_2005_1_57afcb1a_p0033_00054] 还可用波形和轴心轨迹辅助判断：畸变正弦波、香蕉形双环椭圆轴心轨迹和正进动是资料列出的不对中图形特征。[vold_kalman_e0e977fa_p0022_00030] 实用结论是：若1X径向为主、慢滚或低速时消失，并在升降速通过临界转速时呈现明显1X相位变化，优先按转子不平衡排查；若1X径向同时伴随明显2X/4X径向、1X轴向、联轴器两侧轴向180°反相、幅值随负荷增加而升高或慢滚仍有转动相关1X，优先按不对中排查。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343][gbt_19873_1_2005_1_57afcb1a_p0033_00054][vold_kalman_e0e977fa_p0022_00030]",
+              "assets": [],
+              "claims": [
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "evidence_type": "documented",
+                  "pages": [
+                    32
+                  ],
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "text": "不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "evidence_type": "documented",
+                  "pages": [
+                    278,
+                    279
+                  ],
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "text": "联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴相对振动分量"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "evidence_type": "documented",
+                  "pages": [
+                    251,
+                    252,
+                    253
+                  ],
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "text": "不平衡导致的1X振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "精密诊断时主要以分析FFT 谱或功率谱中的二倍频（2 rf ）或四倍频（4 rf ）成分来判断。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "轴向振动往往是存在不对中的一些征兆。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "联轴器两侧的轴向振动基本上是 180°反相的。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "不对中振动幅值对转速的变化不敏感，因此影响不太明显；振动对负荷的变化比较敏感，一般振动幅值随负荷的增加而升高。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "evidence_type": "documented",
+                  "pages": [
+                    33,
+                    34
+                  ],
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "text": "在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。转子不平衡也是最常见的激励"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "振动信号的原始时间波形为畸变的正弦波；典型的轴心轨迹为香蕉形（双环椭圆），正进动；"
+                }
+              ],
+              "cost": {
+                "cached_input_tokens": 0,
+                "estimated_usd": 0.22501,
+                "input_tokens": 6926,
+                "model": "gpt-5.5",
+                "notes": [],
+                "output_tokens": 6346,
+                "provider": "openai",
+                "source": "local_estimate",
+                "total_tokens": 13272
+              },
+              "evidence_count": 10,
+              "language": "zh",
+              "mode": "qa",
+              "synthesis_mode": "llm",
+              "task_id": "p5_diagnosis_zh_fault_discrimination",
+              "token_cost": 13272,
+              "unsupported_claims": []
+            },
+            "s4": {
+              "answer": "不能只凭“1X径向振动”直接判定为转子不平衡，因为不对中也常产生或改变1X、2X、3X径向振动分量，且联轴器处平行不对中通常会产生1X和2X轴相对振动分量。[gbt_19873_1_2005_1_57afcb1a_p0032_00050][donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384] 判别时先看慢滚或很低速数据：不平衡导致的1X在低速时消失，而由转动/耦合问题导致的1X在慢滚动速度下会继续存在，因此“低速消失”更支持不平衡，“慢滚仍存在”更支持不对中或联轴器几何问题。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343] 再看频谱或阶次中是否伴随2X、4X或更高倍频：综合不对中会激励二倍频径向振动和一倍频轴向振动，精密诊断主要分析FFT或功率谱中的2fr或4fr成分。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看轴向振动和相位：轴向振动往往是不对中的征兆，联轴器两侧轴向振动基本180°反相时更支持不对中。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看转速和负荷趋势：不对中振动幅值对转速变化不敏感、对负荷变化敏感且一般随负荷增加而升高；不平衡作为常见激励在机器共振转速时会放大，并且转子通过临界转速时1X相位角有明显大的变化。[vold_kalman_e0e977fa_p0022_00030][gbt_19873_1_2005_1_57afcb1a_p0033_00054] 还可用波形和轴心轨迹辅助判断：畸变正弦波、香蕉形双环椭圆轴心轨迹和正进动是资料列出的不对中图形特征。[vold_kalman_e0e977fa_p0022_00030] 实用结论是：若1X径向为主、慢滚或低速时消失，并在升降速通过临界转速时呈现明显1X相位变化，优先按转子不平衡排查；若1X径向同时伴随明显2X/4X径向、1X轴向、联轴器两侧轴向180°反相、幅值随负荷增加而升高或慢滚仍有转动相关1X，优先按不对中排查。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343][gbt_19873_1_2005_1_57afcb1a_p0033_00054][vold_kalman_e0e977fa_p0022_00030]",
+              "assets": [],
+              "claims": [
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "evidence_type": "documented",
+                  "pages": [
+                    32
+                  ],
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "text": "不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "evidence_type": "documented",
+                  "pages": [
+                    278,
+                    279
+                  ],
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "text": "联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴相对振动分量"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "evidence_type": "documented",
+                  "pages": [
+                    251,
+                    252,
+                    253
+                  ],
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "text": "不平衡导致的1X振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "精密诊断时主要以分析FFT 谱或功率谱中的二倍频（2 rf ）或四倍频（4 rf ）成分来判断。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "轴向振动往往是存在不对中的一些征兆。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "联轴器两侧的轴向振动基本上是 180°反相的。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "不对中振动幅值对转速的变化不敏感，因此影响不太明显；振动对负荷的变化比较敏感，一般振动幅值随负荷的增加而升高。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "evidence_type": "documented",
+                  "pages": [
+                    33,
+                    34
+                  ],
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "text": "在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。转子不平衡也是最常见的激励"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "振动信号的原始时间波形为畸变的正弦波；典型的轴心轨迹为香蕉形（双环椭圆），正进动；"
+                }
+              ],
+              "cost": null,
+              "engineering_meaning": "工程意义仅限于所引证据：不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量",
+              "evidence_count": 10,
+              "failure_modes": "请勿超出所引工况、单位或数值范围进行外推。",
+              "language": "zh",
+              "mode": "engineering_analysis",
+              "next_action": "在应用阈值、维护措施或模型假设前，请先核对所引证据块。",
+              "premises": "仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0032_00050, donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384, donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343, vold_kalman_e0e977fa_p0022_00029, vold_kalman_e0e977fa_p0022_00030, gbt_19873_1_2005_1_57afcb1a_p0033_00054。",
+              "s4_analysis": {
+                "policy": "deterministic_claim_framing_only",
+                "source_claim_count": 10,
+                "visible_chunk_ids": [
+                  "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "vold_kalman_e0e977fa_p0022_00029",
+                  "vold_kalman_e0e977fa_p0022_00030",
+                  "gbt_19873_1_2005_1_57afcb1a_p0033_00054"
+                ]
+              },
+              "source_synthesis_mode": "llm",
+              "synthesis_mode": "deterministic",
+              "task_id": "p5_diagnosis_zh_fault_discrimination",
+              "token_cost": null,
+              "unsupported_claims": []
+            },
+            "v2": {
+              "answer": "不能只凭“1X径向振动”直接判定为转子不平衡，因为不对中也常产生或改变1X、2X、3X径向振动分量，且联轴器处平行不对中通常会产生1X和2X轴相对振动分量。[gbt_19873_1_2005_1_57afcb1a_p0032_00050][donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384] 判别时先看慢滚或很低速数据：不平衡导致的1X在低速时消失，而由转动/耦合问题导致的1X在慢滚动速度下会继续存在，因此“低速消失”更支持不平衡，“慢滚仍存在”更支持不对中或联轴器几何问题。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343] 再看频谱或阶次中是否伴随2X、4X或更高倍频：综合不对中会激励二倍频径向振动和一倍频轴向振动，精密诊断主要分析FFT或功率谱中的2fr或4fr成分。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看轴向振动和相位：轴向振动往往是不对中的征兆，联轴器两侧轴向振动基本180°反相时更支持不对中。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看转速和负荷趋势：不对中振动幅值对转速变化不敏感、对负荷变化敏感且一般随负荷增加而升高；不平衡作为常见激励在机器共振转速时会放大，并且转子通过临界转速时1X相位角有明显大的变化。[vold_kalman_e0e977fa_p0022_00030][gbt_19873_1_2005_1_57afcb1a_p0033_00054] 还可用波形和轴心轨迹辅助判断：畸变正弦波、香蕉形双环椭圆轴心轨迹和正进动是资料列出的不对中图形特征。[vold_kalman_e0e977fa_p0022_00030] 实用结论是：若1X径向为主、慢滚或低速时消失，并在升降速通过临界转速时呈现明显1X相位变化，优先按转子不平衡排查；若1X径向同时伴随明显2X/4X径向、1X轴向、联轴器两侧轴向180°反相、幅值随负荷增加而升高或慢滚仍有转动相关1X，优先按不对中排查。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343][gbt_19873_1_2005_1_57afcb1a_p0033_00054][vold_kalman_e0e977fa_p0022_00030]",
+              "assets": [],
+              "citation_check": {
+                "derivation_step_count": 0,
+                "unsupported_count": 0,
+                "visible_answer_refs": [
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+                  "vold_kalman_e0e977fa_p0022_00029",
+                  "vold_kalman_e0e977fa_p0022_00030"
+                ],
+                "visible_chunk_ids": [
+                  "document_bce240f3_p0010_00017",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00366",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0330_00465",
+                  "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "gbt_19873_1_2005_1_57afcb1a_p0033_00053",
+                  "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+                  "vold_kalman_e0e977fa_p0022_00029",
+                  "vold_kalman_e0e977fa_p0022_00030"
+                ]
+              },
+              "claims": [
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "evidence_type": "documented",
+                  "pages": [
+                    32
+                  ],
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "text": "不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "evidence_type": "documented",
+                  "pages": [
+                    278,
+                    279
+                  ],
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "text": "联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴相对振动分量"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "doc_id": "donalde_bently_charlest_hatch_2014_cdef6d55",
+                  "evidence_type": "documented",
+                  "pages": [
+                    251,
+                    252,
+                    253
+                  ],
+                  "source_filename": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf",
+                  "source_title": "旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年",
+                  "text": "不平衡导致的1X振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "精密诊断时主要以分析FFT 谱或功率谱中的二倍频（2 rf ）或四倍频（4 rf ）成分来判断。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00029",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "轴向振动往往是存在不对中的一些征兆。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "联轴器两侧的轴向振动基本上是 180°反相的。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "不对中振动幅值对转速的变化不敏感，因此影响不太明显；振动对负荷的变化比较敏感，一般振动幅值随负荷的增加而升高。"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "gbt_19873_1_2005_1_57afcb1a_p0033_00054",
+                  "doc_id": "gbt_19873_1_2005_1_57afcb1a",
+                  "evidence_type": "documented",
+                  "pages": [
+                    33,
+                    34
+                  ],
+                  "source_filename": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf",
+                  "source_title": "GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则",
+                  "text": "在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。转子不平衡也是最常见的激励"
+                },
+                {
+                  "asset_ids": [],
+                  "assets": [],
+                  "chunk_id": "vold_kalman_e0e977fa_p0022_00030",
+                  "doc_id": "vold_kalman_e0e977fa",
+                  "evidence_type": "documented",
+                  "pages": [
+                    22,
+                    23
+                  ],
+                  "source_filename": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf",
+                  "source_title": "旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)",
+                  "text": "振动信号的原始时间波形为畸变的正弦波；典型的轴心轨迹为香蕉形（双环椭圆），正进动；"
+                }
+              ],
+              "cost": null,
+              "engineering_meaning": "工程意义仅限于所引证据：不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量",
+              "evidence_count": 10,
+              "failure_modes": "请勿超出所引工况、单位或数值范围进行外推。",
+              "language": "zh",
+              "mode": "engineering_analysis",
+              "next_action": "在应用阈值、维护措施或模型假设前，请先核对所引证据块。",
+              "premises": "仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0032_00050, donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384, donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343, vold_kalman_e0e977fa_p0022_00029, vold_kalman_e0e977fa_p0022_00030, gbt_19873_1_2005_1_57afcb1a_p0033_00054。",
+              "s4_analysis": {
+                "policy": "deterministic_claim_framing_only",
+                "source_claim_count": 10,
+                "visible_chunk_ids": [
+                  "gbt_19873_1_2005_1_57afcb1a_p0032_00050",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384",
+                  "donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343",
+                  "vold_kalman_e0e977fa_p0022_00029",
+                  "vold_kalman_e0e977fa_p0022_00030",
+                  "gbt_19873_1_2005_1_57afcb1a_p0033_00054"
+                ]
+              },
+              "source_synthesis_mode": "llm",
+              "synthesis_mode": "deterministic",
+              "task_id": "p5_diagnosis_zh_fault_discrimination",
+              "token_cost": null,
+              "unsupported_claims": []
+            },
+            "v3": {
+              "review_summary": {
+                "checked_answer_relevance": true,
+                "checked_overclaiming": true,
+                "checked_sections": [
+                  "conclusion",
+                  "evidence",
+                  "limits"
+                ],
+                "issue_count": 0
+              },
+              "reviewer_notes": [],
+              "task_id": "p5_diagnosis_zh_fault_discrimination"
+            },
+            "v4": {
+              "answer": "## 结论\n不能只凭“1X径向振动”直接判定为转子转子不平衡，因为不对中也常产生或改变1X、2X、3X径向振动分量，且联轴器处平行不对中通常会产生1X和2X轴相对振动分量。[gbt_19873_1_2005_1_57afcb1a_p0032_00050][donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384] 判别时先看慢滚或很低速数据：转子不平衡导致的1X在低速时消失，而由转动/耦合问题导致的1X在慢滚动速度下会继续存在，因此“低速消失”更支持转子不平衡，“慢滚仍存在”更支持不对中或联轴器几何问题。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343] 再看频谱或阶次中是否伴随2X、4X或更高倍频：综合不对中会激励二倍频径向振动和一倍频轴向振动，精密诊断主要分析FFT或功率谱中的2fr或4fr成分。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看轴向振动和相位：轴向振动往往是不对中的征兆，联轴器两侧轴向振动基本180°反相时更支持不对中。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看转速和负荷趋势：不对中振动幅值对转速变化不敏感、对负荷变化敏感且一般随负荷增加而升高；转子不平衡作为常见激励在机器共振转速时会放大，并且转子通过临界转速时1X相位角有明显大的变化。[vold_kalman_e0e977fa_p0022_00030][gbt_19873_1_2005_1_57afcb1a_p0033_00054] 还可用波形和轴心轨迹辅助判断：畸变正弦波、香蕉形双环椭圆轴心轨迹和正进动是资料列出的不对中图形特征。[vold_kalman_e0e977fa_p0022_00030] 实用结论是：若1X径向为主、慢滚或低速时消失，并在升降速通过临界转速时呈现明显1X相位变化，优先按转子转子不平衡排查；若1X径向同时伴随明显2X/4X径向、1X轴向、联轴器两侧轴向180°反相、幅值随负荷增加而升高或慢滚仍有转动相关1X，优先按不对中排查。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343][gbt_19873_1_2005_1_57afcb1a_p0033_00054][vold_kalman_e0e977fa_p0022_00030]\n\n## 工程意义\n工程意义仅限于所引证据：不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。\n\n## 适用前提\n仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0032_00050, donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384, donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343, vold_kalman_e0e977fa_p0022_00029, vold_kalman_e0e977fa_p0022_00030, gbt_19873_1_2005_1_57afcb1a_p0033_00054。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第32页, 已记录): 不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第278-279页, 已记录): 联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴相对振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第251-253页, 已记录): 转子不平衡导致的1X振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22页, 已记录): 最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22-23页, 已记录): 精密诊断时主要以分析FFT 谱或功率谱中的二倍频（2 rf ）或四倍频（4 rf ）成分来判断。\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33-34页, 已记录): 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。转子转子不平衡也是最常见的激励。",
+              "assets": [],
+              "formula_renders": [],
+              "language": "zh",
+              "section_keys": [
+                "conclusion",
+                "engineering_meaning",
+                "premises",
+                "failure_modes",
+                "next_action",
+                "evidence"
+              ],
+              "sections": {
+                "conclusion": "不能只凭“1X径向振动”直接判定为转子转子不平衡，因为不对中也常产生或改变1X、2X、3X径向振动分量，且联轴器处平行不对中通常会产生1X和2X轴相对振动分量。[gbt_19873_1_2005_1_57afcb1a_p0032_00050][donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384] 判别时先看慢滚或很低速数据：转子不平衡导致的1X在低速时消失，而由转动/耦合问题导致的1X在慢滚动速度下会继续存在，因此“低速消失”更支持转子不平衡，“慢滚仍存在”更支持不对中或联轴器几何问题。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343] 再看频谱或阶次中是否伴随2X、4X或更高倍频：综合不对中会激励二倍频径向振动和一倍频轴向振动，精密诊断主要分析FFT或功率谱中的2fr或4fr成分。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看轴向振动和相位：轴向振动往往是不对中的征兆，联轴器两侧轴向振动基本180°反相时更支持不对中。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看转速和负荷趋势：不对中振动幅值对转速变化不敏感、对负荷变化敏感且一般随负荷增加而升高；转子不平衡作为常见激励在机器共振转速时会放大，并且转子通过临界转速时1X相位角有明显大的变化。[vold_kalman_e0e977fa_p0022_00030][gbt_19873_1_2005_1_57afcb1a_p0033_00054] 还可用波形和轴心轨迹辅助判断：畸变正弦波、香蕉形双环椭圆轴心轨迹和正进动是资料列出的不对中图形特征。[vold_kalman_e0e977fa_p0022_00030] 实用结论是：若1X径向为主、慢滚或低速时消失，并在升降速通过临界转速时呈现明显1X相位变化，优先按转子转子不平衡排查；若1X径向同时伴随明显2X/4X径向、1X轴向、联轴器两侧轴向180°反相、幅值随负荷增加而升高或慢滚仍有转动相关1X，优先按不对中排查。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343][gbt_19873_1_2005_1_57afcb1a_p0033_00054][vold_kalman_e0e977fa_p0022_00030]",
+                "engineering_meaning": "工程意义仅限于所引证据：不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。",
+                "evidence": "- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第32页, 已记录): 不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第278-279页, 已记录): 联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴相对振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第251-253页, 已记录): 转子不平衡导致的1X振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22页, 已记录): 最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22-23页, 已记录): 精密诊断时主要以分析FFT 谱或功率谱中的二倍频（2 rf ）或四倍频（4 rf ）成分来判断。\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33-34页, 已记录): 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。转子转子不平衡也是最常见的激励。",
+                "failure_modes": "请勿超出所引工况、单位或数值范围进行外推。",
+                "next_action": "在应用阈值、维护措施或模型假设前，请先核对所引证据块。",
+                "premises": "仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0032_00050, donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384, donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343, vold_kalman_e0e977fa_p0022_00029, vold_kalman_e0e977fa_p0022_00030, gbt_19873_1_2005_1_57afcb1a_p0033_00054。"
+              },
+              "source_status": "ok",
+              "task_id": "p5_diagnosis_zh_fault_discrimination"
+            }
+          },
+          "task_id": "p5_diagnosis_zh_fault_discrimination",
+          "v4": {
+            "answer": "## 结论\n不能只凭“1X径向振动”直接判定为转子转子不平衡，因为不对中也常产生或改变1X、2X、3X径向振动分量，且联轴器处平行不对中通常会产生1X和2X轴相对振动分量。[gbt_19873_1_2005_1_57afcb1a_p0032_00050][donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384] 判别时先看慢滚或很低速数据：转子不平衡导致的1X在低速时消失，而由转动/耦合问题导致的1X在慢滚动速度下会继续存在，因此“低速消失”更支持转子不平衡，“慢滚仍存在”更支持不对中或联轴器几何问题。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343] 再看频谱或阶次中是否伴随2X、4X或更高倍频：综合不对中会激励二倍频径向振动和一倍频轴向振动，精密诊断主要分析FFT或功率谱中的2fr或4fr成分。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看轴向振动和相位：轴向振动往往是不对中的征兆，联轴器两侧轴向振动基本180°反相时更支持不对中。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看转速和负荷趋势：不对中振动幅值对转速变化不敏感、对负荷变化敏感且一般随负荷增加而升高；转子不平衡作为常见激励在机器共振转速时会放大，并且转子通过临界转速时1X相位角有明显大的变化。[vold_kalman_e0e977fa_p0022_00030][gbt_19873_1_2005_1_57afcb1a_p0033_00054] 还可用波形和轴心轨迹辅助判断：畸变正弦波、香蕉形双环椭圆轴心轨迹和正进动是资料列出的不对中图形特征。[vold_kalman_e0e977fa_p0022_00030] 实用结论是：若1X径向为主、慢滚或低速时消失，并在升降速通过临界转速时呈现明显1X相位变化，优先按转子转子不平衡排查；若1X径向同时伴随明显2X/4X径向、1X轴向、联轴器两侧轴向180°反相、幅值随负荷增加而升高或慢滚仍有转动相关1X，优先按不对中排查。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343][gbt_19873_1_2005_1_57afcb1a_p0033_00054][vold_kalman_e0e977fa_p0022_00030]\n\n## 工程意义\n工程意义仅限于所引证据：不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。\n\n## 适用前提\n仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0032_00050, donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384, donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343, vold_kalman_e0e977fa_p0022_00029, vold_kalman_e0e977fa_p0022_00030, gbt_19873_1_2005_1_57afcb1a_p0033_00054。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第32页, 已记录): 不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第278-279页, 已记录): 联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴相对振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第251-253页, 已记录): 转子不平衡导致的1X振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22页, 已记录): 最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22-23页, 已记录): 精密诊断时主要以分析FFT 谱或功率谱中的二倍频（2 rf ）或四倍频（4 rf ）成分来判断。\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33-34页, 已记录): 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。转子转子不平衡也是最常见的激励。",
+            "assets": [],
+            "formula_renders": [],
+            "language": "zh",
+            "section_keys": [
+              "conclusion",
+              "engineering_meaning",
+              "premises",
+              "failure_modes",
+              "next_action",
+              "evidence"
+            ],
+            "sections": {
+              "conclusion": "不能只凭“1X径向振动”直接判定为转子转子不平衡，因为不对中也常产生或改变1X、2X、3X径向振动分量，且联轴器处平行不对中通常会产生1X和2X轴相对振动分量。[gbt_19873_1_2005_1_57afcb1a_p0032_00050][donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384] 判别时先看慢滚或很低速数据：转子不平衡导致的1X在低速时消失，而由转动/耦合问题导致的1X在慢滚动速度下会继续存在，因此“低速消失”更支持转子不平衡，“慢滚仍存在”更支持不对中或联轴器几何问题。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343] 再看频谱或阶次中是否伴随2X、4X或更高倍频：综合不对中会激励二倍频径向振动和一倍频轴向振动，精密诊断主要分析FFT或功率谱中的2fr或4fr成分。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看轴向振动和相位：轴向振动往往是不对中的征兆，联轴器两侧轴向振动基本180°反相时更支持不对中。[vold_kalman_e0e977fa_p0022_00029][vold_kalman_e0e977fa_p0022_00030] 再看转速和负荷趋势：不对中振动幅值对转速变化不敏感、对负荷变化敏感且一般随负荷增加而升高；转子不平衡作为常见激励在机器共振转速时会放大，并且转子通过临界转速时1X相位角有明显大的变化。[vold_kalman_e0e977fa_p0022_00030][gbt_19873_1_2005_1_57afcb1a_p0033_00054] 还可用波形和轴心轨迹辅助判断：畸变正弦波、香蕉形双环椭圆轴心轨迹和正进动是资料列出的不对中图形特征。[vold_kalman_e0e977fa_p0022_00030] 实用结论是：若1X径向为主、慢滚或低速时消失，并在升降速通过临界转速时呈现明显1X相位变化，优先按转子转子不平衡排查；若1X径向同时伴随明显2X/4X径向、1X轴向、联轴器两侧轴向180°反相、幅值随负荷增加而升高或慢滚仍有转动相关1X，优先按不对中排查。[donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343][gbt_19873_1_2005_1_57afcb1a_p0033_00054][vold_kalman_e0e977fa_p0022_00030]",
+              "engineering_meaning": "工程意义仅限于所引证据：不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。",
+              "evidence": "- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第32页, 已记录): 不对中常产生(或改变)一倍频(1 X)、二倍频(2X)或三倍频(3X)的径向振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第278-279页, 已记录): 联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴相对振动分量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第251-253页, 已记录): 转子不平衡导致的1X振动在低速时消失，但由转动导致的1X振动在慢滚动速度条件下会继续存在。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22页, 已记录): 最终激励转子和支承发生二倍频的径向振动和一倍频的轴向振动。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第22-23页, 已记录): 精密诊断时主要以分析FFT 谱或功率谱中的二倍频（2 rf ）或四倍频（4 rf ）成分来判断。\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33-34页, 已记录): 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。转子转子不平衡也是最常见的激励。",
+              "failure_modes": "请勿超出所引工况、单位或数值范围进行外推。",
+              "next_action": "在应用阈值、维护措施或模型假设前，请先核对所引证据块。",
+              "premises": "仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0032_00050, donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384, donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343, vold_kalman_e0e977fa_p0022_00029, vold_kalman_e0e977fa_p0022_00030, gbt_19873_1_2005_1_57afcb1a_p0033_00054。"
+            },
+            "source_status": "ok",
+            "task_id": "p5_diagnosis_zh_fault_discrimination"
+          }
+        },
+        "summary": "V4 style ok: 6 section(s), 6 citation(s).",
+        "warnings": [
+          "S3 LLM route: main_answer -> openai:gpt-5.5.",
+          "S3 LLM route: main_answer -> openai:gpt-5.5."
+        ]
+      },
+      "loop_count": 0,
+      "max_tokens": 4096,
+      "prompt": "You are the senior supervisor for a vibration-engineering answer. Use only the supplied candidate, citations, reviewer notes, and issues. Return only valid JSON matching the requested schema.\nReview response JSON:\n- status: one of \"ok\", \"insufficient\", \"refusal\", \"refused\". Use \"ok\" when the review ran successfully, even if the candidate is not approved.\n- task_id: string.\n- approved: boolean. Set false when any required correction remains.\n- issues: list of objects with severity, description, file, line, recommendation. Use [] when approved is true.\n- residual_risk: string.\n- warnings: list of strings.\nDo not return a revised answer in the review response. If the answer needs revision, set approved=false and describe the issues.\n{\"candidate\": {\"citations\": [{\"chunk_id\": \"gbt_19873_1_2005_1_57afcb1a_p0032_00050\", \"confidence\": 0.8026076843028832, \"doc_id\": \"gbt_19873_1_2005_1_57afcb1a\", \"evidence_type\": \"documented\", \"pages\": [32], \"snippet\": \"使激励减至最小，这要求从转子特定位置上添加或去掉质量。在转子转速通过每个机器固有频率时，振 动相位将明显变化。而在固定的转速下，任意测点的振动通常是恒定的 旋转机器振动的另一个常见原因是轴或轴承的不对中。有两种类型的不对中:内部的和外部的 内部不对中是在部件中心线不同心时产生。电动机中空气间隙不均匀是内部不对中的一个例子。外部 不对中较为常见，且在两台或多台…\", \"source_filename\": \"GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf\", \"source_title\": \"GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则\"}, {\"chunk_id\": \"donalde_bently_charlest_hatch_2014_cdef6d55_p0278_00384\", \"confidence\": 0.7922218368054847, \"doc_id\": \"donalde_bently_charlest_hatch_2014_cdef6d55\", \"evidence_type\": \"documented\", \"pages\": [278, 279], \"snippet\": \"联轴器处的平行不对中将使轴发生偏移，起到曲轴的作用。这通常将产生1X和2X轴 相对振动分量，这些分量存在于机器的整个速度范围内。振动可能会传递到外壳，但只有轴 相对振动测量才能揭示出慢滚动速度时的转动效应。由于轴每次旋转时，相邻轴承的载荷交 替增加，因此产生2X分量。 错位的联轴器孔或弯轴（角不对中）可产生1X或2X振动。非圆形的联轴器会产生振 摆，看起来像…\", \"source_filename\": \"旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf\", \"source_title\": \"旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年\"}, {\"chunk_id\": \"donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343\", \"confidence\": 0.5374523046787325, \"doc_id\": \"donalde_bently_charlest_hatch_2014_cdef6d55\", \"evidence_type\": \"documented\", \"pages\": [251, 252, 253], \"snippet\": \"振摆始终包括机械振摆和电学振摆。其主要特征是，只要探头的圆周路径不变，即使降 至慢滚动速度，振幅也是恒定的。尽管不平衡力与转子速度的平方成比例，也不会在慢滚动 速度条件下产生任何可检测到的1X动态响应。 232 旋转机械诊断技术 -3X 1X 2X 2.0 划痕 6 ( 1.0 0.5 MuiM V MMAM w Mhnm 0 -30 -20 -10 0 1…\", \"source_filename\": \"旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf\", \"source_title\": \"旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年\"}, {\"chunk_id\": \"vold_kalman_e0e977fa_p0022_00029\", \"confidence\": 0.9607010957171133, \"doc_id\": \"vold_kalman_e0e977fa\", \"evidence_type\": \"documented\", \"pages\": [22], \"snippet\": \"移。平行偏角综合不对中时，两转子轴心线相互交错位移。根据理论分析可知，单纯的平行不 对中将产生振动频率为转子工频两倍的径向振动，而纯粹的偏角不对中则由于附加弯矩作用产 生振动频率与转子工频相同的轴向振动。然而在实际情况中所碰到的轴系不对中，很少有单一 的平行不对中或偏角不对中。通常是两者同时存在的平行偏角综合不对中，即各转子轴线之内 既有径向位移又有偏角位移…\", \"source_filename\": \"旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf\", \"source_title\": \"旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)\"}, {\"chunk_id\": \"vold_kalman_e0e977fa_p0022_00030\", \"confidence\": 1.0, \"doc_id\": \"vold_kalman_e0e977fa\", \"evidence_type\": \"documented\", \"pages\": [22, 23], \"snippet\": \"（2）振动频率的特征：转子不对中相当于在联轴器端输入某种激励。根据理论及实验研究 的结果表明，对刚性联轴器及齿轮联轴器，其径向激振频率除旋转频率 rf （由角度不对中引起） 外，主要以旋转频率的二倍频2 rf 或四倍频4 rf 为主，尚伴有高次倍频 r nf ( 6,8, ) n = L 。轴向 振动的频谱成分中，以一倍频幅值较大。 （3）转速跟踪幅值动态变…\", \"source_filename\": \"旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf\", \"source_title\": \"旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平)\"}, {\"chunk_id\": \"gbt_19873_1_2005_1_57afcb1a_p0033_00054\", \"confidence\": 0.8501295680385236, \"doc_id\": \"gbt_19873_1_2005_1_57afcb1a\", \"evidence_type\": \"documented\", \"pages\": [33, 34], \"snippet\": \"在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响 应中相位角有明显大的变化。转子不平衡也是最常见的激励，它在机 器的非旋转系统中能产生机器的共振响应。对于电机，另一个主要激 一时 励是2x，它由转子感应在定子上的电磁力引起 最常见的是1x，但 低速时轻微摩擦可使之磨合，然而，在高速时摩抹有可能使振动突变， 很快上升到要求停机的幅值 有时摩擦是由…\", \"source_filename\": \"GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf\", \"source_title\": \"GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则\"}], \"handoff_recommendation\": \"Return structured_result.answer to the user.\", \"status\": \"ok\", \"structured_result\": {\"a...[TRUNCATED]",
+      "prompt_version": "supervisor_review.v1",
+      "query": "设备出现1X径向振动时，怎样判断是转子不平衡还是不对中？",
+      "reviewer_notes": [],
+      "schema_version": "supervisor.v1",
+      "task_id": "p5_diagnosis_zh_fault_discrimination",
+      "timeout": 30.0
+    },
+    "request_hash": "62de22514d8ead3f9c41c0e2faa9c78ab01a35d3b8d7b32ad6d55ca452fbb852",
+    "schema_version": "supervisor.v1",
+    "text_verbosity": null
+  },
+  "response": {
+    "approved": false,
+    "cost": {
+      "cached_input_tokens": 0,
+      "estimated_usd": 0.27997,
+      "input_tokens": 52874,
+      "model": "claude-opus-4-8",
+      "notes": [],
+      "output_tokens": 624,
+      "provider": "anthropic",
+      "source": "local_estimate",
+      "total_tokens": 53498
+    },
+    "issues": [
+      {
+        "description": "V4 styling introduced a text corruption: the phrase '转子转子不平衡' (duplicated '转子') appears in the conclusion section and in the last evidence bullet ('转子转子不平衡也是最常见的激励'). The underlying S3/S4/V2 text correctly reads '转子不平衡'. This is a stylistic/rendering defect introduced at the V4 stage, not a citation error.",
+        "file": "v4.sections.conclusion / v4.sections.evidence",
+        "line": "conclusion paragraph (multiple occurrences) and final evidence bullet (GBT 19873.1-2005, 第33-34页)",
+        "recommendation": "Correct all instances of '转子转子不平衡' to '转子不平衡' in the V4 conclusion and evidence sections so the rendered answer matches the source claims.",
+        "severity": "minor"
+      }
+    ],
+    "residual_risk": "The substantive diagnostic content is faithful to the cited evidence (citation check found 0 unsupported claims; all six visible refs map to retrieved chunks). Residual risk is limited to the cosmetic '转子转子不平衡' duplication, which does not alter technical meaning but reduces polish and could confuse readers. No overclaiming or scope violations detected.",
+    "status": "ok",
+    "task_id": "p5_diagnosis_zh_fault_discrimination",
+    "token_cost": 53498,
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "inference_geo": "global",
+      "input_tokens": 52874,
+      "output_tokens": 624,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": null,
+      "service_tier": "standard"
+    },
+    "warnings": [
+      "S3 LLM route logged twice (main_answer -> openai:gpt-5.5); confirm no duplicate synthesis billing.",
+      "Evidence relevance subscore is moderate (0.678) though overall gate passed; several top hits are from a standard (GBT) with source_priority 5 and one dense-only match, so verify page-level snippets before external use."
+    ]
+  }
+}
