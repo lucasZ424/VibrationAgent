@@ -59,7 +59,17 @@ def load_postgres_chunks(conn: Any) -> list[dict[str, Any]]:
 
 
 def corpus_fingerprint(chunks: Sequence[Mapping[str, Any]]) -> str:
-    material = "\n".join(f"{chunk['chunk_id']}\0{chunk.get('text', '')}" for chunk in chunks)
+    """Fingerprint text plus payload identity that must reach Qdrant.
+
+    WHY: Obj7B can change citation/source payloads without changing chunk text.
+    Reusing an old checkpoint in that case would skip the upsert that refreshes
+    Qdrant metadata.
+    """
+    fields = ("chunk_id", "text", "source_type", "source_filename", "source_title", "source_path", "title")
+    material = "\n".join(
+        json.dumps({field: chunk.get(field) for field in fields}, ensure_ascii=False, sort_keys=True)
+        for chunk in chunks
+    )
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 

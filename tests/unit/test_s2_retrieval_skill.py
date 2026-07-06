@@ -87,6 +87,30 @@ def test_query_normalize_bridges_real_corpus_turbine_and_order_analysis_terms():
     assert "order analysis" in order["normalized_query"]
 
 
+def test_query_normalize_expands_obj7_key_fact_alias_families():
+    order = normalize("Why is equal-angle sampling used during start-up?")
+    balancing = normalize("How is the influence vector calculated with a trial weight?")
+
+    assert "angular_sampling" in order["detected_terms"]
+    assert "variable_speed_operation" in order["detected_terms"]
+    assert "角域采样" in order["normalized_query"]
+    assert "run-up" in order["normalized_query"]
+    assert "influence_vector" in balancing["detected_terms"]
+    assert "trial_weight" in balancing["detected_terms"]
+    assert "H=(T-O)/m" in balancing["normalized_query"]
+    assert "校准配重" in balancing["normalized_query"]
+
+
+def test_query_normalize_uses_curated_runtime_aliases_for_broad_obj7_terms():
+    mechanism = normalize("Why do rotor vibration amplitude and phase change near critical speed?")
+    gas_turbine = normalize("gas turbine torsional vibration")
+
+    assert "complex_response_vector" not in mechanism["detected_terms"]
+    assert "complex vector" not in mechanism["normalized_query"]
+    assert "turbine_generator_unit" not in gas_turbine["detected_terms"]
+    assert "透平发电机组" not in gas_turbine["normalized_query"]
+
+
 def test_query_normalize_does_not_expand_gas_turbine_to_steam_turbine():
     # WHY: the generic English word "turbine" must not turn a gas-turbine query into 汽轮机 evidence.
     result = normalize("gas turbine torsional vibration")

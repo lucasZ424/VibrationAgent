@@ -8,7 +8,7 @@ from scripts.qdrant_reindex import parse_args
 from vibration_agent.config import load
 from vibration_agent.schemas import EmbeddingRecord
 from vibration_agent.storage import qdrant
-from vibration_agent.storage.reindex import run_reindex
+from vibration_agent.storage.reindex import corpus_fingerprint, run_reindex
 
 
 def _chunks():
@@ -97,6 +97,15 @@ def test_reindex_defaults_to_non_writing_dry_run(tmp_path, monkeypatch):
     assert report["embeddable_chunks"] == 2
     assert report["source_type_counts"] == {"book": 1, "standard": 1}
     assert not (tmp_path / "checkpoint.json").exists()
+
+
+def test_reindex_fingerprint_includes_source_identity_payload():
+    # WHY: Obj7B can mutate citation/source payloads without changing text; a
+    # stale checkpoint must not hide the required Qdrant payload refresh.
+    original = [{"chunk_id": "c1", "text": "rotor", "source_filename": "old.pdf"}]
+    mutated = [{"chunk_id": "c1", "text": "rotor", "source_filename": "new.pdf"}]
+
+    assert corpus_fingerprint(original) != corpus_fingerprint(mutated)
 
 
 def test_reindex_rejects_empty_pre_migration_corpus(tmp_path):

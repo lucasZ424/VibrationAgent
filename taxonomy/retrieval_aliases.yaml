@@ -25,3 +25,80 @@ families:
     aliases: [order analysis, order tracking, 阶比分析, 阶次分析]
   - id: shaft_train
     aliases: [shaft train, shafting, 轴系]
+  - id: angular_sampling
+    canonical: angular-domain sampling
+    aliases: [angular-domain, angular-domain sampling, equal-angle sampling, angle-domain sampling, 角域采样, 等角度采样]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_definition_zh_order_analysis, p5_definition_en_order_analysis]
+    ambiguity: Do not expand the generic word "order" unless it appears with analysis, tracking, or sampling context.
+  - id: variable_speed_operation
+    canonical: variable-speed operation
+    aliases: [variable-speed, variable speed, start-up, startup, run-up, coast-down, coastdown, 启停, 变速, 升降速]
+    retrieval_aliases: [variable-speed, variable speed, start-up, startup, run-up, coast-down, coastdown]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_definition_zh_order_analysis, p5_definition_en_order_analysis]
+    ambiguity: Generic "speed" alone is not enough to trigger this family.
+  - id: phase_response
+    canonical: vibration phase response
+    aliases: [phase change, phase angle, phase response, vector phase, phase, vector, 相位变化, 相位角, 相位, 矢量]
+    retrieval_aliases: [phase response, vector phase, 相位变化, 相位角]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_mechanism_zh_critical_speed, p5_mechanism_en_critical_speed, p5_diagnosis_zh_fault_discrimination, p5_diagnosis_en_fault_discrimination]
+    ambiguity: Phase is broad; use as a retrieval expansion only with vibration, critical-speed, balancing, or diagnosis context.
+  - id: axial_vibration
+    canonical: axial vibration
+    aliases: [axial vibration, axial component, axial direction, axial, 轴向振动, 轴向分量, 轴向]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_comparison_zh_unbalance_misalignment, p5_comparison_en_unbalance_misalignment, p5_diagnosis_zh_fault_discrimination, p5_diagnosis_en_fault_discrimination]
+    ambiguity: Generic "axial" must stay tied to vibration or fault-discrimination questions.
+  - id: harmonic_components
+    canonical: harmonic vibration components
+    aliases: [harmonic, harmonics, 2x, 2X, second harmonic, higher harmonics, 二倍频, 谐波, 高阶谐波, 较高阶谐波]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_comparison_zh_unbalance_misalignment, p5_comparison_en_unbalance_misalignment, p5_diagnosis_zh_fault_discrimination, p5_diagnosis_en_fault_discrimination]
+    ambiguity: Do not treat every numeric multiplier as a fault harmonic without vibration context.
+  - id: measurement_workflow
+    canonical: rotating-machine vibration measurement workflow
+    aliases: [measurement workflow, measurement procedure, diagnosis workflow, feasibility, operating state, operating condition, whole train, entire machine, 测量流程, 测量程序, 可行性, 测量的可行性, 运行状态, 工况, 整个机组, 整机]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_workflow_zh_measurement_diagnosis, p5_workflow_en_measurement_diagnosis]
+    ambiguity: Generic "workflow" alone is not enough unless the query is about rotating-machine vibration measurement or diagnosis.
+  - id: turbine_generator_unit
+    canonical: turbine-generator unit
+    aliases: [turbine-generator, turbine generator, gas turbine, gas turbine generator, steam turbine generator, 汽轮发电机组, 燃气轮机发电机组, 透平发电机组]
+    retrieval_aliases: [turbine-generator, turbine generator, gas turbine generator, steam turbine generator, 汽轮发电机组, 燃气轮机发电机组, 透平发电机组]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_standards_zh_gbt33199_scope, p5_standards_en_gbt33199_scope]
+    ambiguity: Do not expand generic "turbine" to steam turbine; this family is for unit scope in standards questions.
+  - id: power_rating_50mw
+    canonical: rating greater than 50 MW
+    aliases: [50 mw, 50mw, greater than 50 mw, above 50 mw, 大于50mw, 50兆瓦]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_standards_zh_gbt33199_scope, p5_standards_en_gbt33199_scope]
+    ambiguity: This is a standards-scope alias, not a generic equipment-size filter.
+  - id: standard_analysis_measurement
+    canonical: standards analysis and measurement verification
+    aliases: [analysis, measurement verification, analysis and measurement, 分析评定, 测量验证]
+    retrieval_aliases: [measurement verification, analysis and measurement, 分析评定, 测量验证]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_standards_zh_gbt33199_scope, p5_standards_en_gbt33199_scope]
+    ambiguity: Analysis is broad; only standards-scope queries should benefit from this expansion.
+  - id: influence_vector
+    canonical: balancing influence vector
+    aliases: [influence vector, influence coefficient, response vector c, "H=(T-O)/m", "T-O", "T−O", "t-0", "t−0", 影响矢量, 影响系数, 响应矢量C]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_formula_zh_influence_vector, p5_formula_en_influence_vector]
+    ambiguity: Keep this family tied to balancing and trial-weight calculation.
+  - id: trial_weight
+    canonical: trial weight for balancing
+    aliases: [trial weight, calibration weight, test weight, 试重, 校准配重, m校准, 配重]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_formula_zh_influence_vector, p5_formula_en_influence_vector]
+    ambiguity: Generic "weight" alone is not enough to trigger balancing evidence.
+  - id: complex_response_vector
+    canonical: complex response vector
+    aliases: [complex vector, complex response, complex, amplitude and phase, 振幅和相位, 复数, 复响应]
+    retrieval_aliases: [complex vector, complex response, 复数, 复响应]
+    languages: [en, zh]
+    source_miss_case_ids: [p5_formula_zh_influence_vector, p5_formula_en_influence_vector]
+    ambiguity: Use only in vibration response or balancing formula contexts.

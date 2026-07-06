@@ -95,6 +95,32 @@ def test_chunk_pages_keeps_page_enumeration_when_section_spans_pages(tmp_path):
     assert MemoryChunk.model_validate(chunks[0]).pages == [4, 5]
 
 
+def test_chunk_pages_writes_direct_source_identity_fields(tmp_path):
+    # WHY: Obj7 requires new chunk exports to carry citation identity directly,
+    # not only via retrieval-time source_path basename fallback.
+    source = tmp_path / "rotor-book.pdf"
+    page = OcrPage(
+        doc_id="doc1",
+        page_no=1,
+        primary_engine="pymupdf",
+        blocks=[PageBlock(block_id="body", text="Rotor response body.", block_type="body")],
+    )
+
+    chunk = chunk_pages(
+        [page],
+        doc_id="doc1",
+        title="Rotor Book",
+        source_path=source,
+        source_type="book",
+        target_tokens=600,
+        overlap_tokens=60,
+    )[0]
+
+    assert chunk["source_filename"] == "rotor-book.pdf"
+    assert chunk["source_title"] == "Rotor Book"
+    assert chunk["source_path"] == str(source)
+
+
 def test_chunk_pages_preserves_typed_text_segments_for_layout_aware_synthesis(tmp_path):
     # WHY: S3 must distinguish headings from body evidence without re-parsing flattened text.
     page = OcrPage(

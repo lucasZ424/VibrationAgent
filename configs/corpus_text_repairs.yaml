@@ -1,0 +1,16 @@
+schema_version: phase5.corpus_text_repairs.v1
+repairs:
+  - id: obj7c_hht_wave_extension_formula
+    chunk_id: 10_1201_9781420027532_previewpdf_65585fa7_p0055_00074
+    doc_id: 10_1201_9781420027532_previewpdf_65585fa7
+    source_type: book
+    source_filename: 10.1201_9781420027532_previewpdf.pdf
+    fields:
+      - text
+      - api_context
+    start_marker: "the time-frequency spectrum."
+    start_marker_alternates:
+      - "the time–frequency spectrum."
+    end_marker: "Loutridis [2004] used EMD"
+    replacement: " [PDF formula extraction artifact removed.] "
+    rationale: "PDF native text extraction produced replacement characters in a formula block; do not infer formula content."

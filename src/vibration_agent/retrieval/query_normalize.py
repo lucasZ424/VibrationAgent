@@ -45,7 +45,8 @@ def load_alias_families(path: str | Path = _ALIAS_PATH) -> dict[str, tuple[str, 
     for row in data.get("families", []):
         if not isinstance(row, dict) or not row.get("id") or not isinstance(row.get("aliases"), list):
             raise ValueError(f"Invalid retrieval alias family in {source}")
-        aliases = tuple(str(value).strip() for value in row["aliases"] if str(value).strip())
+        source_aliases = row.get("retrieval_aliases") if isinstance(row.get("retrieval_aliases"), list) else row["aliases"]
+        aliases = tuple(str(value).strip() for value in source_aliases if str(value).strip())
         if len(aliases) < 2:
             raise ValueError(f"Retrieval alias family requires at least two aliases: {row.get('id')}")
         families[str(row["id"])] = aliases

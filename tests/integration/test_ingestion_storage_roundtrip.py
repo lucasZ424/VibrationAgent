@@ -107,6 +107,13 @@ def test_live_ingestion_persists_postgres_and_qdrant(tmp_path, monkeypatch):
         hits = qdrant.search_chunks(qdrant_client, [1.0, 0.0], top_k=1, collection=settings.database.qdrant_collection)
         assert hits[0]["chunk"]["chunk_id"] == chunk_id
     finally:
+        try:
+            pg_conn.rollback()
+            with pg_conn.cursor() as cur:
+                cur.execute("DELETE FROM documents WHERE hash = %s", (marker,))
+            pg_conn.commit()
+        except Exception:
+            pg_conn.rollback()
         pg_conn.close()
         try:
             qdrant_client.delete_collection(settings.database.qdrant_collection)

@@ -2,22 +2,26 @@ schema_version: phase5.corpus_standards.v1
 source:
   backend: qdrant
   collection: chunks
-  generated_at: 2026-07-01
-  identity_fields: [source_title, source_filename, doc_id, title]
+  generated_at: '2026-07-06'
+  identity_fields:
+  - source_title
+  - source_filename
+  - doc_id
+  - title
 identifiers:
-  - DL/T 5565
-  - GB/T 6075
-  - GB/T 11348
-  - GB/T 13436
-  - GB/T 19873
-  - GB/T 20471
-  - GB/T 20921
-  - GB/T 22393
-  - GB/T 22394
-  - GB/T 23713
-  - GB/T 23718
-  - GB/T 25889
-  - GB/T 29531
-  - GB/T 29716
-  - GB/T 33199
-  - ISO 10816
+- DL/T 5565
+- GB/T 11348
+- GB/T 13436
+- GB/T 19873
+- GB/T 20471
+- GB/T 20921
+- GB/T 22393
+- GB/T 22394
+- GB/T 23713
+- GB/T 23718
+- GB/T 25889
+- GB/T 29531
+- GB/T 29716
+- GB/T 33199
+- GB/T 6075
+- ISO 10816

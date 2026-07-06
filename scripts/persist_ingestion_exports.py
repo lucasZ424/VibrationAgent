@@ -57,6 +57,12 @@ def load_export_documents(settings: Settings, *, source_type: str, doc_id: str |
     return documents
 
 
+def apply_storage_overrides(settings: Settings, *, skip_qdrant: bool = False) -> Settings:
+    if skip_qdrant:
+        settings.database.qdrant_enabled = False
+    return settings
+
+
 def _write_json(payload: dict[str, Any], output: Path | None) -> None:
     text = json.dumps(payload, ensure_ascii=False, indent=2)
     if output is None:
@@ -71,11 +77,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--workspace", type=Path, default=None)
     parser.add_argument("--source-type", required=True)
     parser.add_argument("--doc-id", default=None)
+    parser.add_argument("--skip-qdrant", action="store_true", help="Persist Postgres rows without Qdrant upserts.")
     parser.add_argument("--output", type=Path, default=None)
     args = parser.parse_args(argv)
 
     try:
-        settings = load(args.workspace)
+        settings = apply_storage_overrides(load(args.workspace), skip_qdrant=args.skip_qdrant)
         documents = load_export_documents(settings, source_type=args.source_type, doc_id=args.doc_id)
         result = {
             "status": "ok" if documents else "insufficient",

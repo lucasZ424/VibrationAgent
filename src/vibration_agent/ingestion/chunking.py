@@ -421,6 +421,8 @@ def chunk_paragraphs(
                 "chunk_id": chunk_id,
                 "doc_id": doc_id,
                 "title": title,
+                "source_title": title,
+                "source_filename": Path(source_path).name,
                 "source_type": source_type,
                 "source_path": str(source_path),
                 "chunk_index": chunk_index,

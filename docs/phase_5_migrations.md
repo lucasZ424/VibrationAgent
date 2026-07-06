@@ -544,3 +544,255 @@ default-off and replay-first; disabling `S3_LLM_ENABLED` or omitting
 `use_opus`/supervisor constraints restores deterministic extraction and normal
 supervisor bypass. No corpus, retrieval, API response, or database migration is
 required.
+
+### Obj7A - Corpus identity audit and taxonomy expansion (2026-07-06)
+
+Status: audit/taxonomy checkpoint complete; source-identity corpus mutation
+handled by Obj7B.
+
+- `scripts/obj7_corpus_audit.py` introduces
+  `phase5.obj7.corpus_audit.report.v1`, a read-only audit over raw chunk
+  exports, Obj1 questions, and taxonomy YAML. It records direct versus fallback
+  source identity coverage, generic `document_*` identity samples, mojibake
+  samples, taxonomy parse status, retrieval-alias counts, Obj1 key-fact alias
+  coverage, and mutation-prerequisite booleans.
+- New chunk exports from `chunk_pages` / `chunk_sections` now include additive
+  top-level `source_filename` and `source_title` fields derived from
+  `source_path.name` and the resolved document title. Existing readers already
+  tolerate these fields; Qdrant payload mapping consumes them through the
+  existing compatibility path.
+- `taxonomy/retrieval_aliases.yaml` remains schema
+  `phase5.retrieval_aliases.v1` but expands from 12 to 24 families. The new
+  Obj1-derived families carry `canonical`, `aliases`, `languages`,
+  `source_miss_case_ids`, and `ambiguity`; runtime normalization still consumes
+  only `id` and aliases. When a family declares `retrieval_aliases`, runtime
+  normalization uses that narrower list while the full `aliases` list remains
+  the audit/human-label coverage list.
+- The Obj7 audit validates trace metadata for families that declare
+  `source_miss_case_ids`, ensuring those ids exist in the Obj1 fixture and that
+  canonical/language/ambiguity fields are present.
+
+Validation:
+
+- Final audit report:
+  `run_logs/obj7_corpus_audit_20260706_174849.json`. It found 4,436 current
+  chunk exports with direct source filename/title rates 0.0000, fallback
+  filename/title/path rates 1.0000, 1,330 generic identities, one replacement
+  character formula fragment, and one generic Obj1 expected doc id
+  `document_cdd35349`.
+- Taxonomy result: 24 families, 152 aliases, 12 traceable new families, zero
+  trace metadata issues, zero mojibake aliases, and Obj1 key-fact alias coverage
+  103/103.
+- Focused regression passed:
+  `tests/unit/test_s2_retrieval_skill.py`,
+  `tests/unit/test_chunking_strategy.py`, and
+  `tests/eval/test_obj7_corpus_audit.py`: 57 passed.
+- All YAML files under `taxonomy/` parse successfully.
+- Obj1 full scorecard after taxonomy expansion:
+  `run_logs/obj7_rag_qa_20260706_174744.json`, exit code 0. Recall@10 improved
+  to 0.821, completeness improved to 0.720 from the fixed 0.708 baseline, V2
+  faithfulness remained 1.000, and citation alignment remained 1.000. This
+  0.821 recall is in-sample because Obj7 alias families were derived from Obj1
+  misses and measured on the same fixture; it is not a held-out generalization
+  signal.
+- Canonical non-large regression:
+  `run_logs/obj7_final_nonlarge_20260706_174940.log`, 637 passed,
+  1 registered large-corpus deselection, exit code 0.
+
+Data/reindex requirement:
+
+- Existing chunk exports and runtime Qdrant payloads are not mutated by Obj7A.
+  Obj7 cannot close until a versioned corpus mutation/re-ingest snapshot is
+  created, PG:Qdrant parity is verified, and the full Obj1 scorecard is rerun on
+  the new snapshot.
+- If the mutation changes chunk ids, shrinks the corpus, or renames chunks, the
+  Qdrant collection must be explicitly recreated and old checkpoints must not be
+  reused across the corpus boundary.
+
+Compatibility: additive chunk fields and additive taxonomy families. Rollback:
+remove `scripts/obj7_corpus_audit.py`, the Obj7A tests, the added chunk identity
+fields, and the added taxonomy families. This restores pre-Obj7A behavior but
+also restores the measured Obj1 taxonomy alias gaps.
+
+### Obj7B - File corpus source-identity mutation checkpoint (2026-07-06)
+
+Status: file snapshot mutated, runtime rebuilt, and PG:Qdrant parity verified.
+
+- `scripts/obj7_corpus_mutation.py` introduces
+  `phase5.obj7.corpus_mutation.report.v1`. It is dry-run by default and can
+  execute a conservative backfill of direct `source_filename`, `source_title`,
+  and `source_path` fields into existing chunk JSONL exports from the matching
+  document manifests.
+- The mutation does not rename `doc_id`, `chunk_id`, or chunk text. It repairs
+  citation/source payload identity while avoiding fixture evidence migration and
+  Qdrant orphan points.
+- `src/vibration_agent/storage/reindex.py` now includes source identity payload
+  fields in `corpus_fingerprint()`. A metadata-only corpus mutation therefore
+  requires a fresh reindex checkpoint and cannot silently resume a stale one.
+- `scripts/persist_ingestion_exports.py` now accepts `--skip-qdrant`, allowing
+  Obj7B to repersist file exports into Postgres before a single controlled
+  Qdrant reindex.
+
+Validation:
+
+- Focused regression:
+  `tests/eval/test_obj7_corpus_mutation.py`,
+  `tests/unit/test_persist_ingestion_exports.py`,
+  `tests/unit/test_reindex.py`, and
+  `tests/eval/test_obj7_corpus_audit.py`: 16 passed.
+- Dry-run report:
+  `run_logs/obj7b_corpus_mutation_dry_run_20260706_180157.json`. Planned 79
+  changed documents and 4,436 changed chunks, updating only
+  `source_filename`/`source_title`.
+- Execute report:
+  `run_logs/obj7b_corpus_mutation_execute_20260706_180206.json`. Direct source
+  filename/title/path coverage in file chunks is 1.0000.
+- Post-mutation audit:
+  `run_logs/obj7b_corpus_audit_after_mutation_20260706_180214.json`. Direct
+  source filename/title rates are 1.0000; taxonomy remains 24 families, 152
+  aliases, zero trace issues, and zero missing Obj1 key-fact aliases.
+- Post-mutation Obj1 scorecard:
+  `run_logs/obj7b_rag_qa_after_mutation_20260706_180247.json`, exit code 0.
+  Recall@10 is 0.821, completeness is 0.720, V2 faithfulness is 1.000, and
+  citation alignment is 1.000. The recall result is in-sample on Obj1 and is
+  treated as a fixed-miss regression result, not a generalization claim.
+- Canonical non-large regression:
+  `run_logs/obj7b_final_nonlarge_20260706_180713.log`, 641 passed,
+  1 registered large-corpus deselection, exit code 0.
+- Runtime dry-run:
+  `run_logs/obj7b_qdrant_reindex_dry_run.json` reported 4,459 embeddable
+  Postgres chunks (manual=951), while the file snapshot has 4,436 chunks
+  (manual=928), proving runtime rebuild was required before closing Obj7B.
+- After explicit approval, runtime reset/rebuild completed:
+  `run_logs/obj7b_reset_runtime_stores_execute_20260706_180923.json` reset
+  local ingestion tables and deleted the configured Qdrant collection. Book,
+  manual, paper, and standard exports were repersisted to Postgres with
+  `--skip-qdrant` under `run_logs/obj7b_*_persist_pg_20260706_180942.json`.
+- Post-persist reindex dry-run:
+  `run_logs/obj7b_qdrant_reindex_after_pg_dry_run_20260706_181003.json`
+  confirmed 4,436 embeddable chunks and source counts book 939 / manual 928 /
+  paper 1,780 / standard 789.
+- Qdrant reindex:
+  `run_logs/obj7b_qdrant_reindex_execute_20260706_181024.json`, exit code 0.
+  Status `complete`, processed chunks 4,436, Qdrant points 4,436, provenance
+  mismatches 0, and parity `true`.
+- Runtime audit:
+  `run_logs/obj7b_runtime_corpus_audit_20260706_181207.json`. Runtime direct
+  source filename/title rates are 1.0000 and source-type distribution matches
+  the file snapshot.
+- `taxonomy/corpus_standards.yaml` was refreshed from Qdrant after reindex:
+  `run_logs/obj7b_build_corpus_standard_catalog_20260706_181318.log`,
+  16 identifiers.
+- Final runtime Obj1 scorecard after catalog refresh:
+  `run_logs/obj7b_final_runtime_rag_qa_20260706_181350.json`, exit code 0.
+  Recall@10 is 0.821, completeness is 0.720, V2 faithfulness is 1.000, and
+  citation alignment is 1.000. This remains an in-sample Obj1 scorecard after
+  taxonomy expansion.
+- Idempotency dry-run:
+  `run_logs/obj7b_corpus_mutation_idempotency_20260706_181549.json` reports
+  zero changed chunks and no further runtime rebuild required by this mutation.
+- Current canonical non-large regression:
+  `run_logs/obj7b_current_final_nonlarge_20260706_181557.log`, 642 passed,
+  1 registered large-corpus deselection, exit code 0.
+
+Data/reindex requirement:
+
+- The Obj7B source-identity mutation does not require chunk-id fixture migration
+  because chunk ids and text are unchanged.
+- The runtime rebuild used a fresh checkpoint and an explicit collection reset,
+  satisfying the no-stale-checkpoint/no-stale-payload requirement for this
+  metadata mutation.
+- Remaining Obj7 corpus-quality work is outside the Obj7B source-identity
+  mutation: generic `document_*` ids and one mojibake formula fragment still
+  require a targeted decision/fix.
+
+Compatibility: additive script/CLI fields and additive chunk metadata in ignored
+file exports. Rollback: rerun the previous corpus export snapshot or remove the
+new direct fields from ignored `data/chunks`; remove
+`scripts/obj7_corpus_mutation.py`, its tests, the `--skip-qdrant` flag, and the
+expanded `corpus_fingerprint()` fields. Rolling back the fingerprint reopens the
+stale-checkpoint risk for metadata-only corpus mutations.
+
+### Obj7C - Corpus residual closure and runtime isolation (2026-07-06)
+
+Status: corpus-quality residuals closed; Obj7 runtime baseline verified.
+
+- `configs/corpus_text_repairs.yaml` introduces schema
+  `phase5.corpus_text_repairs.v1`, a manifest for source-specific text repairs.
+  The first repair removes one PDF formula extraction artifact from
+  `10_1201_9781420027532_previewpdf_65585fa7_p0055_00074` in both `text` and
+  `api_context`; the replacement explicitly records that the formula artifact
+  was removed and does not reconstruct source content.
+- `scripts/obj7_text_repair.py` introduces
+  `phase5.obj7.text_repair.report.v1`. It is dry-run by default, applies
+  marker-bounded field repairs, updates token/character counts, and stamps
+  `metadata.corpus_text_repairs` for auditability.
+- `scripts/obj7_corpus_audit.py` now distinguishes generic user-facing source
+  identity from generic internal evidence ids. Generic `document_*` chunk/doc ids
+  are accepted as internal identifiers when `source_filename`/`source_title`
+  resolve to real source display data and Obj1 expected evidence has a resolved
+  source display.
+- `tests/integration/test_ingestion_storage_roundtrip.py` now deletes its live
+  temporary Postgres document by hash in `finally`. The test still validates
+  real PG/Qdrant writes, but no longer leaves `Rotor Storage Smoke` chunks in
+  the shared runtime corpus.
+
+Validation:
+
+- Text repair dry-run/execute:
+  `run_logs/obj7c_text_repair_dry_run_20260706_182657.json` and
+  `run_logs/obj7c_text_repair_execute_20260706_182709.json`; one configured
+  repair matched and one chunk changed.
+- File corpus audit:
+  `run_logs/obj7c_file_corpus_audit_20260706_182724.json`; mojibake count 0,
+  direct source filename/title rates 1.0000, zero missing Obj1 key-fact aliases,
+  and all mutation-prerequisite booleans false.
+- Runtime rebuild:
+  `run_logs/obj7c_reset_runtime_stores_execute_20260706_183209.json`,
+  `run_logs/obj7c_*_persist_pg_20260706_183221.json`, and
+  `run_logs/obj7c_qdrant_reindex_execute_20260706_183547.json`. Final Qdrant
+  report status is `complete`, processed chunks 4,436, points 4,436, provenance
+  mismatches 0, and parity `true`.
+- Runtime audit:
+  `run_logs/obj7c_runtime_corpus_audit_20260706_183750.json`; runtime count is
+  4,436 with source counts book 939 / manual 928 / paper 1,780 / standard 789,
+  mojibake count 0, and all mutation-prerequisite booleans false.
+- Final Obj1 scorecard:
+  `run_logs/obj7c_final_runtime_rag_qa_20260706_183804.json`; recall@10 0.821,
+  completeness 0.720, V2 faithfulness 1.000, citation alignment 1.000. The
+  recall value is explicitly in-sample: aliases were derived from Obj1 misses and
+  measured on the same 14-case fixture.
+- Regression:
+  `tests/eval/test_obj7_corpus_audit.py`,
+  `tests/eval/test_obj7_text_repair.py`, and
+  `tests/integration/test_ingestion_storage_roundtrip.py`: passed. Canonical
+  non-large regression `run_logs/obj7c_final_nonlarge_20260706_184020.log`:
+  645 passed, 1 registered large-corpus deselection, exit code 0.
+- Post-regression parity remained clean:
+  `run_logs/obj7c_final_runtime_corpus_audit_20260706_184103.json`; file,
+  Postgres, and Qdrant all contain 4,436 chunks with no extra/missing ids.
+- Issue-follow-up parity check:
+  `run_logs/obj7_issue_followup_runtime_parity_*.json`; file, Postgres, and
+  Qdrant all contain 4,436 chunks with source counts book 939 / manual 928 /
+  paper 1,780 / standard 789 and no extra/missing ids. The earlier 4,459 runtime
+  PG count was pre-reset test pollution and is reconciled.
+
+Data/reindex requirement:
+
+- The text repair changes ignored file exports and runtime chunk text for one
+  chunk. Runtime stores must be rebuilt or the repaired document must be
+  repersisted followed by a fresh Qdrant reindex. Obj7C used a full reset,
+  repersist, and fresh checkpoint reindex because a direct one-document Qdrant
+  upsert skipped vectors when the embedding model was unavailable.
+- The reindex must use real ANN embeddings. Token-feature fallback remains
+  forbidden for Qdrant writes and must fail loud.
+- `tests/fixtures/rag_qa/post_r3_baseline.json` remains the pre-Obj7 fixed-S3
+  committed baseline until Obj9 locks the backend/eval regression net. Obj9 must
+  decide whether to promote the in-sample post-Obj7 scorecard as the standing
+  regression baseline.
+
+Compatibility: additive repair manifest, additive dry-run-default repair CLI,
+audit report field refinements, and test cleanup only. Rollback: restore the
+previous chunk export for the repaired source, remove
+`configs/corpus_text_repairs.yaml`, `scripts/obj7_text_repair.py`, and its tests,
+then reset/repersist/reindex runtime stores from the restored file snapshot.
