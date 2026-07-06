@@ -16,6 +16,23 @@ _CORRECTION_PROMPT_VERSION = "supervisor_correction.v1"
 _REVIEW_SCHEMA_VERSION = "supervisor.v1"
 _CORRECTION_SCHEMA_VERSION = "correction.v1"
 
+_REVIEW_SCHEMA_INSTRUCTION = """Review response JSON:
+- status: one of "ok", "insufficient", "refusal", "refused". Use "ok" when the review ran successfully, even if the candidate is not approved.
+- task_id: string.
+- approved: boolean. Set false when any required correction remains.
+- issues: list of objects with severity, description, file, line, recommendation. Use [] when approved is true.
+- residual_risk: string.
+- warnings: list of strings.
+Do not return a revised answer in the review response. If the answer needs revision, set approved=false and describe the issues."""
+
+_CORRECTION_SCHEMA_INSTRUCTION = """Correction response JSON:
+- status: one of "ok", "insufficient", "refusal", "refused". Do not use "revised".
+- answer: corrected answer string, or structured_result.answer.
+- summary: short correction summary.
+- structured_result: optional object carrying updated fields. If used, include answer.
+- warnings: list of strings.
+An ok correction must include either top-level answer or structured_result.answer."""
+
 
 class SupervisorAction(StrEnum):
     FINALIZE = "finalize"
@@ -132,6 +149,7 @@ def _annotate_output(
     supervisor_corrections: int = 0,
     supervisor_token_cost: int | None = None,
     supervisor_costs: list[dict[str, Any]] | None = None,
+    supervisor_residual_risk: str | None = None,
 ) -> SkillOutput:
     updated = output.model_copy(deep=True)
     structured = dict(updated.structured_result)
@@ -148,6 +166,8 @@ def _annotate_output(
         structured["token_cost"] = int(existing or 0) + supervisor_token_cost
     if supervisor_costs:
         structured["supervisor_cost"] = supervisor_costs
+    if supervisor_residual_risk:
+        structured["supervisor_residual_risk"] = supervisor_residual_risk
     updated.structured_result = structured
     for warning in warnings or []:
         if warning not in updated.warnings:
@@ -204,6 +224,14 @@ def _review_issue_payload(value: Any) -> Any:
             or issue.get("code")
             or "Supervisor returned an issue without a description."
         )
+    line = issue.get("line")
+    if isinstance(line, str) and line.strip() and not line.strip().isdigit():
+        location = line.strip()
+        recommendation = str(issue.get("recommendation") or "")
+        issue["recommendation"] = (
+            f"{recommendation} Location: {location}" if recommendation else f"Location: {location}"
+        )
+        issue["line"] = None
     return issue
 
 
@@ -219,8 +247,13 @@ def _prompt(*, query: str, output: SkillOutput, reviewer_notes: list[dict[str, A
         "You are the senior supervisor for a vibration-engineering answer. "
         "Use only the supplied candidate, citations, reviewer notes, and issues. "
         "Return only valid JSON matching the requested schema.\n"
+        f"{_schema_instruction(purpose)}\n"
         f"{json.dumps(payload, ensure_ascii=False, sort_keys=True)}"
     )
+
+
+def _schema_instruction(purpose: str) -> str:
+    return _CORRECTION_SCHEMA_INSTRUCTION if purpose == "correct" else _REVIEW_SCHEMA_INSTRUCTION
 
 
 def _provider_kwargs(settings: Any) -> dict[str, Any]:
@@ -292,7 +325,7 @@ def _apply_correction(current: SkillOutput, response: dict[str, Any] | SkillOutp
     if isinstance(response, SkillOutput):
         return response
 
-    correction = SupervisorCorrectionResponse.model_validate(response)
+    correction = SupervisorCorrectionResponse.model_validate(_correction_response_payload(response))
     if correction.status != "ok":
         raise ValueError(f"Synthetic correction returned {correction.status}")
 
@@ -318,6 +351,26 @@ def _apply_correction(current: SkillOutput, response: dict[str, Any] | SkillOutp
         if warning not in updated.warnings:
             updated.warnings.append(warning)
     return updated
+
+
+def _correction_response_payload(response: Mapping[str, Any]) -> dict[str, Any]:
+    data = dict(response)
+    answer = data.get("answer")
+    if not isinstance(answer, str) or not answer.strip().startswith("{"):
+        return data
+    try:
+        nested = json.loads(answer)
+    except json.JSONDecodeError:
+        return data
+    if not isinstance(nested, Mapping) or "answer" not in nested:
+        return data
+    if not ({"status", "summary", "structured_result", "warnings"} & set(nested)):
+        return data
+    merged = dict(nested)
+    for key in ("token_cost", "cost", "usage"):
+        if key in data and key not in merged:
+            merged[key] = data[key]
+    return merged
 
 
 class SupervisorLoop:
@@ -407,6 +460,7 @@ class SupervisorLoop:
                         supervisor_corrections=corrections,
                         supervisor_token_cost=supervisor_token_cost or None,
                         supervisor_costs=supervisor_costs,
+                        supervisor_residual_risk=review.residual_risk,
                     )
                     return SupervisorLoopResult(
                         output=annotated,
@@ -429,6 +483,7 @@ class SupervisorLoop:
                         supervisor_corrections=corrections,
                         supervisor_token_cost=supervisor_token_cost or None,
                         supervisor_costs=supervisor_costs,
+                        supervisor_residual_risk=review.residual_risk,
                     )
                     return SupervisorLoopResult(
                         output=annotated,
@@ -450,6 +505,7 @@ class SupervisorLoop:
                         supervisor_corrections=corrections,
                         supervisor_token_cost=supervisor_token_cost or None,
                         supervisor_costs=supervisor_costs,
+                        supervisor_residual_risk=review.residual_risk,
                     )
                     return SupervisorLoopResult(
                         output=annotated,

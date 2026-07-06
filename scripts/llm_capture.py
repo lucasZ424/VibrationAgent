@@ -19,10 +19,12 @@ for path in (ROOT, SRC):
         sys.path.insert(0, str(path))
 
 from vibration_agent.config import load  # noqa: E402
+from vibration_agent.agent.supervisor import ReviewReport, SupervisorCorrectionResponse  # noqa: E402
 from vibration_agent.llm.anthropic_client import AnthropicClient  # noqa: E402
 from vibration_agent.llm.budget import BudgetGuard  # noqa: E402
 from vibration_agent.llm.openai_client import OpenAIClient  # noqa: E402
-from vibration_agent.llm.replay import RecordingClient, request_from_kwargs  # noqa: E402
+from vibration_agent.llm.replay import request_from_kwargs, write_fixture  # noqa: E402
+from vibration_agent.schemas import S3LlmResponse, S4LlmResponse, S5LlmResponse  # noqa: E402
 
 _OPENAI_TASKS = {
     "s3_qa_summary": "s3.v1",
@@ -75,6 +77,21 @@ def _live_client(settings: Any, *, provider_name: str, budget: BudgetGuard) -> A
     return AnthropicClient(settings.llm.anthropic, allow_live=True, budget_guard=budget)
 
 
+def _validate_response(task: str, response: dict[str, Any]) -> None:
+    if response.get("status") == "incomplete":
+        details = response.get("incomplete_details")
+        reason = details.get("reason") if isinstance(details, dict) else "unknown"
+        raise RuntimeError(f"{task} provider response incomplete: {reason}")
+    schema = {
+        "s3_qa_summary": S3LlmResponse,
+        "s4_engineering_analysis": S4LlmResponse,
+        "s5_formula_derivation": S5LlmResponse,
+        "supervisor_review": ReviewReport,
+        "supervisor_correction": SupervisorCorrectionResponse,
+    }[task]
+    schema.model_validate(response)
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Capture one manual Phase-3 replay fixture.")
     parser.add_argument("task", choices=[*_OPENAI_TASKS.keys(), *_ANTHROPIC_TASKS.keys()])
@@ -95,13 +112,9 @@ def main(argv: list[str] | None = None) -> int:
         usd_budget_per_task=settings.llm.usd_budget_per_task,
     )
     live = _live_client(settings, provider_name=provider_name, budget=budget)
-    recorder = RecordingClient(
-        client=live,
-        fixture_dir=args.fixture_dir,
-        capture_enabled=settings.llm.capture_enabled,
-        manual_lane=True,
-    )
-    response = recorder.complete(request)
+    response = live.complete(request)
+    _validate_response(args.task, response)
+    write_fixture(args.fixture_dir, request, response)
     print(
         json.dumps(
             {

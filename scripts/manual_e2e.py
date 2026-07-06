@@ -34,6 +34,7 @@ from vibration_agent.skills.base import Skill  # noqa: E402
 
 PDF_CHUNKS = ROOT / "tests" / "fixtures" / "chunks" / "sample_zh_chunks.jsonl"
 DOCX_CHUNKS = ROOT / "tests" / "fixtures" / "chunks" / "sample_zh_docx_chunks.jsonl"
+DEFAULT_QUERY = "阻尼比如何影响转子临界转速附近的振动响应？"
 
 
 class StaticRetrievalSkill(Skill):
@@ -105,6 +106,8 @@ def _summary(output: SkillOutput) -> dict[str, Any]:
         "reviewer_notes": structured.get("reviewer_notes", []),
         "supervisor_status": structured.get("supervisor_status"),
         "supervisor_invocations": structured.get("supervisor_invocations"),
+        "supervisor_corrections": structured.get("supervisor_corrections"),
+        "supervisor_residual_risk": structured.get("supervisor_residual_risk"),
         "token_cost": aggregate_token_cost,
         "cost": structured.get("cost") or _aggregate_cost(skill_costs),
         "skill_token_costs": skill_token_costs,
@@ -184,7 +187,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the manual Phase-3 E2E probe.")
     parser.add_argument(
         "--query",
-        default="阻尼比如何影响转子临界转速附近的振动响应？",
+        default=DEFAULT_QUERY,
         help="Question to ask against the PDF + DOCX fixtures.",
     )
     parser.add_argument("--difficulty", default="extreme", choices=["low", "medium", "high", "extreme"])

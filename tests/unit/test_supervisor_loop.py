@@ -85,6 +85,65 @@ class BudgetDeniedSupervisor:
         raise BudgetDeniedError("per-task token budget exceeded")
 
 
+class MalformedCorrectionSupervisor:
+    def __init__(self) -> None:
+        self.review_calls: list[int] = []
+        self.correction_calls: list[int] = []
+
+    def review(self, *, query, output, loop_count, reviewer_notes):
+        self.review_calls.append(loop_count)
+        return ReviewReport(task_id="t1", issues=[ReviewIssue(description="missing boundary condition")])
+
+    def correct(self, *, query, output, review, loop_count, reviewer_notes):
+        self.correction_calls.append(loop_count)
+        return {"status": "ok", "summary": "Claimed correction without candidate content."}
+
+
+class StructuredResultCorrectionSupervisor:
+    def __init__(self) -> None:
+        self.review_calls: list[int] = []
+        self.correction_calls: list[int] = []
+
+    def review(self, *, query, output, loop_count, reviewer_notes):
+        self.review_calls.append(loop_count)
+        if "boundary condition" in output.structured_result["answer"].casefold():
+            return ReviewReport(task_id="t1", approved=True)
+        return ReviewReport(task_id="t1", issues=[ReviewIssue(description="missing boundary condition")])
+
+    def correct(self, *, query, output, review, loop_count, reviewer_notes):
+        self.correction_calls.append(loop_count)
+        return {
+            "status": "ok",
+            "summary": "Corrected via structured_result.",
+            "structured_result": {
+                "answer": output.structured_result["answer"]
+                + "\nBoundary condition: use the cited operating region."
+            },
+        }
+
+
+class NestedJsonAnswerCorrectionSupervisor:
+    def __init__(self) -> None:
+        self.review_calls: list[int] = []
+        self.correction_calls: list[int] = []
+
+    def review(self, *, query, output, loop_count, reviewer_notes):
+        self.review_calls.append(loop_count)
+        if "clean corrected answer" in output.structured_result["answer"].casefold():
+            return ReviewReport(task_id="t1", approved=True)
+        return ReviewReport(task_id="t1", issues=[ReviewIssue(description="answer needs cleanup")])
+
+    def correct(self, *, query, output, review, loop_count, reviewer_notes):
+        self.correction_calls.append(loop_count)
+        nested = {
+            "status": "ok",
+            "answer": "Clean corrected answer.",
+            "summary": "Corrected nested payload.",
+            "structured_result": {"answer": "Clean corrected answer."},
+        }
+        return {"answer": json.dumps(nested), "token_cost": 7}
+
+
 def _fixture(name: str) -> dict:
     path = Path(__file__).resolve().parents[1] / "fixtures" / "llm" / name
     return json.loads(path.read_text(encoding="utf-8"))
@@ -196,6 +255,60 @@ def test_supervisor_loop_reject_correct_approve_returns_improved_candidate():
     assert client.correction_calls == [0]
 
 
+def test_supervisor_loop_rejects_malformed_ok_correction_without_approving():
+    # WHY: Obj6B's supervisor correction gate must not treat a schema-shaped
+    # empty "ok" as an improved answer. The only safe result is visible fallback.
+    client = MalformedCorrectionSupervisor()
+    output = _orchestrator(supervisor_loop=SupervisorLoop(client=client)).handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert output.structured_result["supervisor_status"] == "fallback"
+    assert output.structured_result["supervisor_corrections"] == 0
+    assert output.structured_result["answer"].startswith("## Conclusion")
+    assert client.review_calls == [0]
+    assert client.correction_calls == [0]
+    assert any("answer or structured_result" in warning for warning in output.warnings)
+
+
+def test_supervisor_loop_accepts_structured_result_only_correction():
+    # WHY: The Obj6B correction contract permits either a top-level answer or a
+    # structured_result carrying the candidate answer; both paths must remain valid.
+    client = StructuredResultCorrectionSupervisor()
+    output = _orchestrator(supervisor_loop=SupervisorLoop(client=client)).handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert output.status == "ok"
+    assert output.structured_result["supervisor_status"] == "approved"
+    assert output.structured_result["supervisor_corrections"] == 1
+    assert "boundary condition" in output.structured_result["answer"].casefold()
+    assert output.structured_result["v4"]["answer"] == output.structured_result["answer"]
+    assert client.review_calls == [0, 1]
+    assert client.correction_calls == [0]
+
+
+def test_supervisor_loop_unwraps_nested_json_correction_answer():
+    # WHY: Live Opus may put the whole correction JSON inside answer; applying
+    # that string directly corrupts the final V4 payload.
+    client = NestedJsonAnswerCorrectionSupervisor()
+    output = _orchestrator(supervisor_loop=SupervisorLoop(client=client)).handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert output.structured_result["supervisor_status"] == "approved"
+    assert output.structured_result["answer"] == "Clean corrected answer."
+    assert not output.structured_result["answer"].startswith("{")
+    assert output.summary == "Corrected nested payload."
+
+
 def test_supervisor_loop_replay_reject_correct_approve_records_token_cost(tmp_path):
     settings = load()
     responses = [
@@ -238,6 +351,7 @@ def test_supervisor_loop_replay_reject_correct_approve_records_token_cost(tmp_pa
     assert replay_output.structured_result["supervisor_status"] == "approved"
     assert replay_output.structured_result["supervisor_invocations"] == 2
     assert replay_output.structured_result["supervisor_corrections"] == 1
+    assert replay_output.structured_result["supervisor_residual_risk"] == "Low residual risk after correction."
     assert replay_output.structured_result["supervisor_token_cost"] == 60
     assert replay_output.structured_result["token_cost"] == 60
 
@@ -277,6 +391,58 @@ def test_supervisor_loop_fills_issue_description_from_message():
 
     assert output.structured_result["supervisor_status"] == "approved"
     assert client.correction_calls[0]["review"]["issues"][0]["description"] == "Limits section is missing."
+
+
+def test_supervisor_loop_prompts_pin_live_schema_status_values():
+    # WHY: Live Opus may otherwise return a correction-shaped payload during
+    # review, such as status="revised", which must be rejected before replay.
+    client = ProbeSupervisorClient(
+        [
+            {"status": "ok", "approved": False, "issues": [{"description": "missing boundary condition"}]},
+            {"status": "ok", "answer": "Corrected answer.", "summary": "Corrected."},
+            {"status": "ok", "approved": True},
+        ]
+    )
+
+    _orchestrator(supervisor_loop=SupervisorLoop(client=client, settings=load())).handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert "Do not return a revised answer in the review response." in client.review_calls[0]["prompt"]
+    assert 'Do not use "revised".' in client.correction_calls[0]["prompt"]
+
+
+def test_supervisor_loop_normalizes_text_location_in_review_issue_line():
+    # WHY: Live Opus can put a paragraph/chunk location string into issues[].line;
+    # the review should stay usable instead of falling back on a type mismatch.
+    client = ProbeSupervisorClient(
+        [
+            {
+                "status": "ok",
+                "approved": False,
+                "issues": [
+                    {
+                        "description": "Clarify the diagnostic discriminator.",
+                        "line": "evidence bullet (chunk_1)",
+                    }
+                ],
+            },
+            {"status": "ok", "answer": "Corrected answer.", "summary": "Corrected."},
+            {"status": "ok", "approved": True},
+        ]
+    )
+
+    output = _orchestrator(supervisor_loop=SupervisorLoop(client=client, settings=load())).handle_query(
+        "critical speed",
+        constraints={"scope": "in_scope", "difficulty": "extreme"},
+        task_id="t1",
+    )
+
+    assert output.structured_result["supervisor_status"] == "approved"
+    assert client.correction_calls[0]["review"]["issues"][0]["line"] is None
+    assert "Location: evidence bullet (chunk_1)" in client.correction_calls[0]["review"]["issues"][0]["recommendation"]
 
 
 def test_supervisor_loop_replay_miss_falls_back_to_deterministic_answer(tmp_path):

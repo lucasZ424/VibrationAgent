@@ -1,0 +1,294 @@
+{
+  "metadata": {
+    "max_tokens": 4096,
+    "model": "claude-opus-4-8",
+    "prompt_version": "supervisor_review.v1",
+    "provider": "anthropic",
+    "reasoning_effort": null,
+    "request_body": {
+      "candidate": {
+        "citations": [
+          {
+            "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+            "confidence": 1.0,
+            "doc_id": "fixture_rotor_zh_doc",
+            "evidence_type": "documented",
+            "pages": [
+              1,
+              2
+            ],
+            "snippet": "1 转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\n\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\n\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\n\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。",
+            "source_filename": null,
+            "source_title": "转子阻尼中文样例"
+          },
+          {
+            "chunk_id": "fixture_rotor_zh_docx_p0001_00001",
+            "confidence": 1.0,
+            "doc_id": "fixture_rotor_zh_docx",
+            "evidence_type": "documented",
+            "pages": [
+              1
+            ],
+            "snippet": "转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n监测量 | 用途\n振幅和轴心轨迹 | 判断转子振动风险",
+            "source_filename": null,
+            "source_title": "转子阻尼与临界转速"
+          }
+        ],
+        "handoff_recommendation": null,
+        "status": "ok",
+        "structured_result": {
+          "answer": "阻尼比对临界转速附近的振动响应没有影响，工程上只需要关注转速。",
+          "retrieval_context": [
+            {
+              "api_context": "[chunk_id=fixture_rotor_zh_doc_p0001_00001; doc_id=fixture_rotor_zh_doc; pages=1-2; section=front_matter]\n1 转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\n\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\n\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\n\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。",
+              "assets": [
+                {
+                  "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                  "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                  "bbox": null,
+                  "confidence": 1.0,
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "metadata": {
+                    "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                    "pages": [
+                      1,
+                      2
+                    ]
+                  },
+                  "object_type": "body",
+                  "page_no": 1,
+                  "text": ""
+                }
+              ],
+              "char_count": 204,
+              "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+              "chunk_index": 1,
+              "chunk_type": "body",
+              "citation_anchor": "转子阻尼中文样例, pp. 1-2",
+              "confidence": 1.0,
+              "doc_id": "fixture_rotor_zh_doc",
+              "language": "zh",
+              "metadata": {
+                "asset_policy": "body asset is a reference; chunk.text owns full body text",
+                "bibliography": {
+                  "authors": [],
+                  "publisher": null,
+                  "year": null
+                },
+                "overlap_tokens": 60,
+                "page_boundary_crossed": true,
+                "paragraph_count": 7,
+                "section_boundary_crossed": false,
+                "section_boundary_policy": "flush_before_new_section",
+                "section_key": "front_matter",
+                "section_keys": [
+                  "front_matter"
+                ],
+                "section_level": 0,
+                "section_parent_keys": [],
+                "section_title": null,
+                "target_tokens": 600,
+                "title_in_text": false
+              },
+              "needs_review_pages": [],
+              "ocr_confidence_avg": 1.0,
+              "ocr_confidence_min": 1.0,
+              "page_end": 2,
+              "page_start": 1,
+              "pages": [
+                1,
+                2
+              ],
+              "schema_version": "0.1",
+              "score": 1.0,
+              "source_path": "tests/fixtures/raw/small_vibration_zh.pdf",
+              "source_type": "book",
+              "text": "1 转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\n\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\n\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\n\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。",
+              "title": "转子阻尼中文样例",
+              "token_estimate": 178,
+              "topic": null,
+              "type": "memory_chunk"
+            },
+            {
+              "api_context": "[chunk_id=fixture_rotor_zh_docx_p0001_00001; doc_id=fixture_rotor_zh_docx; pages=1-1; section=s0001; section_title=转子阻尼与临界转速]\n转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n监测量 | 用途\n振幅和轴心轨迹 | 判断转子振动风险",
+              "assets": [
+                {
+                  "asset_id": "fixture_rotor_zh_docx_p0001_00001_body",
+                  "asset_path": "chunk://fixture_rotor_zh_docx/fixture_rotor_zh_docx_p0001_00001/body",
+                  "bbox": null,
+                  "confidence": 1.0,
+                  "doc_id": "fixture_rotor_zh_docx",
+                  "metadata": {
+                    "chunk_id": "fixture_rotor_zh_docx_p0001_00001",
+                    "pages": [
+                      1
+                    ]
+                  },
+                  "object_type": "body",
+                  "page_no": 1,
+                  "text": ""
+                },
+                {
+                  "asset_id": "fixture_rotor_zh_docx_p0001_table_0001",
+                  "asset_path": "docx://fixture_rotor_zh_docx/table/fixture_rotor_zh_docx_p0001_table_0001",
+                  "bbox": null,
+                  "confidence": 1.0,
+                  "doc_id": "fixture_rotor_zh_docx",
+                  "metadata": {
+                    "block_id": "p0001_b0004",
+                    "source": "docx_table"
+                  },
+                  "object_type": "table",
+                  "page_no": 1,
+                  "text": "监测量 | 用途\n振幅和轴心轨迹 | 判断转子振动风险"
+                }
+              ],
+              "char_count": 103,
+              "chunk_id": "fixture_rotor_zh_docx_p0001_00001",
+              "chunk_index": 1,
+              "chunk_type": "body",
+              "citation_anchor": "转子阻尼与临界转速, p. 1",
+              "confidence": 1.0,
+              "doc_id": "fixture_rotor_zh_docx",
+              "language": "zh",
+              "metadata": {
+                "asset_policy": "body asset is a reference; chunk.text owns full body text",
+                "bibliography": {
+                  "authors": [],
+                  "publisher": null,
+                  "year": null
+                },
+                "overlap_tokens": 60,
+                "page_boundary_crossed": false,
+                "paragraph_count": 4,
+                "section_boundary_crossed": false,
+                "section_boundary_policy": "flush_before_new_section",
+                "section_hierarchy_source": "heading_level",
+                "section_hierarchy_warnings": [],
+                "section_key": "s0001",
+                "section_keys": [
+                  "s0001"
+                ],
+                "section_level": 1,
+                "section_parent_keys": [],
+                "section_title": "转子阻尼与临界转速",
+                "target_tokens": 600,
+                "title_in_text": true
+              },
+              "needs_review_pages": [],
+              "ocr_confidence_avg": 1.0,
+              "ocr_confidence_min": 1.0,
+              "page_end": 1,
+              "page_start": 1,
+              "pages": [
+                1
+              ],
+              "schema_version": "0.1",
+              "score": 1.0,
+              "source_path": "tests/fixtures/raw/small_vibration_zh.docx",
+              "source_type": "book",
+              "text": "转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n监测量 | 用途\n振幅和轴心轨迹 | 判断转子振动风险",
+              "title": "转子阻尼与临界转速",
+              "token_estimate": 84,
+              "topic": "转子阻尼与临界转速",
+              "type": "memory_chunk"
+            }
+          ],
+          "retrieval_output": {
+            "hits": [
+              {
+                "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                "doc_id": "fixture_rotor_zh_doc",
+                "score": 1.0
+              },
+              {
+                "chunk_id": "fixture_rotor_zh_docx_p0001_00001",
+                "doc_id": "fixture_rotor_zh_docx",
+                "score": 1.0
+              }
+            ]
+          },
+          "scope": "in_scope",
+          "task_id": "obj6b-live-correction-probe",
+          "v4": {
+            "answer": "阻尼比对临界转速附近的振动响应没有影响，工程上只需要关注转速。"
+          }
+        },
+        "summary": "Deliberately incomplete Obj6B live correction probe.",
+        "warnings": [
+          "Obj6B live probe intentionally starts from a bad candidate answer."
+        ]
+      },
+      "loop_count": 0,
+      "max_tokens": 4096,
+      "prompt": "You are the senior supervisor for a vibration-engineering answer. Use only the supplied candidate, citations, reviewer notes, and issues. Return only valid JSON matching the requested schema.\nReview response JSON:\n- status: one of \"ok\", \"insufficient\", \"refusal\", \"refused\". Use \"ok\" when the review ran successfully, even if the candidate is not approved.\n- task_id: string.\n- approved: boolean. Set false when any required correction remains.\n- issues: list of objects with severity, description, file, line, recommendation. Use [] when approved is true.\n- residual_risk: string.\n- warnings: list of strings.\nDo not return a revised answer in the review response. If the answer needs revision, set approved=false and describe the issues.\n{\"candidate\": {\"citations\": [{\"chunk_id\": \"fixture_rotor_zh_doc_p0001_00001\", \"confidence\": 1.0, \"doc_id\": \"fixture_rotor_zh_doc\", \"evidence_type\": \"documented\", \"pages\": [1, 2], \"snippet\": \"1 转子阻尼与临界转速\\n\\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\\n\\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\\n\\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\\n\\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\\n\\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\\n\\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。\", \"source_filename\": null, \"source_title\": \"转子阻尼中文样例\"}, {\"chunk_id\": \"fixture_rotor_zh_docx_p0001_00001\", \"confidence\": 1.0, \"doc_id\": \"fixture_rotor_zh_docx\", \"evidence_type\": \"documented\", \"pages\": [1], \"snippet\": \"转子阻尼与临界转速\\n\\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\\n\\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\\n\\n监测量 | 用途\\n振幅和轴心轨迹 | 判断转子振动风险\", \"source_filename\": null, \"source_title\": \"转子阻尼与临界转速\"}], \"handoff_recommendation\": null, \"status\": \"ok\", \"structured_result\": {\"answer\": \"阻尼比对临界转速附近的振动响应没有影响，工程上只需要关注转速。\", \"retrieval_context\": [{\"api_context\": \"[chunk_id=fixture_rotor_zh_doc_p0001_00001; doc_id=fixture_rotor_zh_doc; pages=1-2; section=front_matter]\\n1 转子阻尼与临界转速\\n\\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\\n\\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\\n\\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\\n\\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\\n\\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\\n\\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。\", \"assets\": [{\"asset_id\": \"fixture_rotor_zh_doc_p0001_00001_body\", \"asset_path\": \"chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body\", \"bbox\": null, \"confidence\": 1.0, \"doc_id\": \"fixture_rotor_zh_doc\", \"metadata\": {\"chunk_id\": \"fixture_rotor_zh_doc_p0001_00001\", \"pages\": [1, 2]}, \"object_type\": \"body\", \"page_no\": 1, \"text\": \"\"}], \"char_count\": 204, \"chunk_id\": \"fixture_rotor_zh_doc_p0001_00001\", \"chunk_index\": 1, \"chunk_type\": \"body\", \"citation_anchor\": \"转子阻尼中文样例, pp. 1-2\", \"confidence\": 1.0, \"doc_id\": \"fixture_rotor_zh_doc\", \"language\": \"zh\", \"metadata\": {\"asset_policy\": \"body asset is a reference; chunk.text owns full body text\", \"bibliography\": {\"authors\": [], \"publisher\": null, \"year\": null}, \"overlap_tokens\": 60, \"page_boundary_crossed\": true, \"paragraph_count\": 7, \"section_boundary_crossed\": false, \"section_boundary_policy\": \"flush_before_new_section\", \"section_key\": \"front_matter\", \"section_keys\": [\"front_matter\"], \"section_level\": 0, \"section_parent_keys\": [], \"section_title\": null, \"target_tokens\": 600, \"title_in_text\": false}, \"needs_review_pages\": [], \"ocr_confidence_avg\": 1.0, \"ocr_confidence_min\": 1.0, \"page_end\": 2, \"page_start\": 1, \"pages\": [1, 2], \"schema_version\": \"0.1\", \"score\": 1.0, \"source_path\": \"tests/fixtures/raw/small_vibration_zh.pdf\", \"source_type\": \"book\", \"text\": \"1 转子阻尼与临界转速\\n\\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\\n\\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\\n\\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\\n\\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\\n\\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\\n\\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。\", \"title\": \"转子阻尼中文样例\", \"token_estimate\": 178, \"topic\": null, \"type\": \"memory_chunk\"}, {\"api_context\": \"[chunk_id=fixture_rotor_zh_docx_p0001_00001; doc_id=fixture_rotor_zh_docx; pages=1-1; section=s0001; section_title=转子阻尼与临界转速]\\n转子阻尼与临界转速\\n\\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\\n\\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\\n\\n监测量 | 用途\\n振幅和轴心轨迹 | 判断转子振动风险\", \"assets\": [{\"asset_id\": \"fixture_rotor_zh_docx_p0001_00001_body\", \"asset_path\": \"chunk://fixture_ro...[TRUNCATED]",
+      "prompt_version": "supervisor_review.v1",
+      "query": "阻尼比如何影响转子临界转速附近的振动响应？",
+      "reviewer_notes": [
+        {
+          "note": "Candidate says damping has no effect, while the supplied evidence says increasing damping lowers the resonance peak and makes resonance passage smoother.",
+          "source": "obj6b_live_correction_probe"
+        }
+      ],
+      "schema_version": "supervisor.v1",
+      "task_id": "obj6b-live-correction-probe",
+      "timeout": 30.0
+    },
+    "request_hash": "aa83d40e433048694da697d67fb0d039a6dc3e8731ab3afd6fcfcb4f2fb0507b",
+    "schema_version": "supervisor.v1",
+    "text_verbosity": null
+  },
+  "response": {
+    "approved": false,
+    "cost": {
+      "cached_input_tokens": 0,
+      "estimated_usd": 0.039505,
+      "input_tokens": 3846,
+      "model": "claude-opus-4-8",
+      "notes": [],
+      "output_tokens": 811,
+      "provider": "anthropic",
+      "source": "local_estimate",
+      "total_tokens": 4657
+    },
+    "issues": [
+      {
+        "description": "The candidate answer directly contradicts the supplied evidence. It states '阻尼比对临界转速附近的振动响应没有影响，工程上只需要关注转速' (damping ratio has no effect on the vibration response near critical speed, and engineering only needs to focus on rotational speed). However, both cited chunks state that near critical speed the response amplitude is amplified and phase changes rapidly, that this region is sensitive to damping changes (对阻尼变化很敏感), and that increasing damping lowers the resonance peak response and makes passage through the resonance region smoother (增加阻尼通常降低共振峰值响应，并使通过共振区更平稳).",
+        "file": "fixture_rotor_zh_doc_p0001_00001",
+        "line": null,
+        "recommendation": "Rewrite the answer to reflect the evidence: damping ratio significantly affects vibration response near the critical speed. Higher damping reduces the resonance peak amplitude and enables smoother passage through the resonance region, while insufficient damping increases the risk of excessive vibration during ramp-up/ramp-down. Monitoring should track amplitude, phase, and shaft orbit.",
+        "severity": "critical"
+      },
+      {
+        "description": "The answer makes an unsupported prescriptive claim ('工程上只需要关注转速') that omits the evidence-backed guidance to monitor amplitude, phase, and shaft-center orbit (振幅、相位和轴心轨迹) to assess rotor vibration risk.",
+        "file": "fixture_rotor_zh_doc_p0001_00001",
+        "line": null,
+        "recommendation": "Include the monitoring guidance from the source: observe amplitude, phase, and shaft orbit to judge rotor vibration risk near critical speed.",
+        "severity": "major"
+      }
+    ],
+    "residual_risk": "High. The current answer is factually inverted relative to the source material and, if released, could lead an operator to disregard damping considerations and improperly monitor a rotor passing through resonance, risking excessive vibration or machine damage.",
+    "status": "ok",
+    "task_id": "obj6b-live-correction-probe",
+    "token_cost": 4657,
+    "usage": {
+      "cache_creation": {
+        "ephemeral_1h_input_tokens": 0,
+        "ephemeral_5m_input_tokens": 0
+      },
+      "cache_creation_input_tokens": 0,
+      "cache_read_input_tokens": 0,
+      "inference_geo": "global",
+      "input_tokens": 3846,
+      "output_tokens": 811,
+      "output_tokens_details": {
+        "thinking_tokens": 0
+      },
+      "server_tool_use": null,
+      "service_tier": "standard"
+    },
+    "warnings": [
+      "Obj6B live probe intentionally starts from a bad candidate answer; the contradiction with evidence is confirmed by reviewer notes."
+    ]
+  }
+}

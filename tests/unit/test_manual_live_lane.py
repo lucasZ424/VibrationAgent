@@ -32,6 +32,26 @@ def test_llm_capture_requires_live_capture_and_provider_key(monkeypatch):
         llm_capture._manual_checks(settings, provider_name="openai")
 
 
+def test_llm_capture_rejects_truncated_provider_response_before_recording():
+    # WHY: a provider-level incomplete object is not a replayable S3 response,
+    # even when the HTTP call itself returned successfully.
+    with pytest.raises(RuntimeError, match="max_output_tokens"):
+        llm_capture._validate_response(
+            "s3_qa_summary",
+            {"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"}},
+        )
+
+
+def test_llm_capture_rejects_malformed_supervisor_correction_before_recording():
+    # WHY: Obj6B replay fixtures must never record an "ok" supervisor correction
+    # that carries no candidate answer or structured_result update.
+    with pytest.raises(ValueError, match="answer or structured_result"):
+        llm_capture._validate_response(
+            "supervisor_correction",
+            {"status": "ok", "summary": "Claimed correction without candidate content."},
+        )
+
+
 def test_manual_e2e_default_path_does_not_require_api_key(monkeypatch, capsys):
     # WHY: The manual probe must remain runnable as a deterministic smoke check;
     # live validation is opt-in only.
@@ -87,11 +107,15 @@ def test_manual_summary_counts_only_model_skill_costs():
                     "cost": {"estimated_usd": 0.2, "source": "local_estimate"},
                 },
             },
+            "supervisor_corrections": 1,
+            "supervisor_residual_risk": "Low residual risk after correction.",
         },
     )
 
     summary = manual_e2e._summary(output)
 
+    assert summary["supervisor_corrections"] == 1
+    assert summary["supervisor_residual_risk"] == "Low residual risk after correction."
     assert summary["token_cost"] == 30
     assert summary["cost"]["estimated_usd"] == pytest.approx(0.3)
     assert summary["skill_token_costs"] == {"s3": 10, "s4": 20}

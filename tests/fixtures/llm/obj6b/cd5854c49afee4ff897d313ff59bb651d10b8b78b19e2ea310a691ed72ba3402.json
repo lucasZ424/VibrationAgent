@@ -1,0 +1,604 @@
+{
+  "metadata": {
+    "max_tokens": 4096,
+    "model": "claude-opus-4-8",
+    "prompt_version": "supervisor_review.v1",
+    "provider": "anthropic",
+    "reasoning_effort": null,
+    "request_body": {
+      "candidate": {
+        "citations": [
+          {
+            "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+            "confidence": 1.0,
+            "doc_id": "fixture_rotor_zh_doc",
+            "evidence_type": "documented",
+            "pages": [
+              1,
+              2
+            ],
+            "snippet": "1 转子阻尼与临界转速 阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。 转子接近临界转速时，响应幅值会放大，相位也会快速变化。 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。 增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。 状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。 如果阻尼不足，机组在升速或…",
+            "source_filename": "small_vibration_zh.pdf",
+            "source_title": "转子阻尼中文样例"
+          }
+        ],
+        "handoff_recommendation": "Return structured_result.answer to the user.",
+        "status": "ok",
+        "structured_result": {
+          "answer": "## Conclusion\nCritical speed affects rotor response.\n\n## Evidence\nCritical speed affects response.\n\nBoundary condition: use the cited operating region.",
+          "answer_quality": {
+            "citation_count": 1,
+            "covered_query_aspects": [
+              "domain_term_0"
+            ],
+            "covered_slots": [],
+            "faithfulness_status": "ok",
+            "gate_reasons": [
+              "score<0.75",
+              "completeness<1.0"
+            ],
+            "gate_status": "blocked",
+            "intent": "general",
+            "query_aspects": [
+              "domain_term_0",
+              "domain_term_1"
+            ],
+            "required_slots": [
+              "recognized_intent"
+            ],
+            "schema_version": "phase5.answer_quality.v2",
+            "score": 0.5,
+            "subscores": {
+              "completeness": 0.0,
+              "evidence_relevance": 1.0,
+              "question_coverage": 0.5,
+              "readability": 0.5
+            },
+            "threshold": 0.75
+          },
+          "chain": [
+            {
+              "skill": "s2_retrieval",
+              "status": "ok",
+              "summary": "S2 fixture ok: 2 row(s)."
+            },
+            {
+              "skill": "s3_qa_summary",
+              "status": "ok",
+              "summary": "S3 qa ok: 2 claim(s) from 1 chunk(s)."
+            },
+            {
+              "skill": "v2_citation_check",
+              "status": "ok",
+              "summary": "V2 citation check ok: 2 claim(s)."
+            },
+            {
+              "skill": "v4_style",
+              "status": "ok",
+              "summary": "V4 style ok: 2 section(s), 1 citation(s)."
+            },
+            {
+              "skill": "v3_reviewer",
+              "status": "insufficient",
+              "summary": "V3 reviewer flagged 1 issue(s)."
+            }
+          ],
+          "retrieval_hits": 2,
+          "retrieval_source": null,
+          "reviewer_notes": [
+            {
+              "code": "missing_limits",
+              "message": "V3 expected a limits section for an extreme-task answer."
+            }
+          ],
+          "scope": "in_scope",
+          "skill_results": {
+            "s2": {
+              "retrieval_context": [
+                {
+                  "api_context": "[chunk_id=fixture_rotor_zh_doc_p0001_00001; doc_id=fixture_rotor_zh_doc; pages=1-2; section=front_matter]\n1 转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\n\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\n\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\n\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。",
+                  "assets": [
+                    {
+                      "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                      "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                      "bbox": null,
+                      "confidence": 1.0,
+                      "doc_id": "fixture_rotor_zh_doc",
+                      "metadata": {
+                        "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                        "pages": [
+                          1,
+                          2
+                        ]
+                      },
+                      "object_type": "body",
+                      "page_no": 1,
+                      "text": ""
+                    }
+                  ],
+                  "char_count": 204,
+                  "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                  "chunk_index": 1,
+                  "chunk_type": "body",
+                  "citation_anchor": "转子阻尼中文样例, pp. 1-2",
+                  "confidence": 1.0,
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "language": "zh",
+                  "metadata": {
+                    "asset_policy": "body asset is a reference; chunk.text owns full body text",
+                    "bibliography": {
+                      "authors": [],
+                      "publisher": null,
+                      "year": null
+                    },
+                    "overlap_tokens": 60,
+                    "page_boundary_crossed": true,
+                    "paragraph_count": 7,
+                    "section_boundary_crossed": false,
+                    "section_boundary_policy": "flush_before_new_section",
+                    "section_key": "front_matter",
+                    "section_keys": [
+                      "front_matter"
+                    ],
+                    "section_level": 0,
+                    "section_parent_keys": [],
+                    "section_title": null,
+                    "target_tokens": 600,
+                    "title_in_text": false
+                  },
+                  "needs_review_pages": [],
+                  "ocr_confidence_avg": 1.0,
+                  "ocr_confidence_min": 1.0,
+                  "page_end": 2,
+                  "page_start": 1,
+                  "pages": [
+                    1,
+                    2
+                  ],
+                  "schema_version": "0.1",
+                  "score": 1.0,
+                  "source_path": "tests/fixtures/raw/small_vibration_zh.pdf",
+                  "source_type": "book",
+                  "text": "1 转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\n\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\n\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\n\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。",
+                  "title": "转子阻尼中文样例",
+                  "token_estimate": 178,
+                  "topic": null,
+                  "type": "memory_chunk"
+                },
+                {
+                  "api_context": "[chunk_id=fixture_rotor_zh_docx_p0001_00001; doc_id=fixture_rotor_zh_docx; pages=1-1; section=s0001; section_title=转子阻尼与临界转速]\n转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n监测量 | 用途\n振幅和轴心轨迹 | 判断转子振动风险",
+                  "assets": [
+                    {
+                      "asset_id": "fixture_rotor_zh_docx_p0001_00001_body",
+                      "asset_path": "chunk://fixture_rotor_zh_docx/fixture_rotor_zh_docx_p0001_00001/body",
+                      "bbox": null,
+                      "confidence": 1.0,
+                      "doc_id": "fixture_rotor_zh_docx",
+                      "metadata": {
+                        "chunk_id": "fixture_rotor_zh_docx_p0001_00001",
+                        "pages": [
+                          1
+                        ]
+                      },
+                      "object_type": "body",
+                      "page_no": 1,
+                      "text": ""
+                    },
+                    {
+                      "asset_id": "fixture_rotor_zh_docx_p0001_table_0001",
+                      "asset_path": "docx://fixture_rotor_zh_docx/table/fixture_rotor_zh_docx_p0001_table_0001",
+                      "bbox": null,
+                      "confidence": 1.0,
+                      "doc_id": "fixture_rotor_zh_docx",
+                      "metadata": {
+                        "block_id": "p0001_b0004",
+                        "source": "docx_table"
+                      },
+                      "object_type": "table",
+                      "page_no": 1,
+                      "text": "监测量 | 用途\n振幅和轴心轨迹 | 判断转子振动风险"
+                    }
+                  ],
+                  "char_count": 103,
+                  "chunk_id": "fixture_rotor_zh_docx_p0001_00001",
+                  "chunk_index": 1,
+                  "chunk_type": "body",
+                  "citation_anchor": "转子阻尼与临界转速, p. 1",
+                  "confidence": 1.0,
+                  "doc_id": "fixture_rotor_zh_docx",
+                  "language": "zh",
+                  "metadata": {
+                    "asset_policy": "body asset is a reference; chunk.text owns full body text",
+                    "bibliography": {
+                      "authors": [],
+                      "publisher": null,
+                      "year": null
+                    },
+                    "overlap_tokens": 60,
+                    "page_boundary_crossed": false,
+                    "paragraph_count": 4,
+                    "section_boundary_crossed": false,
+                    "section_boundary_policy": "flush_before_new_section",
+                    "section_hierarchy_source": "heading_level",
+                    "section_hierarchy_warnings": [],
+                    "section_key": "s0001",
+                    "section_keys": [
+                      "s0001"
+                    ],
+                    "section_level": 1,
+                    "section_parent_keys": [],
+                    "section_title": "转子阻尼与临界转速",
+                    "target_tokens": 600,
+                    "title_in_text": true
+                  },
+                  "needs_review_pages": [],
+                  "ocr_confidence_avg": 1.0,
+                  "ocr_confidence_min": 1.0,
+                  "page_end": 1,
+                  "page_start": 1,
+                  "pages": [
+                    1
+                  ],
+                  "schema_version": "0.1",
+                  "score": 1.0,
+                  "source_path": "tests/fixtures/raw/small_vibration_zh.docx",
+                  "source_type": "book",
+                  "text": "转子阻尼与临界转速\n\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\n\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\n\n监测量 | 用途\n振幅和轴心轨迹 | 判断转子振动风险",
+                  "title": "转子阻尼与临界转速",
+                  "token_estimate": 84,
+                  "topic": "转子阻尼与临界转速",
+                  "type": "memory_chunk"
+                }
+              ],
+              "retrieval_output": {
+                "hits": [
+                  {
+                    "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                    "doc_id": "fixture_rotor_zh_doc",
+                    "score": 1.0
+                  },
+                  {
+                    "chunk_id": "fixture_rotor_zh_docx_p0001_00001",
+                    "doc_id": "fixture_rotor_zh_docx",
+                    "score": 1.0
+                  }
+                ]
+              }
+            },
+            "s3": {
+              "answer": "根据已检索证据，可以确定：\n1. 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。（证据：fixture_rotor_zh_doc_p0001_00001）\n2. 转子接近临界转速时，响应幅值会放大，相位也会快速变化。（证据：fixture_rotor_zh_doc_p0001_00001）",
+              "assets": [
+                {
+                  "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                  "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                  "bbox": null,
+                  "confidence": 1.0,
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "metadata": {
+                    "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                    "pages": [
+                      1,
+                      2
+                    ]
+                  },
+                  "object_type": "body",
+                  "page_no": 1,
+                  "text": ""
+                }
+              ],
+              "claims": [
+                {
+                  "asset_ids": [
+                    "fixture_rotor_zh_doc_p0001_00001_body"
+                  ],
+                  "assets": [
+                    {
+                      "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                      "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                      "bbox": null,
+                      "confidence": 1.0,
+                      "doc_id": "fixture_rotor_zh_doc",
+                      "metadata": {
+                        "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                        "pages": [
+                          1,
+                          2
+                        ]
+                      },
+                      "object_type": "body",
+                      "page_no": 1,
+                      "text": ""
+                    }
+                  ],
+                  "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "evidence_type": "documented",
+                  "pages": [
+                    1,
+                    2
+                  ],
+                  "source_filename": "small_vibration_zh.pdf",
+                  "source_title": "转子阻尼中文样例",
+                  "text": "工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。"
+                },
+                {
+                  "asset_ids": [
+                    "fixture_rotor_zh_doc_p0001_00001_body"
+                  ],
+                  "assets": [
+                    {
+                      "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                      "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                      "bbox": null,
+                      "confidence": 1.0,
+                      "doc_id": "fixture_rotor_zh_doc",
+                      "metadata": {
+                        "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                        "pages": [
+                          1,
+                          2
+                        ]
+                      },
+                      "object_type": "body",
+                      "page_no": 1,
+                      "text": ""
+                    }
+                  ],
+                  "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "evidence_type": "documented",
+                  "pages": [
+                    1,
+                    2
+                  ],
+                  "source_filename": "small_vibration_zh.pdf",
+                  "source_title": "转子阻尼中文样例",
+                  "text": "转子接近临界转速时，响应幅值会放大，相位也会快速变化。"
+                }
+              ],
+              "evidence_count": 2,
+              "language": "zh",
+              "mode": "qa",
+              "synthesis_mode": "deterministic",
+              "task_id": "obj6b-supervisor-replay",
+              "token_cost": null,
+              "unsupported_claims": []
+            },
+            "v2": {
+              "answer": "根据已检索证据，可以确定：\n1. 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。（证据：fixture_rotor_zh_doc_p0001_00001）\n2. 转子接近临界转速时，响应幅值会放大，相位也会快速变化。（证据：fixture_rotor_zh_doc_p0001_00001）",
+              "assets": [
+                {
+                  "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                  "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                  "bbox": null,
+                  "confidence": 1.0,
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "metadata": {
+                    "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                    "pages": [
+                      1,
+                      2
+                    ]
+                  },
+                  "object_type": "body",
+                  "page_no": 1,
+                  "text": ""
+                }
+              ],
+              "citation_check": {
+                "derivation_step_count": 0,
+                "unsupported_count": 0,
+                "visible_answer_refs": [
+                  "fixture_rotor_zh_doc_p0001_00001"
+                ],
+                "visible_chunk_ids": [
+                  "fixture_rotor_zh_doc_p0001_00001",
+                  "fixture_rotor_zh_docx_p0001_00001"
+                ]
+              },
+              "claims": [
+                {
+                  "asset_ids": [
+                    "fixture_rotor_zh_doc_p0001_00001_body"
+                  ],
+                  "assets": [
+                    {
+                      "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                      "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                      "bbox": null,
+                      "confidence": 1.0,
+                      "doc_id": "fixture_rotor_zh_doc",
+                      "metadata": {
+                        "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                        "pages": [
+                          1,
+                          2
+                        ]
+                      },
+                      "object_type": "body",
+                      "page_no": 1,
+                      "text": ""
+                    }
+                  ],
+                  "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "evidence_type": "documented",
+                  "pages": [
+                    1,
+                    2
+                  ],
+                  "source_filename": "small_vibration_zh.pdf",
+                  "source_title": "转子阻尼中文样例",
+                  "text": "工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。"
+                },
+                {
+                  "asset_ids": [
+                    "fixture_rotor_zh_doc_p0001_00001_body"
+                  ],
+                  "assets": [
+                    {
+                      "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                      "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                      "bbox": null,
+                      "confidence": 1.0,
+                      "doc_id": "fixture_rotor_zh_doc",
+                      "metadata": {
+                        "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                        "pages": [
+                          1,
+                          2
+                        ]
+                      },
+                      "object_type": "body",
+                      "page_no": 1,
+                      "text": ""
+                    }
+                  ],
+                  "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "evidence_type": "documented",
+                  "pages": [
+                    1,
+                    2
+                  ],
+                  "source_filename": "small_vibration_zh.pdf",
+                  "source_title": "转子阻尼中文样例",
+                  "text": "转子接近临界转速时，响应幅值会放大，相位也会快速变化。"
+                }
+              ],
+              "evidence_count": 2,
+              "language": "zh",
+              "mode": "qa",
+              "synthesis_mode": "deterministic",
+              "task_id": "obj6b-supervisor-replay",
+              "token_cost": null,
+              "unsupported_claims": []
+            },
+            "v3": {
+              "review_summary": {
+                "checked_answer_relevance": true,
+                "checked_overclaiming": true,
+                "checked_sections": [
+                  "conclusion",
+                  "evidence",
+                  "limits"
+                ],
+                "issue_count": 1
+              },
+              "reviewer_notes": [
+                {
+                  "code": "missing_limits",
+                  "message": "V3 expected a limits section for an extreme-task answer."
+                }
+              ],
+              "task_id": "obj6b-supervisor-replay"
+            },
+            "v4": {
+              "answer": "## 结论\n根据已检索证据，可以确定：\n1. 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。（证据：fixture_rotor_zh_doc_p0001_00001）\n2. 转子接近临界转速时，响应幅值会放大，相位也会快速变化。（证据：fixture_rotor_zh_doc_p0001_00001）\n\n## 证据\n- small_vibration_zh.pdf (第1-2页, 已记录): 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。 [资产: fixture_rotor_zh_doc_p0001_00001_body]",
+              "assets": [
+                {
+                  "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                  "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                  "bbox": null,
+                  "confidence": 1.0,
+                  "doc_id": "fixture_rotor_zh_doc",
+                  "metadata": {
+                    "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                    "pages": [
+                      1,
+                      2
+                    ]
+                  },
+                  "object_type": "body",
+                  "page_no": 1,
+                  "text": ""
+                }
+              ],
+              "formula_renders": [],
+              "language": "zh",
+              "section_keys": [
+                "conclusion",
+                "evidence"
+              ],
+              "sections": {
+                "conclusion": "根据已检索证据，可以确定：\n1. 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。（证据：fixture_rotor_zh_doc_p0001_00001）\n2. 转子接近临界转速时，响应幅值会放大，相位也会快速变化。（证据：fixture_rotor_zh_doc_p0001_00001）",
+                "evidence": "- small_vibration_zh.pdf (第1-2页, 已记录): 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。 [资产: fixture_rotor_zh_doc_p0001_00001_body]"
+              },
+              "source_status": "ok",
+              "task_id": "obj6b-supervisor-replay"
+            }
+          },
+          "task_id": "obj6b-supervisor-replay",
+          "v4": {
+            "answer": "## Conclusion\nCritical speed affects rotor response.\n\n## Evidence\nCritical speed affects response.\n\nBoundary condition: use the cited operating region.",
+            "assets": [
+              {
+                "asset_id": "fixture_rotor_zh_doc_p0001_00001_body",
+                "asset_path": "chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body",
+                "bbox": null,
+                "confidence": 1.0,
+                "doc_id": "fixture_rotor_zh_doc",
+                "metadata": {
+                  "chunk_id": "fixture_rotor_zh_doc_p0001_00001",
+                  "pages": [
+                    1,
+                    2
+                  ]
+                },
+                "object_type": "body",
+                "page_no": 1,
+                "text": ""
+              }
+            ],
+            "formula_renders": [],
+            "language": "zh",
+            "section_keys": [
+              "conclusion",
+              "evidence"
+            ],
+            "sections": {
+              "conclusion": "根据已检索证据，可以确定：\n1. 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。（证据：fixture_rotor_zh_doc_p0001_00001）\n2. 转子接近临界转速时，响应幅值会放大，相位也会快速变化。（证据：fixture_rotor_zh_doc_p0001_00001）",
+              "evidence": "- small_vibration_zh.pdf (第1-2页, 已记录): 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。 [资产: fixture_rotor_zh_doc_p0001_00001_body]"
+            },
+            "source_status": "ok",
+            "task_id": "obj6b-supervisor-replay"
+          }
+        },
+        "summary": "Corrected candidate with boundary condition.",
+        "warnings": []
+      },
+      "loop_count": 1,
+      "max_tokens": 4096,
+      "prompt": "You are the senior supervisor for a vibration-engineering answer. Use only the supplied candidate, citations, reviewer notes, and issues. Return only valid JSON matching the requested schema.\nReview response JSON:\n- status: one of \"ok\", \"insufficient\", \"refusal\", \"refused\". Use \"ok\" when the review ran successfully, even if the candidate is not approved.\n- task_id: string.\n- approved: boolean. Set false when any required correction remains.\n- issues: list of objects with severity, description, file, line, recommendation. Use [] when approved is true.\n- residual_risk: string.\n- warnings: list of strings.\nDo not return a revised answer in the review response. If the answer needs revision, set approved=false and describe the issues.\n{\"candidate\": {\"citations\": [{\"chunk_id\": \"fixture_rotor_zh_doc_p0001_00001\", \"confidence\": 1.0, \"doc_id\": \"fixture_rotor_zh_doc\", \"evidence_type\": \"documented\", \"pages\": [1, 2], \"snippet\": \"1 转子阻尼与临界转速 阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。 转子接近临界转速时，响应幅值会放大，相位也会快速变化。 工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。 增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。 状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。 如果阻尼不足，机组在升速或…\", \"source_filename\": \"small_vibration_zh.pdf\", \"source_title\": \"转子阻尼中文样例\"}], \"handoff_recommendation\": \"Return structured_result.answer to the user.\", \"status\": \"ok\", \"structured_result\": {\"answer\": \"## Conclusion\\nCritical speed affects rotor response.\\n\\n## Evidence\\nCritical speed affects response.\\n\\nBoundary condition: use the cited operating region.\", \"answer_quality\": {\"citation_count\": 1, \"covered_query_aspects\": [\"domain_term_0\"], \"covered_slots\": [], \"faithfulness_status\": \"ok\", \"gate_reasons\": [\"score<0.75\", \"completeness<1.0\"], \"gate_status\": \"blocked\", \"intent\": \"general\", \"query_aspects\": [\"domain_term_0\", \"domain_term_1\"], \"required_slots\": [\"recognized_intent\"], \"schema_version\": \"phase5.answer_quality.v2\", \"score\": 0.5, \"subscores\": {\"completeness\": 0.0, \"evidence_relevance\": 1.0, \"question_coverage\": 0.5, \"readability\": 0.5}, \"threshold\": 0.75}, \"chain\": [{\"skill\": \"s2_retrieval\", \"status\": \"ok\", \"summary\": \"S2 fixture ok: 2 row(s).\"}, {\"skill\": \"s3_qa_summary\", \"status\": \"ok\", \"summary\": \"S3 qa ok: 2 claim(s) from 1 chunk(s).\"}, {\"skill\": \"v2_citation_check\", \"status\": \"ok\", \"summary\": \"V2 citation check ok: 2 claim(s).\"}, {\"skill\": \"v4_style\", \"status\": \"ok\", \"summary\": \"V4 style ok: 2 section(s), 1 citation(s).\"}, {\"skill\": \"v3_reviewer\", \"status\": \"insufficient\", \"summary\": \"V3 reviewer flagged 1 issue(s).\"}], \"retrieval_hits\": 2, \"retrieval_source\": null, \"reviewer_notes\": [{\"code\": \"missing_limits\", \"message\": \"V3 expected a limits section for an extreme-task answer.\"}], \"scope\": \"in_scope\", \"skill_results\": {\"s2\": {\"retrieval_context\": [{\"api_context\": \"[chunk_id=fixture_rotor_zh_doc_p0001_00001; doc_id=fixture_rotor_zh_doc; pages=1-2; section=front_matter]\\n1 转子阻尼与临界转速\\n\\n阻尼比 ζ 表示系统耗散能量的能力。阻尼比增加时，自由振动衰减更快。\\n\\n转子接近临界转速时，响应幅值会放大，相位也会快速变化。\\n\\n工程上会关注临界转速附近的振动幅值，因为该区间对阻尼变化很敏感。\\n\\n增加阻尼通常降低共振峰值响应，并使通过共振区更平稳。\\n\\n状态监测应同时观察振幅、相位和轴心轨迹，用来判断转子振动风险。\\n\\n如果阻尼不足，机组在升速或降速通过共振区时更容易出现过大振动。\", \"assets\": [{\"asset_id\": \"fixture_rotor_zh_doc_p0001_00001_body\", \"asset_path\": \"chunk://fixture_rotor_zh_doc/fixture_rotor_zh_doc_p0001_00001/body\", \"bbox\": null, \"confidence\": 1.0, \"doc_id\": \"fixture_rotor_zh_doc\", \"metadata\": {\"chunk_id\": \"fixture_rotor_zh_doc_p0001_00001\", \"pages\": [1, 2]}, \"object_type\": \"body\", \"page_no\": 1, \"text\": \"\"}], \"char_count\": 204, \"chunk_id\": \"fixture_rotor_zh_doc_p0001_00001\", \"chunk_index\": 1, \"chunk_type\": \"body\", \"citation_anchor\": \"转子阻尼中文样例, pp. 1-2\", \"confidence\": 1.0, \"doc_id\": \"fixture_rotor_zh_doc\", \"language\": \"zh\", \"metadata\": {\"asset_policy\": \"body asset is a reference; chunk.text owns full body text\", \"bibliography\": {\"authors\": [], \"publisher\": null, \"year\": null}, \"overlap_tokens\": 60, \"page_boundary_crossed\": true, \"paragraph_count\": 7, \"section_boundary_crossed\": false, \"section_boundary_policy\": \"flush_before_new_section\", \"section_key\": \"front_matter\", \"section_keys\": [\"front_matter\"], \"secti...[TRUNCATED]",
+      "prompt_version": "supervisor_review.v1",
+      "query": "阻尼比如何影响转子临界转速附近的振动响应？",
+      "reviewer_notes": [
+        {
+          "code": "missing_limits",
+          "message": "V3 expected a limits section for an extreme-task answer."
+        }
+      ],
+      "schema_version": "supervisor.v1",
+      "task_id": "obj6b-supervisor-replay",
+      "timeout": 30.0
+    },
+    "request_hash": "cd5854c49afee4ff897d313ff59bb651d10b8b78b19e2ea310a691ed72ba3402",
+    "schema_version": "supervisor.v1",
+    "text_verbosity": null
+  },
+  "response": {
+    "approved": true,
+    "cost": {
+      "estimated_usd": 0.0005,
+      "model": "claude-opus-4-8",
+      "provider": "anthropic",
+      "source": "local_estimate",
+      "total_tokens": 10
+    },
+    "issues": [],
+    "residual_risk": "Low residual risk after correction.",
+    "status": "ok",
+    "task_id": "t1",
+    "token_cost": 10
+  }
+}
