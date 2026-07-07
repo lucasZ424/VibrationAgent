@@ -3017,7 +3017,7 @@
     "seed_chunks": 10,
     "token_budget": 6000
   },
-  "git_commit": "07ac541f14ab56cf6178e4f9b9cb91fb6e9ce806",
+  "git_commit": "5d7a9f7",
   "live_providers_constructed": false,
   "question_schema_version": "phase5.rag_qa.questions.v2",
   "retrieval_config": {
