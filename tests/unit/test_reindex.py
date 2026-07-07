@@ -216,3 +216,23 @@ def test_reindex_parity_fails_when_payload_embedding_provenance_drifts(tmp_path,
 
     assert report["status"] == "parity_failed"
     assert report["provenance_mismatch_chunk_ids"] == ["c2"]
+
+
+def test_reindex_refreshes_runtime_retrieval_state_after_complete(tmp_path, monkeypatch):
+    refreshed = {"called": False}
+    monkeypatch.setattr(qdrant, "upsert_chunk_points", lambda *args, **kwargs: len(args[1]))
+    monkeypatch.setattr(qdrant, "load_chunk_payloads", lambda *args, **kwargs: _indexed_chunks())
+
+    report = run_reindex(
+        _chunks(),
+        client=MissingCollectionClient(),
+        settings=_settings(),
+        execute=True,
+        checkpoint_path=tmp_path / "checkpoint.json",
+        embedder=_records,
+        refresh_runtime_state=lambda: refreshed.update(called=True),
+    )
+
+    assert report["status"] == "complete"
+    assert report["runtime_state_refreshed"] is True
+    assert refreshed["called"] is True

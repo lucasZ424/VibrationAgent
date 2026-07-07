@@ -16,6 +16,13 @@ from . import qdrant
 from .qdrant_client import collection_vector_contract
 
 Embedder = Callable[..., list[EmbeddingRecord]]
+RuntimeStateRefresher = Callable[[], None]
+
+
+def _refresh_runtime_retrieval_state() -> None:
+    from vibration_agent.retrieval.hybrid import clear_runtime_retrieval_state
+
+    clear_runtime_retrieval_state()
 
 
 def load_postgres_chunks(conn: Any) -> list[dict[str, Any]]:
@@ -93,6 +100,7 @@ def run_reindex(
     checkpoint_path: Path,
     recreate_collection: bool = False,
     embedder: Embedder = embed_texts,
+    refresh_runtime_state: RuntimeStateRefresher = _refresh_runtime_retrieval_state,
 ) -> dict[str, Any]:
     if not chunks:
         raise RuntimeError("No reindexable chunks found; apply migration 004 and re-ingest before reindex.")
@@ -172,6 +180,8 @@ def run_reindex(
                 collection=collection,
                 embedding_model=settings.embeddings.model_name,
                 embedding_version=settings.embeddings.model_version,
+                batch_size=batch_size,
+                retry_attempts=2,
             )
             report["processed_chunks"] = offset + len(batch)
             _write_checkpoint(checkpoint_path, report)
@@ -198,5 +208,9 @@ def run_reindex(
         and not provenance_mismatches
     )
     report["status"] = "complete" if report["parity"] else "parity_failed"
+    report["runtime_state_refreshed"] = False
+    if report["status"] == "complete":
+        refresh_runtime_state()
+        report["runtime_state_refreshed"] = True
     _write_checkpoint(checkpoint_path, report)
     return report

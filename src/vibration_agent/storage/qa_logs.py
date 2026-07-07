@@ -11,6 +11,7 @@ Phase-2 Obj7. Writing is an optional side effect of ``handle_query``:
 from __future__ import annotations
 
 import re
+import time
 from typing import Any, Mapping, Sequence
 
 from vibration_agent.config import Settings, load
@@ -20,6 +21,8 @@ from .postgres import qa_log_row
 # Defensive caps so a pathological query/summary never becomes long stored text.
 _MAX_QUERY_CHARS = 2000
 _MAX_SUMMARY_CHARS = 2000
+_FAILURE_COOLDOWN_SECONDS = 30.0
+_FAILURE_CACHE: dict[str, float] = {}
 
 # Best-effort secret masking for the free-text fields (query/summary). This is a
 # conservative net for common credential shapes, not a guarantee — it covers the
@@ -126,6 +129,27 @@ def build_qa_log_row(
     return row
 
 
+def clear_failure_cache() -> None:
+    _FAILURE_CACHE.clear()
+
+
+def _failure_key(database: Any) -> str:
+    return str(getattr(database, "postgres_url", "") or "<empty>")
+
+
+def _in_failure_cooldown(database: Any) -> bool:
+    failed_at = _FAILURE_CACHE.get(_failure_key(database))
+    return failed_at is not None and time.monotonic() - failed_at < _FAILURE_COOLDOWN_SECONDS
+
+
+def _record_failure(database: Any) -> None:
+    _FAILURE_CACHE[_failure_key(database)] = time.monotonic()
+
+
+def _clear_failure(database: Any) -> None:
+    _FAILURE_CACHE.pop(_failure_key(database), None)
+
+
 def record_qa_log(
     output: Any,
     *,
@@ -142,6 +166,8 @@ def record_qa_log(
     database = (settings or load()).database
     if not getattr(database, "postgres_enabled", False):
         return None  # offline / disabled: silent skip, primary chain unaffected
+    if _in_failure_cooldown(database):
+        return "qa_logs persistence skipped (recent failure cooldown)."
 
     try:
         from . import postgres_client
@@ -155,6 +181,8 @@ def record_qa_log(
             postgres_client.insert_row(connection, "qa_logs", row, jsonb_columns=("citations",))
         finally:
             connection.close()
+        _clear_failure(database)
         return None
     except Exception as exc:  # noqa: BLE001 - side effect must never break the answer
+        _record_failure(database)
         return f"qa_logs persistence skipped (write failed): {type(exc).__name__}: {exc}"

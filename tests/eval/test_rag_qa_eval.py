@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import copy
+import json
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from scripts.rag_qa_eval import load_questions, run_rag_qa_eval
 from vibration_agent.schemas import Citation, SkillOutput
+
+ROOT = Path(__file__).resolve().parents[2]
 
 
 def _passing_output(case: Mapping[str, Any]) -> SkillOutput:
@@ -209,3 +213,35 @@ def test_obj1_loader_rejects_a_rubric_without_human_usable_criteria():
 
     with pytest.raises(ValueError, match="human completeness rubric"):
         run_rag_qa_eval(questions=questions, query_runner=_passing_output, git_commit="test")
+
+
+def test_obj9_committed_baseline_is_phase5_backend_freeze_regression_net():
+    baseline = json.loads(
+        (ROOT / "tests" / "fixtures" / "rag_qa" / "post_r3_baseline.json").read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert baseline["schema_version"] == "phase5.rag_qa.report.v3"
+    assert baseline["live_providers_constructed"] is False
+    assert baseline["corpus"]["actual_chunk_count"] == 4436
+    assert baseline["corpus"]["embedding_model"] == (
+        "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    )
+    assert baseline["corpus"]["embedding_dimension"] == 384
+    assert baseline["retrieval_config"] == {
+        "bm25_top_k": 50,
+        "dense_top_k": 50,
+        "final_top_k": 10,
+        "fusion": "rrf",
+        "mode": "hybrid",
+        "rerank_enabled": False,
+    }
+    assert baseline["evaluation_contract"]["evidence_match_rule"] == (
+        "exact_chunk_id OR same_doc_id_with_page_overlap"
+    )
+    assert baseline["scorecard"]["recall_at_5"] == 0.643
+    assert baseline["scorecard"]["recall_at_10"] == 0.821
+    assert baseline["scorecard"]["completeness_rate"] == 0.72
+    assert baseline["scorecard"]["v2_faithfulness_rate"] == 1.0
+    assert baseline["scorecard"]["citation_alignment_rate"] == 1.0

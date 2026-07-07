@@ -796,3 +796,145 @@ audit report field refinements, and test cleanup only. Rollback: restore the
 previous chunk export for the repaired source, remove
 `configs/corpus_text_repairs.yaml`, `scripts/obj7_text_repair.py`, and its tests,
 then reset/repersist/reindex runtime stores from the restored file snapshot.
+
+### Obj8 - Backend reliability and operator ergonomics (2026-07-07)
+
+Status: backend reliability contract complete.
+
+- `src/vibration_agent/storage/qdrant.py` adds explicit Qdrant bulk upsert
+  batching and retry controls to `upsert_chunk_points()`. The default remains
+  backward compatible, while callers can bound write size and retry transient
+  interruptions.
+- `src/vibration_agent/storage/reindex.py` now passes the configured embedding
+  batch size into Qdrant upserts, retries each write batch twice, and refreshes
+  runtime retrieval state after a parity-clean reindex. Reports include
+  `runtime_state_refreshed`.
+- `src/vibration_agent/retrieval/hybrid.py` formalizes the Obj4 process lexical
+  payload cache: it is capped at four runtime entries, exposes
+  `runtime_lexical_cache_stats()`, and has `clear_runtime_retrieval_state()` to
+  clear both payload and taxonomy/catalog caches.
+- `src/vibration_agent/retrieval/query_normalize.py` exposes standard-catalog
+  and taxonomy cache clear helpers so reindex/restart flows have an explicit
+  refresh contract.
+- `src/vibration_agent/storage/qa_logs.py` adds a failure cooldown for optional
+  Postgres qa_logs persistence. Postgres downtime no longer imposes a full
+  connect timeout on every answer turn after the first failed side-effect.
+- `apps/api/main.py` upgrades local diagnostics to
+  `phase5.obj8.local_diagnostics.v1`, adding retrieval runtime source,
+  embedding provider/model/dimension, store config/reachability fields, Qdrant
+  collection/vector size, and lexical cache stats.
+- `scripts/start_operator.py` remains the lifecycle entry point and now supports
+  `--reload` for local development in addition to the existing `--restart`.
+  Restart remains the supported cache-refresh boundary for an already-running
+  API process after out-of-process reindex/catalog changes.
+
+Validation:
+
+- Focused Obj8 suite:
+  `tests/unit/test_api_hardening.py`, `tests/unit/test_qa_logs.py`,
+  `tests/unit/test_s2_retrieval_skill.py`, `tests/unit/test_reindex.py`,
+  `tests/unit/test_qdrant.py`, and `tests/unit/test_start_operator_script.py`:
+  97 passed.
+- Canonical non-large regression:
+  `run_logs/obj8_final_nonlarge_20260707_112024.log`, 651 passed,
+  1 registered large-corpus deselection, exit code 0.
+- Runtime Obj1 scorecard:
+  `run_logs/obj8_final_runtime_rag_qa_20260707_112054.json`, exit code 0.
+  Recall@10 0.821, completeness 0.720, V2 faithfulness 1.000, citation
+  alignment 1.000; retrieval metrics match the post-Obj7 in-sample scorecard.
+
+Compatibility: additive diagnostics fields, additive helper functions, additive
+launcher flag, and backward-compatible Qdrant upsert parameters. Rollback:
+remove the new helper functions/diagnostics fields and restore direct
+`upsert_points()` calls; remove qa_logs cooldown if per-query connect attempts
+are required for debugging.
+
+### Obj9 - Local-reliability backend/eval freeze (2026-07-07)
+
+Status: complete; backend/eval freeze recorded.
+
+- Added `docs/phase_5_backend_interface_freeze.md` as the authoritative
+  backend/eval freeze for Phase 5 before the final Obj10 interface freeze.
+- `tests/fixtures/rag_qa/post_r3_baseline.json` now stores the post-Obj8
+  standing regression net. The file name remains historical from the original
+  post-R3 baseline; from Obj9 onward the contents are the Phase-5
+  backend-freeze baseline.
+- The frozen Obj1 scorecard is recall@5 0.643, recall@10 0.821, completeness
+  0.720, sentence completeness 0.867, V2 faithfulness 1.000, and citation
+  alignment 1.000. It is explicitly in-sample because Obj7 alias/corpus fixes
+  were derived from Obj1 misses and measured on the same 14-case fixture.
+- Added a committed-baseline regression in `tests/eval/test_rag_qa_eval.py` to
+  pin corpus count, embedding model/dimension, retrieval config, evidence match
+  rule, and the Obj9 scorecard.
+- The frozen default backend remains deterministic S3 with V2 hard-gate
+  authority. GPT S3, Opus supervision, and combined-chain replay remain
+  default-off, replay-first lanes and are not promoted to production defaults.
+- `tests/fixtures/eval/answer_quality/obj2_calibration.json` was regenerated
+  from the Obj9 standing baseline. The deterministic baseline's best observed
+  candidate is now threshold 0.85 with accuracy 1.0, false allow 0, false block
+  0, and decision margin 0.056.
+- Runtime `answer_quality` threshold 0.75 remains provisional. The Obj9
+  deterministic calibration alone does not authorize a migration because the
+  label set remains one usable / thirteen unusable, and the Obj6 combined-chain
+  recalibration showed degraded threshold discrimination for LLM-style answers.
+  Future changes require human label re-review, regenerated calibration,
+  migration, and regression across the default and LLM lanes.
+- Obj8's out-of-process reindex/catalog rebuild limitation is frozen as an
+  operator contract: restart the API with `scripts/start_operator.py --restart`
+  before trusting retrieval after such changes.
+
+Compatibility: documentation and committed baseline update only; no API schema,
+runtime chain, provider default, database, Qdrant collection, or retrieval
+algorithm changed in Obj9. Rollback: restore the previous baseline file and
+remove the Obj9 freeze references, but doing so reopens Obj7 issue #2 and leaves
+the standing regression net at the stale pre-Obj7 0.607 scorecard.
+
+Validation:
+
+- Regenerated baseline:
+  `run_logs/obj9_backend_freeze_rag_qa_20260707_113520.json`, exit code 0.
+- Regenerated calibration:
+  `run_logs/obj9_answer_quality_calibration_20260707_113809.json`, exit code 0.
+- Focused baseline regression:
+  `tests/eval/test_rag_qa_eval.py`, 9 passed.
+- Canonical non-large regression:
+  `run_logs/obj9_final_nonlarge_20260707_113917.log`, 652 passed,
+  1 registered large-corpus deselection, exit code 0.
+
+### Obj10 - Phase-5 final interface freeze (2026-07-07)
+
+Status: complete; Phase 5 is frozen and closed.
+
+- Added `docs/phase_5_interface_freeze.md` as the final Phase-5 closure
+  document. It incorporates `docs/phase_5_backend_interface_freeze.md` and
+  freezes the local single-user product boundary, runtime authority, API/operator
+  surface, accepted residual risks, and post-freeze change rule.
+- `README.md`, `docs/architecture.md`, `docs/phase_5_scope.md`, and
+  `docs/phase_5_progress.md` now point to the same Phase-5 frozen baseline.
+- Obj9 review Info is carried into the final freeze: sentence completeness is
+  frozen at 0.867 as the true post-Obj7 production value, and recall@10 0.821 is
+  explicitly in-sample on the Obj1 fixture.
+- UI and observability are classified as additive local surfaces only. They do
+  not change retrieval, scoring, provider defaults, corpus identity, or
+  final-answer authority.
+- Shared, remote, public, SaaS, and multi-user deployment remain indefinitely
+  deferred. No Phase-5 entry gate or candidate can activate them.
+
+Compatibility: documentation-only final freeze. No runtime chain, API schema,
+database schema, Qdrant collection, retrieval algorithm, provider default, or
+answer-quality threshold changed in Obj10. Rollback: remove
+`docs/phase_5_interface_freeze.md` and restore Phase-5 status text to Obj9
+backend/eval-freeze-only, but doing so reopens the final closure objective.
+
+Validation:
+
+- Final deterministic Obj1 baseline:
+  `run_logs/obj9_backend_freeze_rag_qa_20260707_113520.json`, exit code 0.
+- Final calibration:
+  `run_logs/obj9_answer_quality_calibration_20260707_113809.json`, exit code 0.
+- Final canonical non-large regression:
+  `run_logs/obj10_final_nonlarge_20260707_120720.log`, 652 passed,
+  1 registered large-corpus deselection, exit code 0.
+- Final corpus/runtime parity:
+  `run_logs/obj7c_final_runtime_corpus_audit_20260706_184103.json`; file,
+  Postgres, and Qdrant all contain 4,436 chunks with no extra/missing ids.

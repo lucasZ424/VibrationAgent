@@ -16,6 +16,13 @@ from vibration_agent.storage import postgres_client, qa_logs
 from vibration_agent.storage.postgres import POSTGRES_TABLES, PostgresWritePlan
 
 
+@pytest.fixture(autouse=True)
+def _clear_qa_log_failure_cache():
+    qa_logs.clear_failure_cache()
+    yield
+    qa_logs.clear_failure_cache()
+
+
 def _output() -> SkillOutput:
     return SkillOutput(
         status="ok",
@@ -328,3 +335,29 @@ def test_record_qa_log_uses_configured_connect_timeout(monkeypatch):
     qa_logs.record_qa_log(_output(), query="q", latency_ms=1, settings=settings)
 
     assert seen["timeout"] == 1.5
+
+
+def test_record_qa_log_fast_fails_after_recent_connection_failure(monkeypatch):
+    # WHY: when Postgres is down, every answer must not pay the connect timeout.
+    settings = load()
+    settings.database.postgres_enabled = True
+    settings.database.postgres_url = "postgresql://down"
+    settings.database.postgres_timeout = 1.5
+    qa_logs.clear_failure_cache()
+    calls = {"connect": 0}
+
+    def fail_connect(url, *, connect_timeout=5.0):
+        calls["connect"] += 1
+        raise TimeoutError("down")
+
+    monkeypatch.setattr(postgres_client, "connect", fail_connect)
+
+    try:
+        first = qa_logs.record_qa_log(_output(), query="q1", latency_ms=1, settings=settings)
+        second = qa_logs.record_qa_log(_output(), query="q2", latency_ms=1, settings=settings)
+    finally:
+        qa_logs.clear_failure_cache()
+
+    assert calls["connect"] == 1
+    assert "write failed" in first
+    assert "recent failure cooldown" in second

@@ -1,7 +1,7 @@
 # Phase 5 Scope
 
-Date: 2026-06-29
-Status: ACTIVE - OBJ4 COMPLETE; OBJ5 VALIDATION CHECKPOINT
+Date: 2026-07-07
+Status: FROZEN / CLOSED AFTER OBJ10
 
 ## Phase Boundary
 
@@ -67,7 +67,7 @@ labeled miss or a measured local reliability failure.
 
 ## Exit Gate
 
-Phase 5 closes only when:
+Phase 5 is closed. The exit gate was:
 
 - the real-question scorecard and human usability labels are committed;
 - retrieval, answer completeness, and faithfulness meet the approved thresholds;
@@ -76,10 +76,16 @@ Phase 5 closes only when:
 - no remote/shared/multi-user scope entered the implementation;
 - backend/eval and final interface freeze documents are complete.
 
+Obj9 freezes the backend/eval subset in
+`docs/phase_5_backend_interface_freeze.md`. Obj10 freezes the final Phase-5
+interface in `docs/phase_5_interface_freeze.md`.
+
 ## Canonical Documents
 
 - `docs/phase_5_scope.md`: binding scope and non-goals.
 - `docs/phase_5_development_order.md`: objective order and acceptance rules.
 - `docs/phase_5_progress.md`: per-objective execution ledger.
 - `docs/phase_5_migrations.md`: contract and configuration migration ledger.
+- `docs/phase_5_backend_interface_freeze.md`: Obj9 backend/eval freeze.
+- `docs/phase_5_interface_freeze.md`: Obj10 final Phase-5 freeze.
 - `docs/issue_log_p5/`: user-owned review findings.

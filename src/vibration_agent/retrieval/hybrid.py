@@ -36,7 +36,8 @@ SOURCE_PRIORITY = {
     "note": 1,
 }
 _MOJIBAKE_MARKERS = set("ÃÂ�¤¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿çåèéã")
-_RUNTIME_LEXICAL_CACHE: dict[tuple[int, str], list[dict[str, Any]]] = {}
+_RUNTIME_LEXICAL_CACHE_MAX_ENTRIES = 4
+_RUNTIME_LEXICAL_CACHE: dict[tuple[int, str], dict[str, Any]] = {}
 
 
 @lru_cache(maxsize=1)
@@ -54,6 +55,22 @@ def clear_default_settings_cache() -> None:
 
 def clear_runtime_lexical_cache() -> None:
     _RUNTIME_LEXICAL_CACHE.clear()
+
+
+def clear_runtime_retrieval_state() -> None:
+    clear_runtime_lexical_cache()
+    query_normalize.clear_taxonomy_caches()
+
+
+def runtime_lexical_cache_stats() -> dict[str, Any]:
+    entries = list(_RUNTIME_LEXICAL_CACHE.values())
+    return {
+        "entry_count": len(entries),
+        "max_entries": _RUNTIME_LEXICAL_CACHE_MAX_ENTRIES,
+        "chunk_count": sum(len(entry.get("chunks", [])) for entry in entries),
+        "collections": sorted({str(entry.get("collection")) for entry in entries if entry.get("collection")}),
+        "loaded_at_unix": [entry.get("loaded_at_unix") for entry in entries],
+    }
 
 
 def read_chunks_jsonl(path: str | Path) -> list[dict[str, Any]]:
@@ -104,14 +121,21 @@ def load_runtime_chunks(settings: Settings) -> list[dict[str, Any]]:
     key = (id(client), settings.database.qdrant_collection)
     cached = _RUNTIME_LEXICAL_CACHE.get(key)
     if cached is not None:
-        return [dict(chunk) for chunk in cached]
+        return [dict(chunk) for chunk in cached["chunks"]]
     chunks = _dedupe_chunks(
         qdrant.load_chunk_payloads(
             client,
             collection=settings.database.qdrant_collection,
         )
     )
-    _RUNTIME_LEXICAL_CACHE[key] = chunks
+    _RUNTIME_LEXICAL_CACHE[key] = {
+        "chunks": chunks,
+        "collection": settings.database.qdrant_collection,
+        "loaded_at_unix": round(time.time(), 3),
+    }
+    while len(_RUNTIME_LEXICAL_CACHE) > _RUNTIME_LEXICAL_CACHE_MAX_ENTRIES:
+        oldest_key = next(iter(_RUNTIME_LEXICAL_CACHE))
+        _RUNTIME_LEXICAL_CACHE.pop(oldest_key, None)
     return [dict(chunk) for chunk in chunks]
 
 

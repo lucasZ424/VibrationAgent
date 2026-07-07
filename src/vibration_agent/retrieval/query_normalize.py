@@ -57,6 +57,15 @@ def clear_alias_cache() -> None:
     load_alias_families.cache_clear()
 
 
+def clear_standard_catalog_cache() -> None:
+    load_corpus_standard_identifiers.cache_clear()
+
+
+def clear_taxonomy_caches() -> None:
+    clear_alias_cache()
+    clear_standard_catalog_cache()
+
+
 def _standard_keys(value: str) -> tuple[tuple[str, str], ...]:
     matches = re.finditer(
         r"(?i)(gb\s*[/∕]?\s*t|gbt|dl\s*[/∕]?\s*t|dlt|iso|api)[\s_-]*(\d{3,6})(?:\.\d+)*",

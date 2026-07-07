@@ -17,6 +17,12 @@ def test_server_command_uses_current_python_and_api_app():
     assert command[-2:] == ["--port", "8000"]
 
 
+def test_server_command_can_enable_uvicorn_reload_for_development():
+    command = start_operator._server_command("127.0.0.1", 8000, reload=True)
+
+    assert "--reload" in command
+
+
 def test_parse_windows_netstat_pid_finds_listening_operator_port():
     # WHY: --stop must target the process actually bound to the operator port,
     # otherwise a stale server can hide new backend changes from the UI.

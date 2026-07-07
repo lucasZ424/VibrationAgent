@@ -12,16 +12,18 @@ The Phase-4 remote/shared hardening decision is recorded in
 `docs/phase_4_remote_shared_hardening_decision.md`; the later binding discipline
 in `docs/vibration_agent_design.md` supersedes its objective-level revisit gate.
 
-## Phase-4 Runtime Scope
+## Phase-5 Final Freeze
 
-Phase 4 is the current frozen local personal engineering-assistant baseline.
-The final freeze is recorded in `docs/phase_4_interface_freeze.md`, with the
-backend freeze in `docs/phase_4_backend_interface_freeze.md`. Phase 1, Phase 2,
-and Phase 3 remain documented compatibility baselines in their freeze docs.
+Phase 5 is frozen as the current local personal engineering-assistant
+reliability baseline. The final freeze is recorded in
+`docs/phase_5_interface_freeze.md`; the backend/eval subset is recorded in
+`docs/phase_5_backend_interface_freeze.md`. Phase 1, Phase 2, Phase 3, and
+Phase 4 remain documented compatibility baselines in their freeze docs.
 
-The next recommended work is local iteration: run the operator/API against a
-real vibration corpus, expand taxonomy from misses, and improve retrieval,
-citations, and backend ergonomics from actual use.
+The frozen Obj9 backend/eval baseline keeps the default answer path local,
+deterministic, and V2/V4-bound. The standing real-question regression net is
+`tests/fixtures/rag_qa/post_r3_baseline.json`; the file name is historical, but
+the contents now record the post-Obj8 Phase-5 backend-freeze scorecard.
 
 Current active and available skills:
 
@@ -370,8 +372,8 @@ must follow `docs/phase_3_interface_freeze.md` and
 
 ## Phase-4 Final Freeze
 
-Phase 4 is frozen as the current local-first, single-user engineering-assistant
-baseline. The final interface freeze is recorded in
+Phase 4 is frozen as the predecessor local-first, single-user
+engineering-assistant baseline. The final interface freeze is recorded in
 `docs/phase_4_interface_freeze.md`; progress and contract changes are tracked
 in `docs/phase_4_progress.md` and `docs/phase_4_migrations.md`.
 
@@ -385,6 +387,19 @@ S6/S7/S8 are default-off advisory handoff skills, not final-answer renderers.
 Formula rendering metadata is structured fallback information for clients, not
 symbolic proof. CAS/symbolic proof remains deferred; remote/shared hardening is
 deferred indefinitely and has no active entry gate.
+
+## Phase-5 Final Freeze
+
+Phase 5 is frozen in `docs/phase_5_interface_freeze.md`. Obj9 freezes the local
+backend/eval contract in `docs/phase_5_backend_interface_freeze.md`; progress
+and contract changes are tracked in `docs/phase_5_progress.md` and
+`docs/phase_5_migrations.md`.
+
+The frozen Phase-5 backend baseline uses the 4,436-chunk local corpus,
+multilingual MiniLM embeddings, hybrid BM25+dense retrieval with RRF fusion,
+deterministic S3 synthesis by default, V2 as a hard faithfulness gate, and the
+committed Obj1 scorecard as the standing regression net. GPT synthesis and Opus
+supervision remain default-off, replay-first lanes.
 
 ## Development Start Points
 

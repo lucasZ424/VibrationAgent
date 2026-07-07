@@ -398,6 +398,34 @@ def test_runtime_lexical_lane_is_not_limited_to_ann_candidates(monkeypatch):
     assert result["lanes"]["ann"]["hits"][0]["chunk_id"] == "c1"
 
 
+def test_runtime_lexical_cache_reports_and_clears_payload_state(monkeypatch):
+    from vibration_agent.config import load
+    from vibration_agent.retrieval import hybrid
+
+    settings = load()
+    settings.database.qdrant_enabled = True
+    settings.database.qdrant_collection = "test_chunks"
+    client = object()
+    hybrid.clear_runtime_retrieval_state()
+    monkeypatch.setattr(hybrid.qdrant, "runtime_client", lambda _: client)
+    monkeypatch.setattr(
+        hybrid.qdrant,
+        "load_chunk_payloads",
+        lambda client, *, collection: [_chunk("c1", "critical speed")],
+    )
+
+    assert hybrid.load_runtime_chunks(settings)[0]["chunk_id"] == "c1"
+    stats = hybrid.runtime_lexical_cache_stats()
+
+    assert stats["entry_count"] == 1
+    assert stats["chunk_count"] == 1
+    assert stats["collections"] == ["test_chunks"]
+
+    hybrid.clear_runtime_retrieval_state()
+
+    assert hybrid.runtime_lexical_cache_stats()["entry_count"] == 0
+
+
 def test_independent_runtime_candidate_can_be_explicitly_disabled(monkeypatch):
     from vibration_agent.config import load
     from vibration_agent.retrieval import hybrid

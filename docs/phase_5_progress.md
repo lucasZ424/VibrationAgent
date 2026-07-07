@@ -1,15 +1,14 @@
 # Phase 5 Progress
 
-Updated: 2026-07-06
+Updated: 2026-07-07
 
 ## Status
 
-Phase 5 is active. Obj0-Obj6 are complete and Obj7 is in progress. Phase 4,
-including its R1-R3 local iteration, is formally closed
-(`docs/phase_4_progress.md`, Obj0-18). Phase 5 exists to systematically close
-the gaps that the R1-R3 iteration exposed on the real corpus. Shared, remote,
-public, and multi-user deployment are deferred indefinitely and are not part of
-this ledger.
+Phase 5 is frozen and closed after Obj10. Phase 4, including its R1-R3 local
+iteration, is formally closed (`docs/phase_4_progress.md`, Obj0-18). Phase 5
+systematically closed the gaps that the R1-R3 iteration exposed on the real
+corpus. Shared, remote, public, and multi-user deployment are deferred
+indefinitely and are not part of this ledger.
 
 The high-level decomposition and design decisions live in
 `docs/phase_5_development_order.md`. The Phase 5 boundary and entry/exit gates
@@ -54,12 +53,12 @@ regression target.
 4. Independent lexical + ANN lanes, bilingual expansion, fusion: complete
 5. Evidence selection, adjacent-passage expansion, reranking: complete
 6. Controlled LLM synthesis lane (default-off, replay-first): complete
-7. Corpus and taxonomy quality pass: in_progress
-8. Backend reliability and operator ergonomics: planned
-9. Local-reliability backend / eval freeze: planned
-10. Phase-5 final interface freeze: planned
+7. Corpus and taxonomy quality pass: complete
+8. Backend reliability and operator ergonomics: complete
+9. Local-reliability backend / eval freeze: complete
+10. Phase-5 final interface freeze: complete
 
-Ordering: Obj1 is a hard prerequisite for all later objectives (measurement
+Ordering used during Phase 5: Obj1 is a hard prerequisite for all later objectives (measurement
 before change). Obj2 (the calibrated quality gate) is the measuring stick used
 throughout Obj3-6. Retrieval recall (Obj3-4) is isolated before evidence
 selection and synthesis (Obj5-6) so quality stays attributable. Obj7 mutates the
@@ -1194,7 +1193,67 @@ and no stale payload or standard catalog survives the supported restart flow.
 
 Dependencies: Obj3 and Obj7.
 
-Status: planned.
+Status: complete.
+
+Implementation:
+
+- Qdrant bulk writes now have an explicit batching/retry contract in
+  `src/vibration_agent/storage/qdrant.py`. `upsert_chunk_points()` accepts
+  `batch_size` and `retry_attempts`; `run_reindex()` uses the embedding batch
+  size and two write attempts per batch, while still rejecting token-feature
+  fallback vectors.
+- `src/vibration_agent/storage/reindex.py` now refreshes runtime retrieval state
+  after a successful parity-checked reindex and records
+  `runtime_state_refreshed` in the reindex report. This clears the process
+  lexical payload cache and the standard/alias taxonomy caches in the current
+  process.
+- `src/vibration_agent/retrieval/hybrid.py` now exposes
+  `runtime_lexical_cache_stats()` and `clear_runtime_retrieval_state()`. The
+  runtime lexical payload cache is capacity-bound to four collection/client
+  entries and reports entry count, chunk count, collections, and load times.
+- `src/vibration_agent/storage/qa_logs.py` now has a short failure cooldown for
+  Postgres qa_logs writes. After a connection/write failure, subsequent answer
+  turns skip the side-effect without paying the full connect timeout until the
+  cooldown expires. The answer chain remains fail-safe and unaffected.
+- `/health` and `/diagnostics` now expose Obj8 local diagnostics schema
+  `phase5.obj8.local_diagnostics.v1`. Diagnostics include configured retrieval
+  mode, runtime retrieval source, embedding provider/model/version/dimension,
+  store enabled/configured/reachable state, Qdrant collection/vector size, and
+  runtime lexical cache stats.
+- `scripts/start_operator.py` remains the supported lifecycle entry. It already
+  supports `--restart`; Obj8 adds `--reload` for local development. The restart
+  contract remains the durable way to clear API process caches after out-of-
+  process reindex/catalog changes. Existing operator asset cache-busting
+  (`?v=r3`) and `/operator` `Cache-Control: no-store` are retained.
+
+Verification:
+
+- Focused Obj8 regression:
+  `.venv\\Scripts\\python.exe -m pytest tests\\unit\\test_api_hardening.py
+  tests\\unit\\test_qa_logs.py tests\\unit\\test_s2_retrieval_skill.py
+  tests\\unit\\test_reindex.py tests\\unit\\test_qdrant.py
+  tests\\unit\\test_start_operator_script.py -q
+  --basetemp=data\\exports\\pytest-obj8-focused -p no:cacheprovider`:
+  97 passed.
+- Canonical non-large regression:
+  `run_logs/obj8_final_nonlarge_20260707_112024.log`, 651 passed,
+  1 registered large-corpus deselection, exit code 0.
+- Final runtime Obj1 scorecard:
+  `run_logs/obj8_final_runtime_rag_qa_20260707_112054.json`, exit code 0.
+  Recall@10 is 0.821, recall@5 is 0.643, completeness is 0.720, V2
+  faithfulness is 1.000, and citation alignment is 1.000. This remains the
+  in-sample post-Obj7 scorecard; Obj8 did not change retrieval ranking.
+
+Residual Risk:
+
+- Out-of-process reindex cannot directly clear an already-running API process
+  cache. The supported operator flow is explicit restart via
+  `scripts/start_operator.py --restart`; in-process reindex callers clear cache
+  through `clear_runtime_retrieval_state()`.
+- Obj8 does not replace the runtime lexical backend with a persistent external
+  lexical index. It formally capacity-bounds and instruments the existing
+  Qdrant-payload cache; a separate index remains a future scalability option if
+  corpus size grows beyond the measured local workflow.
 
 ## Obj9 - Local-reliability backend / eval freeze
 
@@ -1210,7 +1269,67 @@ local-reliability contract drift.
 
 Dependencies: Obj2-8.
 
-Status: planned.
+Status: complete.
+
+Implementation:
+
+- Added `docs/phase_5_backend_interface_freeze.md` as the authoritative Obj9
+  backend/eval freeze. It freezes the local single-user product boundary,
+  default answer path, retrieval lanes, corpus/store identity, scoring/V2 gate,
+  LLM/supervisor default-off contract, backend reliability behavior, change
+  control, and accepted residual risks.
+- Promoted the post-Obj8 in-sample Obj1 scorecard into
+  `tests/fixtures/rag_qa/post_r3_baseline.json` as the standing Phase-5
+  backend/eval regression net. The filename remains historical; the contents
+  now represent the Obj9 freeze baseline.
+- Regenerated `tests/fixtures/eval/answer_quality/obj2_calibration.json` from
+  that baseline so the durable Obj2 calibration artifact matches the standing
+  regression net.
+- Added `test_obj9_committed_baseline_is_phase5_backend_freeze_regression_net`
+  to pin the committed baseline's corpus, embedding, retrieval config,
+  evidence-match rule, and scorecard.
+- Updated `docs/phase_5_scope.md`, `README.md`, and `docs/architecture.md` so
+  Phase-5 backend/eval freeze and Phase-4 compatibility baseline no longer
+  conflict.
+- Cleared Obj8 issue #1 by documenting the out-of-process reindex/catalog
+  rebuild restart contract in both `docs/operator_ui.md` and the backend freeze.
+
+Verification:
+
+- Obj9 baseline regeneration:
+  `run_logs/obj9_backend_freeze_rag_qa_20260707_113520.json`, exit code 0.
+  Recall@10 is 0.821, recall@5 is 0.643, completeness is 0.720, sentence
+  completeness is 0.867, V2 faithfulness is 1.000, and citation alignment is
+  1.000.
+- Focused baseline regression:
+  `.venv\\Scripts\\python.exe -m pytest tests\\eval\\test_rag_qa_eval.py -q
+  --basetemp=data\\exports\\pytest-obj9-rag-qa -p no:cacheprovider`: 9 passed.
+- Answer-quality calibration refresh:
+  `run_logs/obj9_answer_quality_calibration_20260707_113809.json`, exit code 0.
+  The best observed deterministic candidate is threshold 0.85 with accuracy
+  1.0, false allow 0, false block 0, and decision margin 0.056. This does not
+  migrate the runtime threshold.
+- Canonical non-large regression:
+  `run_logs/obj9_final_nonlarge_20260707_113917.log`, 652 passed,
+  1 registered large-corpus deselection, exit code 0.
+
+Residual Risk:
+
+- The standing 0.821 recall@10 result is in-sample on the Obj1 fixture. It is a
+  regression net for fixed misses, not held-out generalization evidence.
+- Runtime `answer_quality` threshold 0.75 remains provisional even though the
+  Obj9 deterministic calibration ranks 0.85 as best observed. The label set is
+  one usable and thirteen unusable cases, and Obj6 LLM-style answers reduced the
+  threshold's discriminative power. Threshold promotion requires relabeling and
+  recalibration across the default and LLM lanes.
+- GPT synthesis and Opus supervisor lanes remain validated but default-off. The
+  deterministic post-Obj8 baseline remains the production default authority.
+- Out-of-process reindex or taxonomy/catalog rebuild requires API restart before
+  retrieval can be trusted.
+
+Next Objective Gate:
+
+- Obj9 is closed. Obj10 final interface freeze is cleared to start.
 
 ## Obj10 - Phase-5 final interface freeze
 
@@ -1227,4 +1346,67 @@ Phase 5 is marked closed; no remote/shared entry gate or candidate remains.
 
 Dependencies: Obj9.
 
-Status: planned.
+Status: complete.
+
+Implementation:
+
+- Added `docs/phase_5_interface_freeze.md` as the final Phase-5 closure
+  document. It incorporates the Obj9 backend/eval freeze and records the final
+  product boundary, runtime authority, backend/eval baseline, scoring contract,
+  LLM/supervisor default-off contract, API/operator/diagnostics surface,
+  reindex/cache restart rule, objective summary, verification evidence,
+  accepted residual risks, and post-freeze change rule.
+- Carried Obj9 review Info into the final freeze:
+  sentence completeness is frozen at the true post-Obj7 production value 0.867,
+  and the 0.821 recall@10 baseline is explicitly in-sample rather than
+  held-out generalization evidence.
+- Updated `docs/phase_5_scope.md`, `README.md`, `docs/architecture.md`, this
+  progress ledger, and `docs/phase_5_migrations.md` so they all point to the
+  same Phase-5 frozen baseline.
+- Confirmed UI/observability changes are additive local diagnostics/operator
+  behavior and do not change retrieval, scoring, provider defaults, corpus
+  identity, or final-answer authority.
+- Reaffirmed that shared, remote, public, and multi-user deployment remains
+  indefinitely deferred with no automatic entry gate.
+
+Verification:
+
+- Final deterministic Obj1 baseline:
+  `run_logs/obj9_backend_freeze_rag_qa_20260707_113520.json`, exit code 0.
+  Recall@10 0.821, recall@5 0.643, completeness 0.720, sentence completeness
+  0.867, V2 faithfulness 1.000, citation alignment 1.000.
+- Final calibration:
+  `run_logs/obj9_answer_quality_calibration_20260707_113809.json`, exit code 0.
+  Deterministic best observed candidate is threshold 0.85; runtime remains
+  provisional 0.75 pending relabel/recalibration across default and LLM lanes.
+- Final canonical non-large regression:
+  `run_logs/obj10_final_nonlarge_20260707_120720.log`, 652 passed,
+  1 registered large-corpus deselection, exit code 0.
+- Final corpus/runtime parity:
+  `run_logs/obj7c_final_runtime_corpus_audit_20260706_184103.json`; file,
+  Postgres, and Qdrant all contain 4,436 chunks with no extra/missing ids.
+- Final Obj6 live/replay evidence:
+  `run_logs/obj6_combined_live_gate_20260706_152132.json` and
+  `run_logs/obj6_combined_replay_promoted_gate_20260706_152530.json`, both
+  eligible true.
+
+Residual Risk:
+
+- The frozen 0.821 recall@10 scorecard is an in-sample fixed-miss regression
+  net, not held-out generalization evidence. Successor eval work owns held-out
+  or expanded real-question coverage.
+- Sentence completeness is frozen at 0.867. This is the true post-Obj7
+  production value and not treated as a defect at closure.
+- Runtime answer-quality threshold 0.75 remains provisional. Threshold promotion
+  requires a successor migration with human label re-review and recalibration
+  across deterministic and LLM lanes.
+- GPT synthesis and Opus supervisor lanes remain validated but dormant. Future
+  default promotion requires a new objective and gate.
+- Out-of-process reindex/catalog rebuild requires API restart before retrieval
+  can be trusted.
+- Remote/shared/public/multi-user deployment remains indefinitely deferred.
+
+Closure:
+
+- Phase 5 is closed. New capability work must enter a successor phase; no
+  additional Phase-5 feature objective should be appended.

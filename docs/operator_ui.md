@@ -28,6 +28,19 @@ Use `--restart` after backend or UI code changes if an older API process is
 already listening on the same port. Use `--stop` to shut down the operator API
 without opening the browser.
 
+After any out-of-process corpus reindex, Qdrant rebuild, or
+`taxonomy/corpus_standards.yaml` catalog rebuild, restart the API before
+trusting retrieval results:
+
+```powershell
+.\.venv\Scripts\python.exe scripts\start_operator.py --restart
+```
+
+The reindex command clears caches only in its own process. A separately running
+API process can still hold the old runtime lexical payload cache or standard
+catalog cache until it is restarted. In-process callers may instead invoke the
+runtime retrieval-state clear helper directly.
+
 The UI sends `/query` requests and renders the human-readable
 `structured_result.answer` first. Raw JSON remains visible for diagnostics.
 

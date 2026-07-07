@@ -1,6 +1,6 @@
 # Architecture Notes
 
-This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `docs/vibration_agent_design.md`; this file records the decisions that are already binding for code layout, Phase-0 runtime, and frozen Phase-2/Phase-3 development.
+This project implements `vibration_agent`, a personal engineering-oriented vibration-learning and knowledge-base agent. The design source is `docs/vibration_agent_design.md`; this file records the decisions that are already binding for code layout, Phase-0 runtime, frozen Phase-2/Phase-4 development, and the frozen Phase-5 reliability baseline.
 
 ## Product Positioning
 
@@ -275,3 +275,26 @@ The default answer path remains V2/V4-bound. S6/S7/S8 are default-off advisory
 handoff skills, Obj11 formula rendering is metadata only, Obj12 keeps symbolic
 proof/CAS deferred, and remote/shared hardening remains indefinitely out of
 scope under the binding product discipline.
+
+## Phase-5 Backend / Eval Freeze
+
+As of Obj9, Phase 5 has frozen the local RAG reliability backend/eval subset in
+`docs/phase_5_backend_interface_freeze.md`. The frozen backend baseline uses the
+4,436-chunk local corpus, multilingual MiniLM embeddings, hybrid BM25+dense
+retrieval with RRF fusion, deterministic S3 by default, V2 as the hard
+faithfulness gate, and `tests/fixtures/rag_qa/post_r3_baseline.json` as the
+standing real-question regression net.
+
+Phase-5 changes after Obj9 must not alter retrieval lanes, embedding/corpus
+identity, answer-quality gate semantics, provider defaults, replay/live
+contracts, or the Obj1 baseline without a successor migration and updated freeze
+evidence. GPT synthesis and Opus supervisor lanes remain default-off and
+replay-first; they are validated lanes, not the default production authority.
+
+## Phase-5 Final Freeze
+
+As of Obj10, Phase 5 is closed in `docs/phase_5_interface_freeze.md`. The final
+freeze incorporates the backend/eval freeze, records the local API/operator
+surface, accepted residual risks, and the rule that future runtime authority,
+retrieval, scoring, provider, corpus, UI/API, or deployment-boundary changes
+belong to a successor phase.

@@ -156,6 +156,8 @@ def upsert_chunk_points(
     collection: str = COLLECTION_CHUNKS,
     embedding_model: str | None = None,
     embedding_version: str | None = None,
+    batch_size: int | None = None,
+    retry_attempts: int = 1,
 ) -> int:
     plan = prepare_chunk_points(
         chunks,
@@ -164,7 +166,24 @@ def upsert_chunk_points(
         embedding_version=embedding_version,
     )
     initialize_collection(client, collection=collection, vector_size=plan.vector_size)
-    return upsert_points(client, collection=collection, points=plan.points)
+    usable_points = [point for point in plan.points if point.vector]
+    if not usable_points:
+        return 0
+    final_batch_size = batch_size or len(usable_points)
+    if final_batch_size <= 0:
+        final_batch_size = len(usable_points)
+    attempts = max(int(retry_attempts), 1)
+    written = 0
+    for offset in range(0, len(usable_points), final_batch_size):
+        batch = usable_points[offset : offset + final_batch_size]
+        for attempt in range(1, attempts + 1):
+            try:
+                written += upsert_points(client, collection=collection, points=batch)
+                break
+            except Exception:
+                if attempt >= attempts:
+                    raise
+    return written
 
 
 def delete_chunk_points_for_documents(

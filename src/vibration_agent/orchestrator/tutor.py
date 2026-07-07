@@ -292,14 +292,12 @@ _QUERY_ASPECTS: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("scope", ("scope", "covered", "适用", "范围")),
     ("formula", ("formula", "equation", "calculate", "公式", "计算")),
 )
-# PROVISIONAL (2026-07-03). On the corrected fixed-S3 baseline this threshold is
-# still zero-error but its score margin is negative (-0.041); the calibrator's own
-# max-margin rule now selects 0.85. 0.75 is retained only because the hard
-# completeness==1.0 condition blocks the higher-scoring unusable cases. Do NOT
-# describe this as "calibration selects 0.75". Human re-review refreshed the
-# corrected-answer usability reasons without flipping labels; threshold promotion
-# is deferred until Obj6 adds more complete-usable positives. See
-# docs/issue_log_p5/issues_obj6a.txt #4/#5 and the Obj6A migration note.
+# PROVISIONAL (2026-07-07). The Obj9 deterministic freeze baseline's calibrator
+# prefers 0.85, but the label set still has one usable case and thirteen
+# unusable cases, and Obj6 combined-chain calibration showed degraded
+# discrimination for LLM-style answers. Keep 0.75 until a separately reviewed
+# threshold migration re-labels the newly pass-like answers and recalibrates the
+# default plus LLM lanes. Do NOT describe this as "calibration selects 0.75".
 ANSWER_QUALITY_THRESHOLD = 0.75
 
 

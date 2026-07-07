@@ -35,8 +35,8 @@ def _health_ok(host: str, port: int) -> bool:
         return False
 
 
-def _server_command(host: str, port: int) -> list[str]:
-    return [
+def _server_command(host: str, port: int, *, reload: bool = False) -> list[str]:
+    command = [
         sys.executable,
         "-m",
         "uvicorn",
@@ -46,6 +46,9 @@ def _server_command(host: str, port: int) -> list[str]:
         "--port",
         str(port),
     ]
+    if reload:
+        command.append("--reload")
+    return command
 
 
 def _parse_windows_netstat_pid(output: str, host: str, port: int) -> int | None:
@@ -138,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-browser", action="store_true", help="Start server without opening the browser.")
     parser.add_argument("--stop", action="store_true", help="Stop the operator API listening on the selected port.")
     parser.add_argument("--restart", action="store_true", help="Stop any existing operator API on the port, then start it.")
+    parser.add_argument("--reload", action="store_true", help="Start uvicorn with reload enabled for local development.")
     parser.add_argument("--startup-timeout", type=float, default=10.0)
     args = parser.parse_args(argv)
 
@@ -159,7 +163,7 @@ def main(argv: list[str] | None = None) -> int:
             webbrowser.open(operator_url)
         return 0
 
-    process = subprocess.Popen(_server_command(args.host, args.port), cwd=_workspace())
+    process = subprocess.Popen(_server_command(args.host, args.port, reload=args.reload), cwd=_workspace())
     try:
         if not _wait_for_health(args.host, args.port, timeout_s=args.startup_timeout):
             print(f"API did not become healthy within {args.startup_timeout:.1f}s.", file=sys.stderr)

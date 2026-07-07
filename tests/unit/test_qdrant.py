@@ -62,6 +62,32 @@ def test_qdrant_upsert_initializes_collection_with_vector_dimension(monkeypatch)
     assert calls[1][0] == "upsert"
 
 
+def test_qdrant_upsert_batches_and_retries_transient_failures(monkeypatch):
+    calls: list[list[str]] = []
+
+    def fake_upsert(client, *, collection, points):
+        calls.append([point.id for point in points])
+        if len(calls) == 1:
+            raise RuntimeError("temporary qdrant interruption")
+        return len(points)
+
+    monkeypatch.setattr(qdrant, "ensure_collection", lambda *args, **kwargs: None)
+    monkeypatch.setattr(qdrant, "upsert_points", fake_upsert)
+
+    count = qdrant.upsert_chunk_points(
+        object(),
+        [{"chunk_id": "c1"}, {"chunk_id": "c2"}, {"chunk_id": "c3"}],
+        embeddings={"c1": [1.0, 0.0], "c2": [0.0, 1.0], "c3": [1.0, 1.0]},
+        collection="test_chunks",
+        batch_size=2,
+        retry_attempts=2,
+    )
+
+    assert count == 3
+    assert len(calls) == 3
+    assert calls[0] == calls[1]
+
+
 def test_qdrant_document_refresh_deletes_stale_points_before_reinsert(monkeypatch):
     # WHY: changed chunk boundaries must not leave orphan vectors after repeat ingestion.
     calls = {}

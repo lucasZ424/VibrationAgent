@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 import apps.api.main as api_main
-from vibration_agent.config import ApiSettings, DatabaseSettings, load
+from vibration_agent.config import ApiSettings, DatabaseSettings, EmbeddingSettings, load
 
 
 def _settings(*, api: ApiSettings | None = None, database: DatabaseSettings | None = None):
@@ -75,7 +75,10 @@ def test_api_health_does_not_probe_external_dependencies(monkeypatch):
     assert payload["status"] == "ok"
     assert payload["dependencies"]["postgres"]["status"] == "enabled"
     assert payload["dependencies"]["qdrant"]["status"] == "enabled"
+    assert payload["dependencies"]["qdrant"]["reachable"] == "not_probed"
     assert payload["diagnostics"]["external_dependency_probe"] == "not_run"
+    assert payload["diagnostics"]["retrieval"]["configured_mode"] == settings.retrieval.mode
+    assert payload["diagnostics"]["stores"]["qdrant"]["collection"] == settings.database.qdrant_collection
 
 
 def test_api_diagnostics_can_probe_dependencies_explicitly(monkeypatch):
@@ -92,6 +95,8 @@ def test_api_diagnostics_can_probe_dependencies_explicitly(monkeypatch):
     assert payload["dependencies"]["postgres"]["status"] == "fail"
     assert payload["dependencies"]["qdrant"]["status"] == "disabled"
     assert payload["diagnostics"]["external_dependency_probe"] == "run"
+    assert payload["dependencies"]["postgres"]["configured"] is True
+    assert payload["dependencies"]["postgres"]["reachable"] is False
 
 
 def test_api_diagnostics_redacts_probe_details(monkeypatch):
@@ -124,6 +129,32 @@ def test_api_health_status_can_fail_when_all_dependencies_fail():
             "qdrant": {"status": "fail", "detail": "down"},
         }
     ) == "fail"
+
+
+def test_api_diagnostics_exposes_retrieval_and_embedding_runtime(monkeypatch):
+    settings = _settings(
+        database=DatabaseSettings(qdrant_enabled=True, qdrant_collection="chunks_obj8"),
+    )
+    settings.embeddings = EmbeddingSettings(
+        enabled=True,
+        provider="sentence_transformers",
+        model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        model_version="v1",
+    )
+    monkeypatch.setattr(api_main, "get_settings", lambda workspace=None: settings)
+    monkeypatch.setattr(
+        api_main.hybrid,
+        "runtime_lexical_cache_stats",
+        lambda: {"entry_count": 1, "chunk_count": 4436, "collections": ["chunks_obj8"]},
+    )
+
+    response = TestClient(api_main.app).get("/diagnostics")
+
+    payload = response.json()["diagnostics"]
+    assert payload["retrieval"]["runtime_source"] == "runtime_qdrant_independent_lanes"
+    assert payload["embedding"]["model"] == "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    assert payload["embedding"]["dimension"] == 384
+    assert payload["runtime_caches"]["lexical_payloads"]["chunk_count"] == 4436
 
 
 def test_api_rate_limit_rejects_second_request_when_enabled(monkeypatch):

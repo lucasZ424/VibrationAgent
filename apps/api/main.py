@@ -24,6 +24,7 @@ from vibration_agent.config import Settings, load  # noqa: E402
 from vibration_agent.ingestion.pipeline import chunk_documents, ingest as plan_ingestion  # noqa: E402
 from vibration_agent.observability import log_event, redact_text, redact_value  # noqa: E402
 from vibration_agent.orchestrator import TutorOrchestrator  # noqa: E402
+from vibration_agent.retrieval import hybrid  # noqa: E402
 from vibration_agent.schemas import (  # noqa: E402
     PHASE0_ACTIVE_SKILLS,
     PHASE0_DEFERRED_SKILLS,
@@ -242,14 +243,19 @@ def _task_id_from_output(output: Any) -> str | None:
 
 
 def _disabled_dependency(name: str) -> dict[str, Any]:
-    return {"status": "disabled", "detail": f"{name} is disabled"}
+    return {"status": "disabled", "configured": False, "reachable": "not_applicable", "detail": f"{name} is disabled"}
 
 
 def _postgres_dependency(settings: Settings) -> dict[str, Any]:
     if not settings.database.postgres_enabled:
         return _disabled_dependency("postgres")
     if not settings.database.postgres_url:
-        return {"status": "fail", "detail": "POSTGRES_ENABLED=true but POSTGRES_URL is empty"}
+        return {
+            "status": "fail",
+            "configured": True,
+            "reachable": False,
+            "detail": "POSTGRES_ENABLED=true but POSTGRES_URL is empty",
+        }
     try:
         from vibration_agent.storage.postgres_client import connect
 
@@ -263,9 +269,11 @@ def _postgres_dependency(settings: Settings) -> dict[str, Any]:
     except Exception as exc:
         return {
             "status": "fail",
+            "configured": True,
+            "reachable": False,
             "detail": redact_text(f"{type(exc).__name__}: {exc}", path_prefixes=[settings.paths.workspace]),
         }
-    return {"status": "ok", "detail": "postgres reachable"}
+    return {"status": "ok", "configured": True, "reachable": True, "detail": "postgres reachable"}
 
 
 def _qdrant_dependency(settings: Settings) -> dict[str, Any]:
@@ -280,9 +288,11 @@ def _qdrant_dependency(settings: Settings) -> dict[str, Any]:
     except Exception as exc:
         return {
             "status": "fail",
+            "configured": True,
+            "reachable": False,
             "detail": redact_text(f"{type(exc).__name__}: {exc}", path_prefixes=[settings.paths.workspace]),
         }
-    return {"status": "ok", "detail": "qdrant reachable"}
+    return {"status": "ok", "configured": True, "reachable": True, "detail": "qdrant reachable"}
 
 
 def _health_dependencies(settings: Settings) -> dict[str, dict[str, Any]]:
@@ -296,10 +306,14 @@ def _configured_dependencies(settings: Settings) -> dict[str, dict[str, Any]]:
     return {
         "postgres": {
             "status": "enabled" if settings.database.postgres_enabled else "disabled",
+            "configured": settings.database.postgres_enabled,
+            "reachable": "not_probed",
             "detail": "configured; reachability not probed",
         },
         "qdrant": {
             "status": "enabled" if settings.database.qdrant_enabled else "disabled",
+            "configured": settings.database.qdrant_enabled,
+            "reachable": "not_probed",
             "detail": "configured; reachability not probed",
         },
     }
@@ -318,9 +332,19 @@ def _api_workspace(settings: Settings) -> str:
     return str(redact_value(str(settings.paths.workspace), path_prefixes=[settings.paths.workspace]))
 
 
+def _retrieval_runtime_source(settings: Settings) -> str:
+    if settings.database.qdrant_enabled and settings.retrieval.mode == "hybrid" and settings.retrieval.independent_lanes_enabled:
+        return "runtime_qdrant_independent_lanes"
+    if settings.database.qdrant_enabled and settings.retrieval.mode == "dense":
+        return "runtime_qdrant_ann"
+    if settings.database.qdrant_enabled:
+        return "runtime_qdrant_payloads"
+    return "file_chunks"
+
+
 def _local_diagnostics(settings: Settings, *, probe_dependencies: bool) -> dict[str, Any]:
     return {
-        "schema_version": "p4.local_observability.v1",
+        "schema_version": "phase5.obj8.local_diagnostics.v1",
         "redaction": "enabled",
         "external_dependency_probe": "run" if probe_dependencies else "not_run",
         "operator_ui": "available" if UI_DIR.exists() else "missing",
@@ -331,6 +355,40 @@ def _local_diagnostics(settings: Settings, *, probe_dependencies: bool) -> dict[
         "llm_capture_enabled": settings.llm.capture_enabled,
         "embedding_provider_enabled": settings.embeddings.enabled,
         "advisory_routing_enabled": settings.routing.advisory_routing_enabled,
+        "retrieval": {
+            "configured_mode": settings.retrieval.mode,
+            "runtime_source": _retrieval_runtime_source(settings),
+            "independent_lanes_enabled": settings.retrieval.independent_lanes_enabled,
+            "final_top_k": settings.retrieval.final_top_k,
+            "bm25_top_k": settings.retrieval.bm25_top_k,
+            "dense_top_k": settings.retrieval.dense_top_k,
+        },
+        "embedding": {
+            "enabled": settings.embeddings.enabled,
+            "provider": settings.embeddings.provider,
+            "model": settings.embeddings.model_name,
+            "model_version": settings.embeddings.model_version,
+            "dimension": settings.database.qdrant_vector_size,
+            "local_files_only": settings.embeddings.local_files_only,
+            "fallback_to_token_features": settings.embeddings.fallback_to_token_features,
+        },
+        "stores": {
+            "postgres": {
+                "enabled": settings.database.postgres_enabled,
+                "timeout_s": settings.database.postgres_timeout,
+            },
+            "qdrant": {
+                "enabled": settings.database.qdrant_enabled,
+                "url_configured": bool(settings.database.qdrant_url),
+                "collection": settings.database.qdrant_collection,
+                "timeout_s": settings.database.qdrant_timeout,
+                "vector_size": settings.database.qdrant_vector_size,
+            },
+        },
+        "runtime_caches": {
+            "lexical_payloads": hybrid.runtime_lexical_cache_stats(),
+            "refresh_contract": "restart via scripts/start_operator.py --restart, or clear runtime retrieval state after reindex.",
+        },
     }
 
 
