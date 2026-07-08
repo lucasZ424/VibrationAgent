@@ -1,7 +1,7 @@
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
-This project is indexed by GitNexus as **VibrationAgent** (5838 symbols, 10859 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
+This project is indexed by GitNexus as **VibrationAgent** (5844 symbols, 10871 relationships, 300 execution flows). Use the GitNexus MCP tools to understand code, assess impact, and navigate safely.
 
 > Index stale? Run `node .gitnexus/run.cjs analyze` from the project root — it auto-selects an available runner. No `.gitnexus/run.cjs` yet? `npx gitnexus analyze` (npm 11 crash → `npm i -g gitnexus`; #1939).
 
@@ -40,23 +40,5 @@ This project is indexed by GitNexus as **VibrationAgent** (5838 symbols, 10859 r
 | Rename / extract / split / refactor | `.claude/skills/gitnexus/gitnexus-refactoring/SKILL.md` |
 | Tools, resources, schema reference | `.claude/skills/gitnexus/gitnexus-guide/SKILL.md` |
 | Index, status, clean, wiki CLI commands | `.claude/skills/gitnexus/gitnexus-cli/SKILL.md` |
-| Work in the Unit area (420 symbols) | `.claude/skills/generated/unit/SKILL.md` |
-| Work in the Scripts area (283 symbols) | `.claude/skills/generated/scripts/SKILL.md` |
-| Work in the Skills area (264 symbols) | `.claude/skills/generated/skills/SKILL.md` |
-| Work in the Ingestion area (131 symbols) | `.claude/skills/generated/ingestion/SKILL.md` |
-| Work in the Storage area (71 symbols) | `.claude/skills/generated/storage/SKILL.md` |
-| Work in the Retrieval area (69 symbols) | `.claude/skills/generated/retrieval/SKILL.md` |
-| Work in the Eval area (56 symbols) | `.claude/skills/generated/eval/SKILL.md` |
-| Work in the Llm area (54 symbols) | `.claude/skills/generated/llm/SKILL.md` |
-| Work in the Agent area (50 symbols) | `.claude/skills/generated/agent/SKILL.md` |
-| Work in the Orchestrator area (41 symbols) | `.claude/skills/generated/orchestrator/SKILL.md` |
-| Work in the Api area (34 symbols) | `.claude/skills/generated/api/SKILL.md` |
-| Work in the Knowledge area (26 symbols) | `.claude/skills/generated/knowledge/SKILL.md` |
-| Work in the Vibration_agent area (24 symbols) | `.claude/skills/generated/vibration-agent/SKILL.md` |
-| Work in the Integration area (23 symbols) | `.claude/skills/generated/integration/SKILL.md` |
-| Work in the Ocr area (18 symbols) | `.claude/skills/generated/ocr/SKILL.md` |
-| Work in the Ui area (14 symbols) | `.claude/skills/generated/ui/SKILL.md` |
-| Work in the Cli area (8 symbols) | `.claude/skills/generated/cli/SKILL.md` |
-| Work in the Tests area (8 symbols) | `.claude/skills/generated/tests/SKILL.md` |
 
 <!-- gitnexus:end -->
