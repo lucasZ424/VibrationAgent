@@ -88,17 +88,31 @@ the true production baseline, not as an Obj10 defect.
 
 ## Frozen Scoring Contract
 
-`phase5.answer_quality.v2` remains the production answer-quality schema.
+Obj10 froze `phase5.answer_quality.v2` as the production answer-quality schema.
+A post-freeze scoring amendment on 2026-07-07 supersedes that schema with
+`phase5.answer_quality.v3`; the rest of this Phase-5 freeze remains closed.
+
+`phase5.answer_quality.v3` adds deterministic prompt/answer language adaptation:
+the expected answer language is derived from explicit language instructions
+first, then from the prompt's primary script. The observed answer language is
+classified as aligned, `mixed_acceptable`, or mismatch. Algorithm, formula,
+standard, unit, and symbol-heavy answers may be `mixed_acceptable` when their
+main prose still follows the requested language. The answer-language check
+ignores the final evidence section so quoted source snippets do not dominate
+the main-answer language decision.
+
 Runtime threshold `0.75` remains provisional and is backstopped by:
 
 - `faithfulness_status == ok`;
 - `completeness == 1.0`;
+- no `language_status=mismatch`;
 - explicit `gate_status=pass`.
 
-The Obj9 deterministic calibration artifact ranks threshold 0.85 as the best
-observed candidate, but this does not migrate runtime behavior. The label set
-still has one usable and thirteen unusable cases, and the Obj6 combined-chain
-calibration showed degraded threshold discrimination for LLM-style answers.
+The refreshed post-amendment deterministic calibration artifact ranks threshold
+0.90 as the best observed candidate, but this does not migrate runtime behavior.
+The label set still has one usable and thirteen unusable cases, and the Obj6
+combined-chain calibration showed degraded threshold discrimination for
+LLM-style answers.
 
 Any threshold migration requires human label re-review, regenerated calibration,
 a migration entry, and regression across deterministic plus LLM lanes.
@@ -160,7 +174,9 @@ running API process does not receive that in-process cache clear.
 - Obj1 created the 14-case bilingual real-question scorecard and offline
   evaluator.
 - Obj2 replaced uncalibrated quality display with the
-  `phase5.answer_quality.v2` gate and durable calibration artifact.
+  `phase5.answer_quality.v2` gate and durable calibration artifact; a
+  post-freeze amendment later superseded it with `phase5.answer_quality.v3`
+  language alignment.
 - Obj3 formalized multilingual ANN reindexing, parity, and independent ANN
   evaluation.
 - Obj4 promoted independent BM25+dense lanes and RRF/weighted fusion after the
@@ -183,6 +199,11 @@ running API process does not receive that in-process cache clear.
   `run_logs/obj9_backend_freeze_rag_qa_20260707_113520.json`, exit code 0.
 - Final answer-quality calibration:
   `run_logs/obj9_answer_quality_calibration_20260707_113809.json`, exit code 0.
+- Post-freeze language-gate baseline:
+  `run_logs/language_gate_mixed_rag_qa_20260708.json`, exit code 0.
+- Post-freeze language-gate calibration:
+  `run_logs/language_gate_mixed_answer_quality_calibration_20260708.json`,
+  exit code 0.
 - Final non-large regression:
   `run_logs/obj10_final_nonlarge_20260707_120720.log`, 652 passed,
   1 registered large-corpus deselection, exit code 0.
@@ -204,7 +225,7 @@ running API process does not receive that in-process cache clear.
 | --- | --- |
 | 0.821 recall@10 is in-sample | Accepted as a fixed-miss regression net only; held-out generalization belongs to a successor eval phase. |
 | Sentence completeness is 0.867 | Accepted as the true post-Obj7 production baseline; future improvements require a new scorecard/migration. |
-| Runtime quality threshold 0.75 is provisional | Owner is a future label/recalibration objective; no automatic migration to 0.85. |
+| Runtime quality threshold 0.75 is provisional | Owner is a future label/recalibration objective; no automatic migration to 0.90. |
 | LLM/supervisor lanes are validated but dormant | Owner is a future default-promotion objective with replay/live gates and cost/budget review. |
 | Out-of-process reindex requires API restart | Owner is operator procedure; hot reload/cross-process cache invalidation is not part of Phase 5. |
 | Runtime lexical backend is process-cached | Accepted for local corpus scale; persistent lexical indexing is future scalability work. |

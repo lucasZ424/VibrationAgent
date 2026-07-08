@@ -5,6 +5,7 @@
     {
       "answer": "## 结论\n根据已检索证据，可以确定：\n1. 在前面几个章节中论证了阶比分析技术在旋转机械非平稳信号分析中，尤其在分析旋转机械升降速等变速过程的振动信号时的重要性。（证据：vold_kalman_04578d8a_p0058_00093）\n2. 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一,特别是在旋转机械的启停振动分析中比传统的频谱分析有着明显的优势。（证据：document_cdd35349_p0026_00031）\n3. 事实上，阶比分析是对角域采样信号的频谱分析，阶比分析的关键是实现振动信号的等角度采样，即每隔一定的角度就对旋转机械进行采样，无论旋转机械的转速是多少，每一转的采样点数总是相同的。（证据：document_cdd35349_p0026_00031）\n4. 为了有针对性地分析旋转机械升降速过程中的非平稳信号，研究和开发阶比分析软件是十分必要的。（证据：vold_kalman_04578d8a_p0058_00093）\n\n## 工程意义\n工程意义仅限于所引证据：在前面几个章节中论证了阶比分析技术在旋转机械非平稳信号分析中，尤其在分析旋转机械升降速等变速过程的振动信号时的重要性。\n\n## 适用前提\n仅适用于检索到的证据块：vold_kalman_04578d8a_p0058_00093, document_cdd35349_p0026_00031。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- 基于Vold-Kalman跟踪滤波的旋转机械阶比分析方法研究（重大傅韦娜）.pdf (第58页, 已记录): 在前面几个章节中论证了阶比分析技术在旋转机械非平稳信号分析中，尤其在分析旋转机械升降速等变速过程的振动信号时的重要性。\n- 旋转机械阶比分析研究与软件实现 (南航刘科伟硕士论文阶比计算).pdf (第26页, 已记录): 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一,特别是在旋转机械的启停振动分析中比传统的频谱分析有着明显的优势。",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 2,
         "covered_query_aspects": [
           "domain_term_0",
@@ -14,10 +15,12 @@
           "definition_statement",
           "purpose"
         ],
+        "expected_language": "zh",
         "faithfulness_status": "ok",
         "gate_reasons": [],
         "gate_status": "pass",
         "intent": "definition",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "domain_term_0",
           "variable_speed"
@@ -26,11 +29,12 @@
           "definition_statement",
           "purpose"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.912,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.93,
         "subscores": {
           "completeness": 1.0,
           "evidence_relevance": 0.739,
+          "language_alignment": 1.0,
           "question_coverage": 1.0,
           "readability": 0.909
         },
@@ -78,7 +82,7 @@
       ],
       "intent": "definition",
       "language": "zh",
-      "latency_ms": 6810.417,
+      "latency_ms": 36749.133,
       "matched_evidence_at_10": [
         "order_definition"
       ],
@@ -204,11 +208,13 @@
     {
       "answer": "## Conclusion\nBased on the retrieved evidence:\n1. In this paper, the following research is conducted around order analysis:For the case where a speed signal is available: this thesis establishes a LabVIEW-based rotating machine vibration signal order analysis system to realize the functions of the computational order analysis process (calculation of the arrival time of the rotational speed pulse,calculation of the rotational speed curve by first-order five-point numerical differentiation, determination of the anti-order mixing filter and angular domain resampling rate, etc.). (evidence: document_bce240f3_p0005_00008)\n2. Order analysis is one of the most important techniques of rotating machinery involving vibration signal processing and fault diagnosis. (evidence: vold_kalman_04578d8a_p0003_00004)\n3. Rotating speed computation is not only one of key technologies of order analysis,but also necessary condition for implemented Vold-Kalman order tracking. (evidence: vold_kalman_04578d8a_p0003_00004)\n4. It demonstrates the effectiveness of the system through simulation, and also proves the applicability of order analysis for non-stationary. (evidence: document_bce240f3_p0005_00008)\n\n## Engineering Meaning\nEngineering implication is limited to the cited evidence: In this paper, the following research is conducted around order analysis:For the case where a speed signal is available: this thesis establishes a LabVIEW-based rotating machine vibration signal order analysis system to realize the functions of the computational order analysis process (calculation of the arrival time of the rotational speed pulse,calculation of the rotational speed curve by first-order five-point numerical differentiation, determination of the anti-order mixing filter and angular domain resampling rate, etc.).\n\n## Premises\nApply this only to the retrieved evidence chunks: document_bce240f3_p0005_00008, vold_kalman_04578d8a_p0003_00004.\n\n## Failure Conditions / Common Pitfalls\nDo not extrapolate beyond the cited operating condition, units, or numeric values.\n\n## Next Actions\nInspect the cited chunks before applying thresholds, maintenance actions, or model assumptions.\n\n## Evidence\n- 旋转机械阶次分析信号处理方法研究及其应用_吴康 湖北汽车工业学院  (◆★★★◆).pdf (p.5, documented): In this paper, the following research is conducted around order analysis:For the case where a speed signal is available: this thesis establishes a LabVIEW-based rotating machine vibration signal order analysis system to realize the functions of the computational order analysis process (calculation of the arrival time of the rotational speed pulse,calculation of the rotational speed curve by first-order five-point numerical differentiation, determination of the anti-order mixing filter and angular domain resampling rate, etc.).\n- 基于Vold-Kalman跟踪滤波的旋转机械阶比分析方法研究（重大傅韦娜）.pdf (p.3, documented): Order analysis is one of the most important techniques of rotating machinery involving vibration signal processing and fault diagnosis.",
       "answer_quality": {
+        "answer_language": "en",
         "citation_count": 2,
         "covered_query_aspects": [
           "domain_term_0"
         ],
         "covered_slots": [],
+        "expected_language": "en",
         "faithfulness_status": "ok",
         "gate_reasons": [
           "score<0.75",
@@ -216,6 +222,7 @@
         ],
         "gate_status": "blocked",
         "intent": "definition",
+        "language_status": "en",
         "query_aspects": [
           "domain_term_0",
           "domain_term_1",
@@ -225,11 +232,12 @@
           "definition_statement",
           "purpose"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.536,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.629,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 0.904,
+          "language_alignment": 1.0,
           "question_coverage": 0.333,
           "readability": 0.909
         },
@@ -277,7 +285,7 @@
       ],
       "intent": "definition",
       "language": "en",
-      "latency_ms": 1941.497,
+      "latency_ms": 2770.471,
       "matched_evidence_at_10": [],
       "matched_evidence_at_5": [],
       "miss_categories": [
@@ -409,6 +417,7 @@
     {
       "answer": "## 结论\n根据已检索证据，可以确定：\n1. 在低转速及转子临界转速时振动幅值可能异常或过大。（证据：gbt_19873_1_2005_1_57afcb1a_p0033_00053）\n2. 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。（证据：gbt_19873_1_2005_1_57afcb1a_p0033_00054）\n3. 柔性转子的额定转速在临界转速之上，因此启动时振幅的变化是先增加而后减小。（证据：vold_kalman_e0e977fa_p0021_00028）\n4. 2x在Zx的激励与转子临界转速重合时，振动达到峰值。（证据：gbt_19873_1_2005_1_57afcb1a_p0033_00053）\n\n## 工程意义\n工程意义仅限于所引证据：在低转速及转子临界转速时振动幅值可能异常或过大。\n\n## 适用前提\n仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0033_00053, gbt_19873_1_2005_1_57afcb1a_p0033_00054, vold_kalman_e0e977fa_p0021_00028。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33页, 已记录): 在低转速及转子临界转速时振动幅值可能异常或过大。\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33-34页, 已记录): 在每个机器共振转速时振动放大，并且在转子通过临界转速时，1x响应中相位角有明显大的变化。\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第21-22页, 已记录): 柔性转子的额定转速在临界转速之上，因此启动时振幅的变化是先增加而后减小。",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 3,
         "covered_query_aspects": [
           "domain_term_0",
@@ -417,6 +426,7 @@
           "phase"
         ],
         "covered_slots": [],
+        "expected_language": "zh",
         "faithfulness_status": "ok",
         "gate_reasons": [
           "score<0.75",
@@ -424,6 +434,7 @@
         ],
         "gate_status": "blocked",
         "intent": "mechanism",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "domain_term_0",
           "domain_term_1",
@@ -434,11 +445,12 @@
           "causal_link",
           "excitation_natural_frequency_relation"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.666,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.733,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 0.747,
+          "language_alignment": 1.0,
           "question_coverage": 1.0,
           "readability": 0.917
         },
@@ -500,7 +512,7 @@
       ],
       "intent": "mechanism",
       "language": "zh",
-      "latency_ms": 1935.752,
+      "latency_ms": 2777.248,
       "matched_evidence_at_10": [
         "critical_response"
       ],
@@ -631,6 +643,7 @@
     {
       "answer": "## Conclusion\n根据已检索证据，可以确定：\n1. 弹簧刚度K的任何变化均会影响转子系统固有频率∞，或共振转速2共振业K(21-3)>M式中，M为转子质量（第10章和第11章）。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0288_00399）\n2. 增大K会增大共振转速，而减小K则会减小该值。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0288_00399）\n3. 共振转速的变化会直接影响系统的稳态振动。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0288_00399）\n4. 图21-10稳态1X振动在正常-紧密和正常-松动条件下的变化如果机器以平衡共振速度2运转，并且发生正常-紧密摩擦，则固有频率将增大，从而使共振点远离运转速度，振动振幅和相位滞后也将减小。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0288_00399）\n\n## Engineering Meaning\n工程意义仅限于所引证据：弹簧刚度K的任何变化均会影响转子系统固有频率∞，或共振转速2共振业K(21-3)>M式中，M为转子质量（第10章和第11章）。\n\n## Premises\n仅适用于检索到的证据块：donalde_bently_charlest_hatch_2014_cdef6d55_p0288_00399。\n\n## Failure Conditions / Common Pitfalls\n请勿超出所引工况、单位或数值范围进行外推。\n\n## Next Actions\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## Evidence\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (pp.288-289, documented): 弹簧刚度K的任何变化均会影响转子系统固有频率∞，或共振转速2共振业K(21-3)>M式中，M为转子质量（第10章和第11章）。",
       "answer_quality": {
+        "answer_language": "zh",
         "citation_count": 1,
         "covered_query_aspects": [
           "domain_term_0",
@@ -638,13 +651,16 @@
           "phase"
         ],
         "covered_slots": [],
+        "expected_language": "en",
         "faithfulness_status": "ok",
         "gate_reasons": [
+          "language_mismatch:zh!=en",
           "score<0.75",
           "completeness<1.0"
         ],
         "gate_status": "blocked",
         "intent": "mechanism",
+        "language_status": "mismatch",
         "query_aspects": [
           "domain_term_0",
           "amplitude",
@@ -654,11 +670,12 @@
           "causal_link",
           "excitation_natural_frequency_relation"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.725,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.58,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 1.0,
+          "language_alignment": 0.0,
           "question_coverage": 1.0,
           "readability": 0.9
         },
@@ -695,7 +712,7 @@
       ],
       "intent": "mechanism",
       "language": "en",
-      "latency_ms": 1929.879,
+      "latency_ms": 2820.422,
       "matched_evidence_at_10": [
         "critical_response"
       ],
@@ -826,6 +843,7 @@
     {
       "answer": "## 结论\n根据已检索证据，可以确定：\n1. 而转子转子不平衡由于激振力随转角的位置而变化，故X 和Y方向测点的信号有90 度的相位差，这要通过相位分析才能区别。（证据：vold_kalman_e0e977fa_p0021_00028）\n2. 根据基本的转子动力学理论可知：对于同步（1X）行为，以低于共振的速度运行时，重点（表示集中的转子转子不平衡）和高点将同相（即0°相位滞后）。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0087_00119）\n3. 这些线上的振动通常由振摆、轴弯曲和转子不平衡等因素综合所致。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0106_00145）\n4. 由转子不平衡导致的基本受迫振动频率1X可产生1X、2X、3X等谐波。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0106_00145）\n\n## 工程意义\n工程意义仅限于所引证据：而转子转子不平衡由于激振力随转角的位置而变化，故X 和Y方向测点的信号有90 度的相位差，这要通过相位分析才能区别。\n\n## 适用前提\n仅适用于检索到的证据块：vold_kalman_e0e977fa_p0021_00028, donalde_bently_charlest_hatch_2014_cdef6d55_p0087_00119, donalde_bently_charlest_hatch_2014_cdef6d55_p0106_00145。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (第21-22页, 已记录): 而转子转子不平衡由于激振力随转角的位置而变化，故X 和Y方向测点的信号有90 度的相位差，这要通过相位分析才能区别。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第87页, 已记录): 根据基本的转子动力学理论可知：对于同步（1X）行为，以低于共振的速度运行时，重点（表示集中的转子转子不平衡）和高点将同相（即0°相位滞后）。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第106-107页, 已记录): 这些线上的振动通常由振摆、轴弯曲和转子不平衡等因素综合所致。",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 3,
         "covered_query_aspects": [
           "domain_term_0",
@@ -834,6 +852,7 @@
         "covered_slots": [
           "contrast"
         ],
+        "expected_language": "zh",
         "faithfulness_status": "ok",
         "gate_reasons": [
           "score<0.75",
@@ -841,6 +860,7 @@
         ],
         "gate_status": "blocked",
         "intent": "comparison",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "domain_term_0",
           "domain_term_1",
@@ -852,11 +872,12 @@
           "contrast",
           "both_entities"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.588,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.67,
         "subscores": {
           "completeness": 0.5,
           "evidence_relevance": 0.533,
+          "language_alignment": 1.0,
           "question_coverage": 0.4,
           "readability": 0.917
         },
@@ -922,7 +943,7 @@
       ],
       "intent": "comparison",
       "language": "zh",
-      "latency_ms": 2069.71,
+      "latency_ms": 2716.462,
       "matched_evidence_at_10": [
         "misalignment_detail"
       ],
@@ -1054,11 +1075,13 @@
     {
       "answer": "## Conclusion\n根据已检索证据，可以确定：\n1. Frame vibration Increases in frame vibration can indicate problems such as imbalance due to unusual pressure differential or inertial 转子转子不平衡, looseness in the foundation attachment (such as deteriorating grout or shims), and high moments caused by excessive rod load.（证据：bently_912f4d62_p0004_00006）\n2. Let’s suppose we want to digitize the vibration signal resulting from an unbalanced rotor, using the already discussed time-based sampling, i.e., collecting samples that are equally spaced in time, during machine shutdown.（证据：bakerhughes_bn_fbd5b29e_p0005_00009）\n3. It turns out that the most frequent lateral vibrations generated by rotating equipment are associated with the 转子转子不平衡 force.（证据：bakerhughes_bn_fbd5b29e_p0005_00009）\n4. 转子转子不平衡是各种旋转机械中普遍存在的问题，也是最常见的振动故障之一。（证据：vold_kalman_e0e977fa_p0021_00027）\n\n## Engineering Meaning\n工程意义仅限于所引证据：Frame vibration Increases in frame vibration can indicate problems such as imbalance due to unusual pressure differential or inertial 转子转子不平衡, looseness in the foundation attachment (such as deteriorating grout or shims), and high moments caused by excessive rod load.\n\n## Premises\n仅适用于检索到的证据块：bently_912f4d62_p0004_00006, bakerhughes_bn_fbd5b29e_p0005_00009, vold_kalman_e0e977fa_p0021_00027。\n\n## Failure Conditions / Common Pitfalls\n请勿超出所引工况、单位或数值范围进行外推。\n\n## Next Actions\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## Evidence\n- Bently往复式压缩机的状态监测解决方案.pdf (p.4, documented): Frame vibration Increases in frame vibration can indicate problems such as imbalance due to unusual pressure differential or inertial 转子转子不平衡, looseness in the foundation attachment (such as deteriorating grout or shims), and high moments caused by excessive rod load.\n- BakerHughes_BN_贝灵顿内华达机器诊断服务：旋转机械状态监测.PDF (p.5, documented): Let’s suppose we want to digitize the vibration signal resulting from an unbalanced rotor, using the already discussed time-based sampling, i.e., collecting samples that are equally spaced in time, during machine shutdown.\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (p.21, documented): 转子转子不平衡是各种旋转机械中普遍存在的问题，也是最常见的振动故障之一。",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 3,
         "covered_query_aspects": [
           "domain_term_0"
         ],
         "covered_slots": [],
+        "expected_language": "en",
         "faithfulness_status": "ok",
         "gate_reasons": [
           "score<0.75",
@@ -1066,6 +1089,7 @@
         ],
         "gate_status": "blocked",
         "intent": "comparison",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "domain_term_0",
           "domain_term_1",
@@ -1076,11 +1100,12 @@
           "contrast",
           "both_entities"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.498,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.598,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 0.824,
+          "language_alignment": 1.0,
           "question_coverage": 0.25,
           "readability": 0.917
         },
@@ -1144,7 +1169,7 @@
       ],
       "intent": "comparison",
       "language": "en",
-      "latency_ms": 2061.579,
+      "latency_ms": 2642.884,
       "matched_evidence_at_10": [
         "standard_fault_table",
         "misalignment_detail"
@@ -1277,12 +1302,14 @@
     {
       "answer": "## 结论\n根据已检索证据，可以确定：\n1. 转子转子不平衡也是最常见的激励，它在机器的非旋转系统中能产生机器的共振响应。（证据：gbt_19873_1_2005_1_57afcb1a_p0033_00054）\n2. 弯曲的转子会产生1X振动，但不同于转子不平衡的是，它会在慢滚动速度条件下产生1X响应。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343）\n3. 图19-4中的1X伯德图显示了同时存在弯曲和转子不平衡的转子系统的响应。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00366）\n4. 5001000150020002500300035004000频率/（r/min）图19-4存在弯曲和转子不平衡的转子系统的1X伯德图（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00366）\n\n## 工程意义\n工程意义仅限于所引证据：转子转子不平衡也是最常见的激励，它在机器的非旋转系统中能产生机器的共振响应。\n\n## 适用前提\n仅适用于检索到的证据块：gbt_19873_1_2005_1_57afcb1a_p0033_00054, donalde_bently_charlest_hatch_2014_cdef6d55_p0251_00343, donalde_bently_charlest_hatch_2014_cdef6d55_p0265_00366。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- GBT 19873.1-2005 机器状态监测与诊断  振动状态监测  第1部分：总则.pdf (第33-34页, 已记录): 转子转子不平衡也是最常见的激励，它在机器的非旋转系统中能产生机器的共振响应。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第251-253页, 已记录): 弯曲的转子会产生1X振动，但不同于转子不平衡的是，它会在慢滚动速度条件下产生1X响应。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第265-266页, 已记录): 图19-4中的1X伯德图显示了同时存在弯曲和转子不平衡的转子系统的响应。",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 3,
         "covered_query_aspects": [
           "domain_term_0",
           "domain_term_1"
         ],
         "covered_slots": [],
+        "expected_language": "zh",
         "faithfulness_status": "ok",
         "gate_reasons": [
           "score<0.75",
@@ -1290,6 +1317,7 @@
         ],
         "gate_status": "blocked",
         "intent": "diagnosis",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "domain_term_0",
           "domain_term_1",
@@ -1300,11 +1328,12 @@
           "multiple_diagnostic_dimensions",
           "decision_action"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.467,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.573,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 0.533,
+          "language_alignment": 1.0,
           "question_coverage": 0.5,
           "readability": 0.833
         },
@@ -1372,7 +1401,7 @@
       ],
       "intent": "diagnosis",
       "language": "zh",
-      "latency_ms": 2224.222,
+      "latency_ms": 2953.283,
       "matched_evidence_at_10": [
         "standard_fault_table"
       ],
@@ -1505,19 +1534,23 @@
     {
       "answer": "## Conclusion\n根据已检索证据，可以确定：\n1. 平行偏角综合不对中时，两转子轴心线相互交错位移。（证据：vold_kalman_e0e977fa_p0022_00029）\n2. 根据理论分析可知，单纯的平行不对中将产生振动频率为转子工频两倍的径向振动，而纯粹的偏角不对中则由于附加弯矩作用产生振动频率与转子工频相同的轴向振动。（证据：vold_kalman_e0e977fa_p0022_00029）\n3. 然而在实际情况中所碰到的轴系不对中，很少有单一的平行不对中或偏角不对中。（证据：vold_kalman_e0e977fa_p0022_00029）\n4. 通常是两者同时存在的平行偏角综合不对中，即各转子轴线之内既有径向位移又有偏角位移。（证据：vold_kalman_e0e977fa_p0022_00029）\n\n## Engineering Meaning\n工程意义仅限于所引证据：平行偏角综合不对中时，两转子轴心线相互交错位移。\n\n## Premises\n仅适用于检索到的证据块：vold_kalman_e0e977fa_p0022_00029。\n\n## Failure Conditions / Common Pitfalls\n请勿超出所引工况、单位或数值范围进行外推。\n\n## Next Actions\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## Evidence\n- 旋转机械阶比分析研究与软件实现Vold-Kalman(南航 博士论文 赵晓平).pdf (p.22, documented): 平行偏角综合不对中时，两转子轴心线相互交错位移。",
       "answer_quality": {
+        "answer_language": "zh",
         "citation_count": 1,
         "covered_query_aspects": [
           "domain_term_0",
           "direction"
         ],
         "covered_slots": [],
+        "expected_language": "en",
         "faithfulness_status": "ok",
         "gate_reasons": [
+          "language_mismatch:zh!=en",
           "score<0.75",
           "completeness<1.0"
         ],
         "gate_status": "blocked",
         "intent": "diagnosis",
+        "language_status": "mismatch",
         "query_aspects": [
           "domain_term_0",
           "domain_term_1",
@@ -1528,11 +1561,12 @@
           "multiple_diagnostic_dimensions",
           "decision_action"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.6,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.48,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 1.0,
+          "language_alignment": 0.0,
           "question_coverage": 0.5,
           "readability": 0.9
         },
@@ -1572,7 +1606,7 @@
       ],
       "intent": "diagnosis",
       "language": "en",
-      "latency_ms": 1963.212,
+      "latency_ms": 2666.045,
       "matched_evidence_at_10": [
         "standard_fault_table"
       ],
@@ -1702,11 +1736,13 @@
     {
       "answer": "## 结论\n根据已检索证据，可以确定：\n1. 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一，是一种研究旋转机械振动特征的、在FFT 分析技术基础上发展起来的技术，它被广泛应用于旋转机械系统的动态分析、工况监测与故障诊断，是本文最重要的研究内容之一，在下一章中将重点论述它的原理及实现过程。（证据：document_cdd35349_p0020_00023）\n2. 振动特性反映旋转机械运行状态的本质，因此，旋转机械故障诊断和状态监测的重要组成部分之一就是振动诊断，广泛应用于设1（证据：document_9af23819_p0010_00018）\n3. 旋转机械的诊断信息包括温度、应力、振动和压力等，振动是旋转机械故障监测诊断过程中是最重要的信息来源，它可以直接反映旋转机械装备运行状态，并包含了丰富的设备故障信息。（证据：document_9af23819_p0010_00018）\n4. 因此旋转机械的振动信号频率范围广，时变性强，而且振动信号不仅含有旋转机械的故障信号，还含有旋转机械的运行状态信息。（证据：document_9af23819_p0010_00018）\n\n## 工程意义\n工程意义仅限于所引证据：阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一，是一种研究旋转机械振动特征的、在FFT 分析技术基础上发展起来的技术，它被广泛应用于旋转机械系统的动态分析、工况监测与故障诊断，是本文最重要的研究内容之一，在下一章中将重点论述它的原理及实现过程。\n\n## 适用前提\n仅适用于检索到的证据块：document_cdd35349_p0020_00023, document_9af23819_p0010_00018。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- 旋转机械阶比分析研究与软件实现 (南航刘科伟硕士论文阶比计算).pdf (第20-21页, 已记录): 阶比分析技术是旋转机械振动信号分析和故障诊断的重要技术之一，是一种研究旋转机械振动特征的、在FFT 分析技术基础上发展起来的技术，它被广泛应用于旋转机械系统的动态分析、工况监测与故障诊断，是本文最重要的研究内容之一，在下一章中将重点论述它的原理及实现过程。\n- 基于二代卡尔曼滤波阶次分析的数控机床故障诊断方法研究_王聪.pdf (第10-11页, 已记录): 振动特性反映旋转机械运行状态的本质，因此，旋转机械故障诊断和状态监测的重要组成部分之一就是振动诊断，广泛应用于设1",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 2,
         "covered_query_aspects": [
           "domain_term_0"
         ],
         "covered_slots": [],
+        "expected_language": "zh",
         "faithfulness_status": "ok",
         "gate_reasons": [
           "score<0.75",
@@ -1714,6 +1750,7 @@
         ],
         "gate_status": "blocked",
         "intent": "workflow",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "domain_term_0",
           "workflow"
@@ -1722,11 +1759,12 @@
           "ordered_measurement_actions",
           "verification_step"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.464,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.571,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 0.627,
+          "language_alignment": 1.0,
           "question_coverage": 0.5,
           "readability": 0.727
         },
@@ -1780,7 +1818,7 @@
       ],
       "intent": "workflow",
       "language": "zh",
-      "latency_ms": 1992.005,
+      "latency_ms": 2830.662,
       "matched_evidence_at_10": [
         "measurement_procedure"
       ],
@@ -1910,18 +1948,22 @@
     {
       "answer": "## Conclusion\n根据已检索证据，可以确定：\n1. 在附录C中依据机器类型给出了故障以及为检测故障而测量的参数的示例，虽然上述示例是依据机器类型提出的，仍建议将整个机组包含在决策和监测过程中。（证据：gbt_20471_2006_e8b906be_p0006_00005）\n2. 宜尽可能在同一时刻或在同··运行工况下，对不同参数进行测量。（证据：gbt_20471_2006_e8b906be_p0006_00005）\n3. 对于变功能和变转速机器，有可能通过改变转速、负荷或其他控制参数得到相近的测量工况LF（证据：gbt_20471_2006_e8b906be_p0006_00005）\n4. 起始与结束工况和运行曲线（例如滑停），都宜在可能的地方进行监测。（证据：gbt_20471_2006_e8b906be_p0006_00005）\n\n## Engineering Meaning\n工程意义仅限于所引证据：在附录C中依据机器类型给出了故障以及为检测故障而测量的参数的示例，虽然上述示例是依据机器类型提出的，仍建议将整个机组包含在决策和监测过程中。\n\n## Premises\n仅适用于检索到的证据块：gbt_20471_2006_e8b906be_p0006_00005。\n\n## Failure Conditions / Common Pitfalls\n请勿超出所引工况、单位或数值范围进行外推。\n\n## Next Actions\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## Evidence\n- GBT 20471-2006 机器状态监测与诊断 基于应用性能参数的一般指南.pdf (pp.6-7, documented): 在附录C中依据机器类型给出了故障以及为检测故障而测量的参数的示例，虽然上述示例是依据机器类型提出的，仍建议将整个机组包含在决策和监测过程中。",
       "answer_quality": {
+        "answer_language": "zh",
         "citation_count": 1,
         "covered_query_aspects": [
           "domain_term_0"
         ],
         "covered_slots": [],
+        "expected_language": "en",
         "faithfulness_status": "ok",
         "gate_reasons": [
+          "language_mismatch:zh!=en",
           "score<0.75",
           "completeness<1.0"
         ],
         "gate_status": "blocked",
         "intent": "workflow",
+        "language_status": "mismatch",
         "query_aspects": [
           "domain_term_0",
           "workflow"
@@ -1930,11 +1972,12 @@
           "ordered_measurement_actions",
           "verification_step"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.455,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.364,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 0.52,
+          "language_alignment": 0.0,
           "question_coverage": 0.5,
           "readability": 0.8
         },
@@ -1975,7 +2018,7 @@
       ],
       "intent": "workflow",
       "language": "en",
-      "latency_ms": 1956.372,
+      "latency_ms": 2828.084,
       "matched_evidence_at_10": [
         "measurement_procedure"
       ],
@@ -2105,6 +2148,7 @@
     {
       "answer": "## 结论\n根据已检索证据，可以确定：\n1. 除了第1章规定的不适用机器外，本准则适用于在稳态工况下各种水轮机带动的机组，不论何种类型，什么水头及多大功率。（证据：gbt_11348_5_2008_t_5_facc1683_p0005_00005）\n2. GB/T33199的本部分规定了正常运行工况下安装了长叶片的透平发电机组耦合轴系的扭振准则，尤其适用于并网运行透平发电机组耦合轴系的扭振固有频率避开电网的线路频率和2倍线路频率的范围。（证据：gb_t_33199_1_2016_1_50mw_6960b36a_p0004_00003）\n3. 通常，唯一关心的是某固有频率是否和本部分规定的频率界限内的某个激振频率相一致，以及是否有某种模态分布可使能量供应给相应的振动模态。（证据：gb_t_33199_1_2016_1_50mw_6960b36a_p0004_00003）\n4. 值得强调的是这些方法在不断改进，且不是仅有的，其他方法也可能同样适用。（证据：gb_t_33199_1_2016_1_50mw_6960b36a_p0014_00016）\n\n## 工程意义\n工程意义仅限于所引证据：除了第1章规定的不适用机器外，本准则适用于在稳态工况下各种水轮机带动的机组，不论何种类型，什么水头及多大功率。\n\n## 适用前提\n仅适用于检索到的证据块：gbt_11348_5_2008_t_5_facc1683_p0005_00005, gb_t_33199_1_2016_1_50mw_6960b36a_p0004_00003, gb_t_33199_1_2016_1_50mw_6960b36a_p0014_00016。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- GBT 11348.5-2008-T 旋转机械转轴径向振动的测量和评定 第5部分：水力发电厂和泵站机组.pdf (第5-6页, 已记录): 除了第1章规定的不适用机器外，本准则适用于在稳态工况下各种水轮机带动的机组，不论何种类型，什么水头及多大功率。\n- GB∕T 33199.1-2016 机械振动 旋转机械扭振 第1部分：50MW以上陆地安装的透平和燃气轮机发电机组.pdf (第4-5页, 已记录): GB/T33199的本部分规定了正常运行工况下安装了长叶片的透平发电机组耦合轴系的扭振准则，尤其适用于并网运行透平发电机组耦合轴系的扭振固有频率避开电网的线路频率和2倍线路频率的范围。\n- GB∕T 33199.1-2016 机械振动 旋转机械扭振 第1部分：50MW以上陆地安装的透平和燃气轮机发电机组.pdf (第14-15页, 已记录): 值得强调的是这些方法在不断改进，且不是仅有的，其他方法也可能同样适用。",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 3,
         "covered_query_aspects": [
           "scope"
@@ -2112,13 +2156,14 @@
         "covered_slots": [
           "scope"
         ],
+        "expected_language": "zh",
         "faithfulness_status": "ok",
         "gate_reasons": [
-          "score<0.75",
           "completeness<1.0"
         ],
         "gate_status": "blocked",
         "intent": "standards",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "scope"
         ],
@@ -2126,11 +2171,12 @@
           "scope",
           "specified_method"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.748,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.798,
         "subscores": {
           "completeness": 0.5,
           "evidence_relevance": 0.574,
+          "language_alignment": 1.0,
           "question_coverage": 1.0,
           "readability": 0.917
         },
@@ -2197,7 +2243,7 @@
       ],
       "intent": "standards",
       "language": "zh",
-      "latency_ms": 1946.495,
+      "latency_ms": 2732.152,
       "matched_evidence_at_10": [
         "gbt33199_scope"
       ],
@@ -2332,11 +2378,13 @@
     {
       "answer": "## Conclusion\nBased on the retrieved evidence:\n1. GB/T 33199.1—2016/ISO 22266-1:2009 (evidence: gb_t_33199_1_2016_1_50mw_6960b36a_p0001_00001)\n2. GB/T 33199.1-—2016/ISO 22266-1:2009准则1:轴系扭振固有频率避开47.0Hz～53.0Hz以及94.0Hz～106.0Hz之间区域。 (evidence: gb_t_33199_1_2016_1_50mw_6960b36a_p0021_00025)\n3. GB/T 33199.1—2016/ISO22266-1:2009 b)频率边界限值B是轴系固有频率和允许的电网频率最大/最小值之间的避开范围，以避免共振附近出现任何动力放大。 (evidence: gb_t_33199_1_2016_1_50mw_6960b36a_p0012_00011)\n4. GB/T 33199.1-2016/ISO 22266-1; (evidence: gb_t_33199_1_2016_1_50mw_6960b36a_p0012_00011)\n\n## Engineering Meaning\nEngineering implication is limited to the cited evidence: GB/T 33199.1—2016/ISO 22266-1:2009\n\n## Premises\nApply this only to the retrieved evidence chunks: gb_t_33199_1_2016_1_50mw_6960b36a_p0001_00001, gb_t_33199_1_2016_1_50mw_6960b36a_p0021_00025, gb_t_33199_1_2016_1_50mw_6960b36a_p0012_00011.\n\n## Failure Conditions / Common Pitfalls\nDo not extrapolate beyond the cited operating condition, units, or numeric values.\n\n## Next Actions\nInspect the cited chunks before applying thresholds, maintenance actions, or model assumptions.\n\n## Evidence\n- GB∕T 33199.1-2016 机械振动 旋转机械扭振 第1部分：50MW以上陆地安装的透平和燃气轮机发电机组.pdf (pp.1-3, documented): GB/T 33199.1—2016/ISO 22266-1:2009\n- GB∕T 33199.1-2016 机械振动 旋转机械扭振 第1部分：50MW以上陆地安装的透平和燃气轮机发电机组.pdf (pp.21-23, documented): GB/T 33199.1-—2016/ISO 22266-1:2009准则1:轴系扭振固有频率避开47.0Hz～53.0Hz以及94.0Hz～106.0Hz之间区域。\n- GB∕T 33199.1-2016 机械振动 旋转机械扭振 第1部分：50MW以上陆地安装的透平和燃气轮机发电机组.pdf (pp.12-13, documented): GB/T 33199.1—2016/ISO22266-1:2009 b)频率边界限值B是轴系固有频率和允许的电网频率最大/最小值之间的避开范围，以避免共振附近出现任何动力放大。",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 3,
         "covered_query_aspects": [
           "scope"
         ],
         "covered_slots": [],
+        "expected_language": "en",
         "faithfulness_status": "ok",
         "gate_reasons": [
           "score<0.75",
@@ -2344,6 +2392,7 @@
         ],
         "gate_status": "blocked",
         "intent": "standards",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "scope"
         ],
@@ -2351,11 +2400,12 @@
           "scope",
           "specified_method"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.572,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.657,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 0.62,
+          "language_alignment": 1.0,
           "question_coverage": 1.0,
           "readability": 0.667
         },
@@ -2424,7 +2474,7 @@
       ],
       "intent": "standards",
       "language": "en",
-      "latency_ms": 2001.522,
+      "latency_ms": 2794.118,
       "matched_evidence_at_10": [],
       "matched_evidence_at_5": [],
       "miss_categories": [
@@ -2557,6 +2607,7 @@
     {
       "answer": "## 结论\n根据已检索证据，可以确定：\n1. 利用校准配重平衡的结果很容易计算影响矢量。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316）\n2. 选择一个平面作为参考平面，然后使用式（16-23）计算影响矢量。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0240_00327）\n3. 通过影响矢量进行多平面平衡在前面的章节中，从“全局”视角查看双平面平衡，同时在整个速度范围内查看机器的响应。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0239_00326）\n4. 使用影响失量H=5.7umpp/gZ135°可计算出平衡解6.1gZ285°，此平衡解可产生与0完全相等且方向相反的响应，从而使机器平衡35μmpp|m|=-=6.1g 5.7μmpp/g m=（240°+180°)-135°=285°一直使用的影响矢量也称为直接影响矢量。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0234_00318）\n\n## 工程意义\n工程意义仅限于所引证据：利用校准配重平衡的结果很容易计算影响矢量。\n\n## 适用前提\n仅适用于检索到的证据块：donalde_bently_charlest_hatch_2014_cdef6d55_p0232_00316, donalde_bently_charlest_hatch_2014_cdef6d55_p0240_00327, donalde_bently_charlest_hatch_2014_cdef6d55_p0239_00326, donalde_bently_charlest_hatch_2014_cdef6d55_p0234_00318。\n\n## 失效条件/常见误区\n请勿超出所引工况、单位或数值范围进行外推。\n\n## 下一步建议\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## 证据\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第232页, 已记录): 利用校准配重平衡的结果很容易计算影响矢量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第240-241页, 已记录): 选择一个平面作为参考平面，然后使用式（16-23）计算影响矢量。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第239-240页, 已记录): 通过影响矢量进行多平面平衡在前面的章节中，从“全局”视角查看双平面平衡，同时在整个速度范围内查看机器的响应。\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (第234-235页, 已记录): 使用影响失量H=5.7umpp/gZ135°可计算出平衡解6.1gZ285°，此平衡解可产生与0完全相等且方向相反的响应，从而使机器平衡35μmpp|m|=-=6.1g 5.7μmpp/g m=（240°+180°)-135°=285°一直使用的影响矢量也称为直接影响矢量。",
       "answer_quality": {
+        "answer_language": "mixed_acceptable",
         "citation_count": 4,
         "covered_query_aspects": [
           "domain_term_0",
@@ -2566,12 +2617,14 @@
         "covered_slots": [
           "equation"
         ],
+        "expected_language": "zh",
         "faithfulness_status": "ok",
         "gate_reasons": [
           "completeness<1.0"
         ],
         "gate_status": "blocked",
         "intent": "formula",
+        "language_status": "mixed_acceptable",
         "query_aspects": [
           "domain_term_0",
           "domain_term_1",
@@ -2581,11 +2634,12 @@
           "equation",
           "variable_definitions"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.794,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.835,
         "subscores": {
           "completeness": 0.5,
           "evidence_relevance": 0.753,
+          "language_alignment": 1.0,
           "question_coverage": 1.0,
           "readability": 0.923
         },
@@ -2664,7 +2718,7 @@
       ],
       "intent": "formula",
       "language": "zh",
-      "latency_ms": 1997.053,
+      "latency_ms": 2860.23,
       "matched_evidence_at_10": [
         "influence_vector_formula"
       ],
@@ -2800,19 +2854,23 @@
     {
       "answer": "## Conclusion\n根据已检索证据，可以确定：\n1. 影响矢量用于描述增加的平衡配重如何改变或影响机器振动的振幅和相位。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0243_00331）\n2. 通过求振动的变化与产生该变化的平衡配重的比率，可计算出影响矢量。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0243_00331）\n3. 影响矢量仅对具体的速度、平衡配重平面、测量平面和有效机器运行条件有效。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0243_00331）\n4. 可以找出用于计算完整的双平面平衡解的影响矢量组，但需要为每个平衡配重平面进行一次校准运行。（证据：donalde_bently_charlest_hatch_2014_cdef6d55_p0243_00331）\n\n## Engineering Meaning\n工程意义仅限于所引证据：影响矢量用于描述增加的平衡配重如何改变或影响机器振动的振幅和相位。\n\n## Premises\n仅适用于检索到的证据块：donalde_bently_charlest_hatch_2014_cdef6d55_p0243_00331。\n\n## Failure Conditions / Common Pitfalls\n请勿超出所引工况、单位或数值范围进行外推。\n\n## Next Actions\n在应用阈值、维护措施或模型假设前，请先核对所引证据块。\n\n## Evidence\n- 旋转机械诊断技术 [（美）DonaldE.Bently，（美）CharlesT.Hatch 著] 2014年.pdf (pp.243-244, documented): 影响矢量用于描述增加的平衡配重如何改变或影响机器振动的振幅和相位。",
       "answer_quality": {
+        "answer_language": "zh",
         "citation_count": 1,
         "covered_query_aspects": [
           "domain_term_0",
           "formula"
         ],
         "covered_slots": [],
+        "expected_language": "en",
         "faithfulness_status": "ok",
         "gate_reasons": [
+          "language_mismatch:zh!=en",
           "score<0.75",
           "completeness<1.0"
         ],
         "gate_status": "blocked",
         "intent": "formula",
+        "language_status": "mismatch",
         "query_aspects": [
           "domain_term_0",
           "formula"
@@ -2821,11 +2879,12 @@
           "equation",
           "variable_definitions"
         ],
-        "schema_version": "phase5.answer_quality.v2",
-        "score": 0.725,
+        "schema_version": "phase5.answer_quality.v3",
+        "score": 0.58,
         "subscores": {
           "completeness": 0.0,
           "evidence_relevance": 1.0,
+          "language_alignment": 0.0,
           "question_coverage": 1.0,
           "readability": 0.9
         },
@@ -2866,7 +2925,7 @@
       ],
       "intent": "formula",
       "language": "en",
-      "latency_ms": 1918.786,
+      "latency_ms": 2740.433,
       "matched_evidence_at_10": [
         "influence_vector_formula"
       ],
@@ -3003,7 +3062,7 @@
     "expected_chunk_count": 4436,
     "snapshot_id": "qdrant-chunks-post-r3-2026-06-30"
   },
-  "deterministic_fingerprint": "0fee2ed831e66269286ccc0a5bfb3c73945736d47bdc5124a135e888a99526dd",
+  "deterministic_fingerprint": "396eb06461949b07e9c13e91868863f7b07f591ebfd7de761b4fc77d67179bdd",
   "evaluation_contract": {
     "evidence_match_rule": "exact_chunk_id OR same_doc_id_with_page_overlap",
     "miss_counts_are_multi_label": true,
@@ -3017,7 +3076,7 @@
     "seed_chunks": 10,
     "token_budget": 6000
   },
-  "git_commit": "5d7a9f7",
+  "git_commit": "4f13b97b6ddaa04675df63de0764f8d94cff053f",
   "live_providers_constructed": false,
   "question_schema_version": "phase5.rag_qa.questions.v2",
   "retrieval_config": {
@@ -3037,9 +3096,9 @@
       "count": 14
     },
     "latency_ms": {
-      "max": 6810.417,
-      "mean": 2339.179,
-      "total": 32748.501
+      "max": 36749.133,
+      "mean": 5205.831,
+      "total": 72881.627
     },
     "miss_counts": {
       "cross-doc": 2,

@@ -113,13 +113,22 @@ The evaluator contract remains `phase5.rag_qa.report.v3`; evidence matching is
 V2 faithfulness remains a hard gate. An answer with `faithfulness_status != ok`
 cannot be treated as usable or pass-quality.
 
-`phase5.answer_quality.v2` remains the production quality schema. The current
-runtime threshold is `0.75`, but it is provisional and backstopped by the hard
-`completeness == 1.0` and V2 requirements. The Obj9 deterministic calibration
-artifact now ranks `0.85` as the best observed candidate, but this is not a
-runtime migration: current labels still have one usable and thirteen unusable
-cases, and the Obj6 combined-chain calibration showed that LLM-style answers
-reduce threshold discriminative power.
+Obj9 froze `phase5.answer_quality.v2` as the production quality schema. A
+post-freeze scoring amendment on 2026-07-07 supersedes it with
+`phase5.answer_quality.v3`, adding deterministic prompt/answer language
+adaptation as a subscore and gate signal. Mixed Chinese/English prompts are
+judged by explicit language instructions first, otherwise by the prompt's
+primary script; algorithm/formula/unit-heavy answers may be
+`mixed_acceptable` when the main prose still follows the requested language.
+The answer-language check ignores the evidence section.
+
+The current runtime threshold is `0.75`, but it is provisional and backstopped
+by the hard `completeness == 1.0`, no `language_status=mismatch`, and V2
+requirements. The refreshed deterministic calibration artifact now ranks `0.90`
+as the best observed candidate, but this is not a runtime threshold migration:
+current labels still have one usable and thirteen unusable cases, and the Obj6
+combined-chain calibration showed that LLM-style answers reduce threshold
+discriminative power.
 
 Future threshold changes require all of the following:
 

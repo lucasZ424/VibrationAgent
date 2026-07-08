@@ -306,6 +306,101 @@ def _contains_any(text: str, values: tuple[str, ...]) -> bool:
     return any(value.casefold() in folded for value in values)
 
 
+_CJK_TEXT_RE = re.compile(r"[\u4e00-\u9fff]")
+_LATIN_WORD_RE = re.compile(r"[A-Za-z][A-Za-z0-9_+-]*")
+_ZH_LANGUAGE_REQUEST_RE = re.compile(
+    r"(?:answer|reply|respond|write|use)\s+(?:in\s+)?chinese\b|"
+    r"\bin\s+chinese\b|"
+    r"(?:\u7528|\u4ee5|\u8bf7\u7528|\u8acb\u7528)\s*(?:\u4e2d\u6587|\u6c49\u8bed|\u6f22\u8a9e)|"
+    r"(?:\u4e2d\u6587|\u6c49\u8bed|\u6f22\u8a9e)\s*(?:\u56de\u7b54|\u8bf4\u660e|\u89e3\u91ca)",
+    re.IGNORECASE,
+)
+_EN_LANGUAGE_REQUEST_RE = re.compile(
+    r"(?:answer|reply|respond|write|use)\s+(?:in\s+)?english\b|"
+    r"\bin\s+english\b|"
+    r"(?:\u7528|\u4ee5|\u8bf7\u7528|\u8acb\u7528)\s*(?:\u82f1\u6587|\u82f1\u8bed|\u82f1\u8a9e)|"
+    r"(?:\u82f1\u6587|\u82f1\u8bed|\u82f1\u8a9e)\s*(?:\u56de\u7b54|\u8bf4\u660e|\u89e3\u91ca)",
+    re.IGNORECASE,
+)
+_EVIDENCE_HEADING_RE = re.compile(r"^##\s*(?:evidence|\u8bc1\u636e|\u8b49\u64da)\b", re.IGNORECASE)
+_SECTION_HEADING_RE = re.compile(r"^##\s+")
+_EN_PROSE_HINT_RE = re.compile(
+    r"\b(?:the|is|are|means|uses|used|because|when|where|with|from|to|and|for|of|in|by|should|can|will|this|that)\b",
+    re.IGNORECASE,
+)
+
+
+def _language_units(text: str) -> tuple[int, int]:
+    cjk_chars = len(_CJK_TEXT_RE.findall(text))
+    latin_words = sum(1 for word in _LATIN_WORD_RE.findall(text) if len(word) >= 2)
+    return cjk_chars, latin_words
+
+
+def _script_primary_language(text: str) -> str | None:
+    cjk_chars, latin_words = _language_units(text)
+    if cjk_chars == 0 and latin_words == 0:
+        return None
+    cjk_units = cjk_chars / 2.0
+    latin_units = float(latin_words)
+    if cjk_units > latin_units:
+        return "zh"
+    if latin_units > cjk_units:
+        return "en"
+    first_signal = re.search(r"[\u4e00-\u9fffA-Za-z]", text)
+    if first_signal is None:
+        return None
+    return "zh" if _CJK_TEXT_RE.fullmatch(first_signal.group(0)) else "en"
+
+
+def _observed_answer_language(text: str, expected: str) -> str | None:
+    cjk_chars, latin_words = _language_units(text)
+    if cjk_chars == 0 and latin_words == 0:
+        return None
+    if expected == "zh":
+        if cjk_chars >= 8:
+            return "mixed_acceptable" if latin_words >= 4 else "zh"
+        return "en" if latin_words else None
+    if expected == "en":
+        has_english_prose = _EN_PROSE_HINT_RE.search(text) is not None
+        if latin_words >= 4 and has_english_prose:
+            return "mixed_acceptable" if cjk_chars >= 8 else "en"
+        return "zh" if cjk_chars else ("en" if latin_words >= 4 else None)
+    return _script_primary_language(text)
+
+
+def _expected_answer_language(query: str) -> str | None:
+    if _ZH_LANGUAGE_REQUEST_RE.search(query):
+        return "zh"
+    if _EN_LANGUAGE_REQUEST_RE.search(query):
+        return "en"
+    return _script_primary_language(query)
+
+
+def _language_alignment_text(answer: str) -> str:
+    kept: list[str] = []
+    in_evidence = False
+    for line in answer.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if _EVIDENCE_HEADING_RE.match(stripped):
+            in_evidence = True
+            continue
+        if in_evidence and _SECTION_HEADING_RE.match(stripped):
+            in_evidence = False
+        if not in_evidence:
+            kept.append(stripped)
+    return "\n".join(kept) if kept else answer
+
+
+def _language_alignment(query: str, answer: str) -> tuple[float, str | None, str | None]:
+    expected = _expected_answer_language(query)
+    if expected is None:
+        return 1.0, None, None
+    observed = _observed_answer_language(_language_alignment_text(answer), expected)
+    return (1.0 if observed in {expected, "mixed_acceptable"} else 0.0), expected, observed
+
+
 def _query_aspect_coverage(query: str, answer: str) -> tuple[float, list[str], list[str]]:
     required: list[str] = []
     covered_slots: list[str] = []
@@ -470,23 +565,27 @@ def _answer_quality(
     answer = _answer_text(answer_output)
     coverage, query_aspects, covered_query_aspects = _query_aspect_coverage(query, answer)
     completeness, intent, required_slots, covered_slots = _intent_completeness(query, answer)
+    language_alignment, expected_language, answer_language = _language_alignment(query, answer)
     subscores = {
         "question_coverage": _bounded(coverage),
         "evidence_relevance": _bounded(_evidence_relevance(s2_output, answer_output.citations)),
         "completeness": _bounded(completeness),
         "readability": _bounded(_complete_sentence_ratio(answer)),
+        "language_alignment": _bounded(language_alignment),
     }
     score = _bounded(sum(subscores.values()) / len(subscores))
     gate_reasons: list[str] = []
     if faithfulness_status != "ok":
         gate_reasons.append(f"faithfulness_status={faithfulness_status}")
+    if expected_language is not None and answer_language not in {expected_language, "mixed_acceptable"}:
+        gate_reasons.append(f"language_mismatch:{answer_language or 'unknown'}!={expected_language}")
     if score < ANSWER_QUALITY_THRESHOLD:
         gate_reasons.append(f"score<{ANSWER_QUALITY_THRESHOLD}")
     if subscores["completeness"] < 1.0:
         gate_reasons.append("completeness<1.0")
     gate_status = "pass" if not gate_reasons else "blocked"
     return {
-        "schema_version": "phase5.answer_quality.v2",
+        "schema_version": "phase5.answer_quality.v3",
         "score": score,
         "threshold": ANSWER_QUALITY_THRESHOLD,
         "subscores": subscores,
@@ -498,6 +597,11 @@ def _answer_quality(
         "covered_query_aspects": covered_query_aspects,
         "required_slots": required_slots,
         "covered_slots": covered_slots,
+        "expected_language": expected_language,
+        "answer_language": answer_language,
+        "language_status": "mismatch"
+        if expected_language is not None and answer_language not in {expected_language, "mixed_acceptable"}
+        else (answer_language or "not_detected"),
         "citation_count": len(answer_output.citations),
     }
 

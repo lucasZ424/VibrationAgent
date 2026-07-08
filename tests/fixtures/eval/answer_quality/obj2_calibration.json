@@ -9,8 +9,8 @@
       "true_unusable": 13,
       "true_usable": 1
     },
-    "decision_margin": 0.056,
-    "threshold": 0.85,
+    "decision_margin": 0.03,
+    "threshold": 0.9,
     "unusable_block_rate": 1.0,
     "usable_recall": 1.0
   },
@@ -19,11 +19,13 @@
     {
       "case_id": "p5_definition_zh_order_analysis",
       "label": "usable",
-      "score": 0.912,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.93,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 1.0,
         "evidence_relevance": 0.739,
+        "language_alignment": 1.0,
         "question_coverage": 1.0,
         "readability": 0.909
       },
@@ -32,11 +34,13 @@
     {
       "case_id": "p5_definition_en_order_analysis",
       "label": "unusable",
-      "score": 0.536,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "en",
+      "score": 0.629,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 0.904,
+        "language_alignment": 1.0,
         "question_coverage": 0.333,
         "readability": 0.909
       },
@@ -45,11 +49,13 @@
     {
       "case_id": "p5_mechanism_zh_critical_speed",
       "label": "unusable",
-      "score": 0.666,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.733,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 0.747,
+        "language_alignment": 1.0,
         "question_coverage": 1.0,
         "readability": 0.917
       },
@@ -58,11 +64,13 @@
     {
       "case_id": "p5_mechanism_en_critical_speed",
       "label": "unusable",
-      "score": 0.725,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mismatch",
+      "score": 0.58,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 1.0,
+        "language_alignment": 0.0,
         "question_coverage": 1.0,
         "readability": 0.9
       },
@@ -71,11 +79,13 @@
     {
       "case_id": "p5_comparison_zh_unbalance_misalignment",
       "label": "unusable",
-      "score": 0.588,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.67,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.5,
         "evidence_relevance": 0.533,
+        "language_alignment": 1.0,
         "question_coverage": 0.4,
         "readability": 0.917
       },
@@ -84,11 +94,13 @@
     {
       "case_id": "p5_comparison_en_unbalance_misalignment",
       "label": "unusable",
-      "score": 0.498,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.598,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 0.824,
+        "language_alignment": 1.0,
         "question_coverage": 0.25,
         "readability": 0.917
       },
@@ -97,11 +109,13 @@
     {
       "case_id": "p5_diagnosis_zh_fault_discrimination",
       "label": "unusable",
-      "score": 0.467,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.573,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 0.533,
+        "language_alignment": 1.0,
         "question_coverage": 0.5,
         "readability": 0.833
       },
@@ -110,11 +124,13 @@
     {
       "case_id": "p5_diagnosis_en_fault_discrimination",
       "label": "unusable",
-      "score": 0.6,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mismatch",
+      "score": 0.48,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 1.0,
+        "language_alignment": 0.0,
         "question_coverage": 0.5,
         "readability": 0.9
       },
@@ -123,11 +139,13 @@
     {
       "case_id": "p5_workflow_zh_measurement_diagnosis",
       "label": "unusable",
-      "score": 0.464,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.571,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 0.627,
+        "language_alignment": 1.0,
         "question_coverage": 0.5,
         "readability": 0.727
       },
@@ -136,11 +154,13 @@
     {
       "case_id": "p5_workflow_en_measurement_diagnosis",
       "label": "unusable",
-      "score": 0.455,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mismatch",
+      "score": 0.364,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 0.52,
+        "language_alignment": 0.0,
         "question_coverage": 0.5,
         "readability": 0.8
       },
@@ -149,11 +169,13 @@
     {
       "case_id": "p5_standards_zh_gbt33199_scope",
       "label": "unusable",
-      "score": 0.748,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.798,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.5,
         "evidence_relevance": 0.574,
+        "language_alignment": 1.0,
         "question_coverage": 1.0,
         "readability": 0.917
       },
@@ -162,11 +184,13 @@
     {
       "case_id": "p5_standards_en_gbt33199_scope",
       "label": "unusable",
-      "score": 0.572,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.657,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 0.62,
+        "language_alignment": 1.0,
         "question_coverage": 1.0,
         "readability": 0.667
       },
@@ -175,11 +199,13 @@
     {
       "case_id": "p5_formula_zh_influence_vector",
       "label": "unusable",
-      "score": 0.794,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mixed_acceptable",
+      "score": 0.835,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.5,
         "evidence_relevance": 0.753,
+        "language_alignment": 1.0,
         "question_coverage": 1.0,
         "readability": 0.923
       },
@@ -188,24 +214,26 @@
     {
       "case_id": "p5_formula_en_influence_vector",
       "label": "unusable",
-      "score": 0.725,
-      "score_schema": "phase5.answer_quality.v2",
+      "language_status": "mismatch",
+      "score": 0.58,
+      "score_schema": "phase5.answer_quality.v3",
       "subscores": {
         "completeness": 0.0,
         "evidence_relevance": 1.0,
+        "language_alignment": 0.0,
         "question_coverage": 1.0,
         "readability": 0.9
       },
       "v2_status": "ok"
     }
   ],
-  "hard_gate_rule": "predicted_usable requires score >= threshold AND v2_status == ok AND completeness == 1.0",
+  "hard_gate_rule": "predicted_usable requires score >= threshold AND v2_status == ok AND completeness == 1.0 AND language_status != mismatch",
   "label_counts": {
     "unusable": 13,
     "usable": 1
   },
   "question_schema_version": "phase5.rag_qa.questions.v2",
-  "schema_version": "phase5.answer_quality_calibration.report.v1",
+  "schema_version": "phase5.answer_quality_calibration.report.v2",
   "threshold_candidates": [
     {
       "accuracy": 1.0,
@@ -215,7 +243,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.794,
+      "decision_margin": -0.835,
       "threshold": 0.0,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -228,7 +256,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.744,
+      "decision_margin": -0.785,
       "threshold": 0.05,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -241,7 +269,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.694,
+      "decision_margin": -0.735,
       "threshold": 0.1,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -254,7 +282,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.644,
+      "decision_margin": -0.685,
       "threshold": 0.15,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -267,7 +295,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.594,
+      "decision_margin": -0.635,
       "threshold": 0.2,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -280,7 +308,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.544,
+      "decision_margin": -0.585,
       "threshold": 0.25,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -293,7 +321,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.494,
+      "decision_margin": -0.535,
       "threshold": 0.3,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -306,7 +334,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.444,
+      "decision_margin": -0.485,
       "threshold": 0.35,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -319,7 +347,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.394,
+      "decision_margin": -0.435,
       "threshold": 0.4,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -332,7 +360,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.344,
+      "decision_margin": -0.385,
       "threshold": 0.45,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -345,7 +373,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.294,
+      "decision_margin": -0.335,
       "threshold": 0.5,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -358,7 +386,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.244,
+      "decision_margin": -0.285,
       "threshold": 0.55,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -371,7 +399,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.194,
+      "decision_margin": -0.235,
       "threshold": 0.6,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -384,7 +412,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.144,
+      "decision_margin": -0.185,
       "threshold": 0.65,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -397,7 +425,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.094,
+      "decision_margin": -0.135,
       "threshold": 0.7,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -410,7 +438,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": -0.044,
+      "decision_margin": -0.085,
       "threshold": 0.75,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -423,7 +451,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": 0.006,
+      "decision_margin": -0.035,
       "threshold": 0.8,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -436,7 +464,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": 0.056,
+      "decision_margin": 0.015,
       "threshold": 0.85,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -449,7 +477,7 @@
         "true_unusable": 13,
         "true_usable": 1
       },
-      "decision_margin": 0.012,
+      "decision_margin": 0.03,
       "threshold": 0.9,
       "unusable_block_rate": 1.0,
       "usable_recall": 1.0
@@ -462,7 +490,7 @@
         "true_unusable": 13,
         "true_usable": 0
       },
-      "decision_margin": -0.038,
+      "decision_margin": -0.02,
       "threshold": 0.95,
       "unusable_block_rate": 1.0,
       "usable_recall": 0.0
@@ -475,7 +503,7 @@
         "true_unusable": 13,
         "true_usable": 0
       },
-      "decision_margin": -0.088,
+      "decision_margin": -0.07,
       "threshold": 1.0,
       "unusable_block_rate": 1.0,
       "usable_recall": 0.0

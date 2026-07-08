@@ -8,6 +8,7 @@ from vibration_agent.orchestrator.tutor import (
     _complete_sentence_ratio,
     _evidence_relevance,
     _intent_completeness,
+    _language_alignment,
     _merge_warnings,
     _query_coverage,
     _token_cost,
@@ -343,9 +344,12 @@ def test_tutor_orchestrator_exposes_answer_quality_score():
     )
 
     quality = output.structured_result["answer_quality"]
-    assert quality["schema_version"] == "phase5.answer_quality.v2"
+    assert quality["schema_version"] == "phase5.answer_quality.v3"
     assert quality["citation_count"] == 1
     assert quality["subscores"]["evidence_relevance"] == 1.0
+    assert quality["subscores"]["language_alignment"] == 1.0
+    assert quality["expected_language"] == "en"
+    assert quality["answer_language"] == "en"
     assert quality["gate_status"] == "pass"
     assert quality["threshold"] == 0.75
     assert 0.0 <= quality["score"] <= 1.0
@@ -370,7 +374,7 @@ def test_tutor_orchestrator_attaches_answer_quality_on_insufficient_retrieval():
 
     assert output.status == "insufficient"
     quality = output.structured_result["answer_quality"]
-    assert quality["schema_version"] == "phase5.answer_quality.v2"
+    assert quality["schema_version"] == "phase5.answer_quality.v3"
     assert quality["faithfulness_status"] == "not_run"
     assert quality["gate_status"] == "blocked"
     assert "faithfulness_status=not_run" in quality["gate_reasons"]
@@ -389,6 +393,52 @@ def test_query_coverage_counts_bilingual_term_families():
     zh_answer = "达到固有频率时转子产生共振，也称为临界转速，此时振幅达到最大值。"
     assert _query_coverage(en_query, zh_answer) == 1.0
     assert _query_coverage(en_query, "Lubrication oil filter maintenance schedule.") < 0.5
+
+
+def test_language_alignment_uses_prompt_primary_language_for_mixed_queries():
+    # WHY: mixed engineering prompts often use English terms inside a Chinese
+    # instruction. The language gate should follow the prompt's main/requested
+    # language, not the language of embedded technical terms.
+    score, expected, observed = _language_alignment(
+        "请用中文回答: What is critical speed and damping ratio?",
+        "临界转速 critical speed 是共振相关转速，damping ratio 表示阻尼程度。",
+    )
+
+    assert score == 1.0
+    assert expected == "zh"
+    assert observed == "mixed_acceptable"
+
+
+def test_language_alignment_ignores_evidence_section_language():
+    # WHY: an English answer may quote Chinese source snippets in the Evidence
+    # section. Those snippets must not make the main answer look Chinese.
+    score, expected, observed = _language_alignment(
+        "Answer in English: what is critical speed?",
+        "Critical speed is a resonance-related speed.\n\n## Evidence\n- 临界转速附近振幅会放大。",
+    )
+
+    assert score == 1.0
+    assert expected == "en"
+    assert observed == "en"
+
+
+def test_language_alignment_accepts_chinese_algorithm_answer_with_latin_formula_terms():
+    # WHY: algorithm answers naturally mix Chinese prose with Latin variables,
+    # formulas, units, and English technical tokens. The language signal should
+    # not hard-block a usable Chinese answer just because Latin symbols dominate
+    # the surface count.
+    score, expected, observed = _language_alignment(
+        "请用中文回答: 单平面动平衡中如何计算影响矢量?",
+        (
+            "计算步骤如下：先记录试重前响应 O，再记录试重后响应 T，"
+            "影响矢量可写为 H=(T-O)/m，其中 m 是 trial weight。"
+            "实际应用时还需要保持 rpm、phase reference 和 sensor channel 一致。"
+        ),
+    )
+
+    assert score == 1.0
+    assert expected == "zh"
+    assert observed == "mixed_acceptable"
 
 
 def test_complete_sentence_ratio_ignores_evidence_tag_suffix():
@@ -447,10 +497,89 @@ def test_answer_quality_blocks_keyword_repetition_at_threshold_boundary():
         faithfulness_status="ok",
     )
 
-    assert quality["score"] == 0.75
+    assert quality["score"] == 0.8
     assert quality["subscores"]["completeness"] == 0.0
     assert quality["gate_status"] == "blocked"
     assert "completeness<1.0" in quality["gate_reasons"]
+
+
+def test_answer_quality_blocks_language_mismatch_for_chinese_prompt():
+    # WHY: a Chinese-dominant prompt answered in English can be faithful and
+    # complete but still unusable to the user; language mismatch is a hard gate.
+    s2 = SkillOutput(
+        status="ok",
+        structured_result={"retrieval_output": {"hits": [{"chunk_id": "c1", "score": 1.0}]}},
+    )
+    answer = SkillOutput(
+        status="ok",
+        summary="Critical speed means resonance and is used for analysis.",
+        citations=[Citation(chunk_id="c1", doc_id="doc1")],
+    )
+
+    quality = _answer_quality(
+        "请用中文回答: What is critical speed and what is it used for?",
+        s2_output=s2,
+        answer_output=answer,
+        faithfulness_status="ok",
+    )
+
+    assert quality["subscores"]["language_alignment"] == 0.0
+    assert quality["expected_language"] == "zh"
+    assert quality["answer_language"] == "en"
+    assert quality["gate_status"] == "blocked"
+    assert "language_mismatch:en!=zh" in quality["gate_reasons"]
+
+
+def test_answer_quality_blocks_language_mismatch_for_english_prompt():
+    s2 = SkillOutput(
+        status="ok",
+        structured_result={"retrieval_output": {"hits": [{"chunk_id": "c1", "score": 1.0}]}},
+    )
+    answer = SkillOutput(
+        status="ok",
+        summary="临界转速是共振相关转速，用于分析。",
+        citations=[Citation(chunk_id="c1", doc_id="doc1")],
+    )
+
+    quality = _answer_quality(
+        "Answer in English: what is critical speed and what is it used for?",
+        s2_output=s2,
+        answer_output=answer,
+        faithfulness_status="ok",
+    )
+
+    assert quality["subscores"]["language_alignment"] == 0.0
+    assert quality["expected_language"] == "en"
+    assert quality["answer_language"] == "zh"
+    assert quality["gate_status"] == "blocked"
+    assert "language_mismatch:zh!=en" in quality["gate_reasons"]
+
+
+def test_answer_quality_passes_mixed_acceptable_algorithm_language():
+    s2 = SkillOutput(
+        status="ok",
+        structured_result={"retrieval_output": {"hits": [{"chunk_id": "c1", "score": 1.0}]}},
+    )
+    answer = SkillOutput(
+        status="ok",
+        summary=(
+            "影响矢量用于描述 trial weight 对振动响应的影响。"
+            "计算时取试重前响应 O 和试重后响应 T，公式为 H=(T-O)/m，"
+            "其中 m 表示 calibration mass，并保持 rpm、phase reference 和 sensor channel 一致。"
+        ),
+        citations=[Citation(chunk_id="c1", doc_id="doc1")],
+    )
+
+    quality = _answer_quality(
+        "请用中文回答: 影响矢量是什么，如何计算?",
+        s2_output=s2,
+        answer_output=answer,
+        faithfulness_status="ok",
+    )
+
+    assert quality["subscores"]["language_alignment"] == 1.0
+    assert quality["answer_language"] == "mixed_acceptable"
+    assert not any(reason.startswith("language_mismatch:") for reason in quality["gate_reasons"])
 
 
 def test_answer_quality_blocks_complete_faithful_answer_below_threshold():

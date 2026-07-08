@@ -19,6 +19,8 @@ from scripts.rag_qa_eval import DEFAULT_BASELINE, DEFAULT_QUESTIONS, load_questi
 
 DEFAULT_OUTPUT = ROOT / "run_logs" / "obj2_answer_quality_calibration.json"
 DEFAULT_THRESHOLDS = tuple(round(index / 20, 2) for index in range(21))
+ANSWER_QUALITY_SCHEMA = "phase5.answer_quality.v3"
+REPORT_SCHEMA = "phase5.answer_quality_calibration.report.v2"
 SUPPORTED_BASELINE_SCHEMAS = {
     "phase5.rag_qa.report.v3",
     "phase5.obj6.combined_report.v1",
@@ -62,7 +64,7 @@ def run_calibration(
         ),
     )
     return {
-        "schema_version": "phase5.answer_quality_calibration.report.v1",
+        "schema_version": REPORT_SCHEMA,
         "question_schema_version": questions.get("schema_version"),
         "baseline_schema_version": baseline.get("schema_version"),
         "baseline_id": baseline.get("baseline_id"),
@@ -71,7 +73,7 @@ def run_calibration(
         "v2_status_counts": dict(sorted(Counter(row["v2_status"] for row in rows).items())),
         "hard_gate_rule": (
             "predicted_usable requires score >= threshold AND v2_status == ok "
-            "AND completeness == 1.0"
+            "AND completeness == 1.0 AND language_status != mismatch"
         ),
         "best_observed_candidate": ranked[0] if ranked else None,
         "threshold_candidates": candidates,
@@ -84,8 +86,8 @@ def _case_row(case_id: str, label: str, result: Mapping[str, Any]) -> dict[str, 
     quality = quality if isinstance(quality, Mapping) else {}
     v2_status = _case_v2_status(result)
     score_schema = quality.get("schema_version")
-    if quality and score_schema != "phase5.answer_quality.v2":
-        raise ValueError(f"{case_id} requires phase5.answer_quality.v2; rerun the Obj1 baseline.")
+    if quality and score_schema != ANSWER_QUALITY_SCHEMA:
+        raise ValueError(f"{case_id} requires {ANSWER_QUALITY_SCHEMA}; rerun the Obj1 baseline.")
     if not quality and v2_status == "ok":
         raise ValueError(f"{case_id} has v2_status=ok but no answer_quality score.")
     score = quality.get("score")
@@ -96,6 +98,7 @@ def _case_row(case_id: str, label: str, result: Mapping[str, Any]) -> dict[str, 
         "score_schema": str(score_schema or "not_scored"),
         "v2_status": v2_status,
         "subscores": dict(quality.get("subscores") or {}),
+        "language_status": str(quality.get("language_status") or "unknown"),
     }
 
 
@@ -114,6 +117,7 @@ def _threshold_result(rows: Sequence[Mapping[str, Any]], threshold: float) -> di
             and row["score"] >= threshold
             and row["v2_status"] == "ok"
             and float(row["subscores"].get("completeness") or 0.0) == 1.0
+            and row.get("language_status") != "mismatch"
         )
         for row in rows
     ]

@@ -1410,3 +1410,43 @@ Closure:
 
 - Phase 5 is closed. New capability work must enter a successor phase; no
   additional Phase-5 feature objective should be appended.
+
+## Post-Freeze Scoring Amendment - Language Alignment Gate
+
+Status: complete; successor scoring-contract amendment.
+
+Implementation:
+
+- Promoted production answer-quality schema from `phase5.answer_quality.v2` to
+  `phase5.answer_quality.v3`.
+- Added deterministic prompt/answer language adaptation as a subscore and gate
+  signal. Explicit prompt language instructions win; otherwise mixed prompts
+  use primary script. Algorithm/formula/unit-heavy answers can be
+  `mixed_acceptable` when the main prose follows the requested language.
+  Evidence snippets are excluded from main answer-language detection.
+- Promoted calibration output to
+  `phase5.answer_quality_calibration.report.v2`; the modeled hard gate blocks
+  only `language_status=mismatch`.
+- Regenerated the standing Obj1 baseline and durable Obj2 calibration artifact.
+
+Verification:
+
+- Baseline regeneration:
+  `run_logs/language_gate_mixed_rag_qa_20260708.json`, exit code 0. Recall@10
+  0.821, completeness 0.720, V2 faithfulness 1.000, citation alignment 1.000.
+- Calibration regeneration:
+  `run_logs/language_gate_mixed_answer_quality_calibration_20260708.json`, exit
+  code 0. Best observed candidate threshold 0.90, accuracy 1.0, false allow 0,
+  false block 0, decision margin 0.030.
+- Focused regression:
+  `.venv\\Scripts\\python.exe -m pytest tests\\unit\\test_tutor_orchestrator.py
+  tests\\eval\\test_answer_quality_calibration.py tests\\eval\\test_rag_qa_eval.py
+  -q --basetemp=data\\exports\\pytest-language-gate-mixed-focused -p no:cacheprovider`:
+  60 passed.
+
+Residual Risk:
+
+- Runtime threshold remains 0.75. The refreshed calibration ranks 0.90 best on
+  the deterministic fixture, but the label set is still one usable and thirteen
+  unusable cases. Threshold promotion still requires human relabel/recalibration
+  across deterministic and LLM lanes.

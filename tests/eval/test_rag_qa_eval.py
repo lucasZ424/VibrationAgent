@@ -245,3 +245,12 @@ def test_obj9_committed_baseline_is_phase5_backend_freeze_regression_net():
     assert baseline["scorecard"]["completeness_rate"] == 0.72
     assert baseline["scorecard"]["v2_faithfulness_rate"] == 1.0
     assert baseline["scorecard"]["citation_alignment_rate"] == 1.0
+    assert all(
+        case["answer_quality"]["schema_version"] == "phase5.answer_quality.v3"
+        for case in baseline["cases"]
+    )
+    assert all(
+        "language_alignment" in case["answer_quality"]["subscores"]
+        for case in baseline["cases"]
+    )
+    assert all("language_status" in case["answer_quality"] for case in baseline["cases"])

@@ -31,27 +31,30 @@ def _baseline() -> dict:
                 "case_id": "usable",
                 "v2_status": "ok",
                 "answer_quality": {
-                    "schema_version": "phase5.answer_quality.v2",
+                    "schema_version": "phase5.answer_quality.v3",
                     "score": 0.8,
-                    "subscores": {"completeness": 1.0},
+                    "subscores": {"completeness": 1.0, "language_alignment": 1.0},
+                    "language_status": "aligned",
                 },
             },
             {
                 "case_id": "bad_score",
                 "v2_status": "ok",
                 "answer_quality": {
-                    "schema_version": "phase5.answer_quality.v2",
+                    "schema_version": "phase5.answer_quality.v3",
                     "score": 0.4,
-                    "subscores": {"completeness": 1.0},
+                    "subscores": {"completeness": 1.0, "language_alignment": 1.0},
+                    "language_status": "aligned",
                 },
             },
             {
                 "case_id": "bad_v2",
                 "v2_status": "insufficient",
                 "answer_quality": {
-                    "schema_version": "phase5.answer_quality.v2",
+                    "schema_version": "phase5.answer_quality.v3",
                     "score": 0.9,
-                    "subscores": {"completeness": 1.0},
+                    "subscores": {"completeness": 1.0, "language_alignment": 1.0},
+                    "language_status": "aligned",
                 },
             },
         ],
@@ -62,7 +65,7 @@ def test_obj2_calibration_reports_confusion_for_candidate_thresholds():
     report = run_calibration(questions=_questions(), baseline=_baseline(), thresholds=[0.5, 0.85])
 
     accepted = report["threshold_candidates"][0]
-    assert report["schema_version"] == "phase5.answer_quality_calibration.report.v1"
+    assert report["schema_version"] == "phase5.answer_quality_calibration.report.v2"
     assert report["label_counts"] == {"unusable": 2, "usable": 1}
     assert accepted["confusion"] == {
         "true_usable": 1,
@@ -78,7 +81,34 @@ def test_obj2_calibration_hard_gate_blocks_a_high_score_without_v2_ok():
     report = run_calibration(questions=_questions(), baseline=_baseline(), thresholds=[0.5])
 
     assert "v2_status == ok" in report["hard_gate_rule"]
-    assert report["hard_gate_rule"].endswith("completeness == 1.0")
+    assert report["hard_gate_rule"].endswith("language_status != mismatch")
+    assert report["threshold_candidates"][0]["confusion"]["false_allow"] == 0
+
+
+def test_obj2_calibration_does_not_hard_gate_mixed_acceptable_language():
+    # WHY: the runtime quality gate treats prompt/answer language mismatch as a
+    # hard usability failure, but Latin-heavy algorithm answers can still be
+    # usable when their main prose follows the requested language.
+    baseline = _baseline()
+    baseline["cases"][0]["answer_quality"]["subscores"]["language_alignment"] = 0.8
+    baseline["cases"][0]["answer_quality"]["language_status"] = "mixed_acceptable"
+
+    report = run_calibration(questions=_questions(), baseline=baseline, thresholds=[0.5])
+    usable_case = next(row for row in report["cases"] if row["case_id"] == "usable")
+
+    assert usable_case["subscores"]["language_alignment"] == 0.8
+    assert usable_case["language_status"] == "mixed_acceptable"
+    assert report["threshold_candidates"][0]["confusion"]["false_block"] == 0
+
+
+def test_obj2_calibration_hard_gate_blocks_language_status_mismatch():
+    questions = _questions()
+    questions["cases"][0]["usability_label"] = "unusable"
+    baseline = _baseline()
+    baseline["cases"][0]["answer_quality"]["language_status"] = "mismatch"
+
+    report = run_calibration(questions=questions, baseline=baseline, thresholds=[0.5])
+
     assert report["threshold_candidates"][0]["confusion"]["false_allow"] == 0
 
 
@@ -104,7 +134,7 @@ def test_obj2_calibration_accepts_obj6_combined_report_post_supervisor_v2():
 
 def test_obj2_calibration_fails_loud_on_stale_answer_quality_schema():
     baseline = _baseline()
-    baseline["cases"][0]["answer_quality"]["schema_version"] = "r3.answer_quality.v1"
+    baseline["cases"][0]["answer_quality"]["schema_version"] = "phase5.answer_quality.v2"
 
     with pytest.raises(ValueError, match="rerun the Obj1 baseline"):
         run_calibration(questions=_questions(), baseline=baseline)

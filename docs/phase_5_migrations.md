@@ -1,6 +1,6 @@
 # Phase 5 Migrations
 
-Updated: 2026-07-06
+Updated: 2026-07-07
 
 ## Purpose
 
@@ -938,3 +938,53 @@ Validation:
 - Final corpus/runtime parity:
   `run_logs/obj7c_final_runtime_corpus_audit_20260706_184103.json`; file,
   Postgres, and Qdrant all contain 4,436 chunks with no extra/missing ids.
+
+### Post-freeze scoring amendment - Prompt/answer language gate (2026-07-07)
+
+Status: implemented as successor scoring-contract amendment; Phase 5 remains
+closed.
+
+- `answer_quality.schema_version` changes from `phase5.answer_quality.v2` to
+  `phase5.answer_quality.v3`.
+- The score adds a deterministic `language_alignment` subscore and
+  `language_status` telemetry. The expected answer language is derived from
+  explicit prompt instructions first, then from the prompt's dominant script.
+  Observed answer language is classified as aligned, `mixed_acceptable`, or
+  mismatch.
+- `gate_status=pass` now blocks only `language_status=mismatch`. Algorithm,
+  formula, standard, unit, and symbol-heavy answers may be `mixed_acceptable`
+  when their main prose still follows the requested language. A true mismatch
+  adds a `language_mismatch:<observed>!=<expected>` gate reason.
+- Answer-language detection ignores the final evidence section so quoted source
+  snippets do not force the main answer into the evidence language.
+- `phase5.answer_quality_calibration.report.v2` supersedes the previous
+  calibration report schema and models the complete hard gate: score threshold,
+  V2 `ok`, completeness 1.0, and no language mismatch.
+- `tests/fixtures/rag_qa/post_r3_baseline.json` and
+  `tests/fixtures/eval/answer_quality/obj2_calibration.json` were regenerated.
+
+Compatibility: this is a deliberate scoring-contract change. Downstream code
+must treat old `phase5.answer_quality.v2` reports as stale for calibration.
+Runtime threshold `0.75` remains provisional and is not migrated to the
+refreshed calibration's best observed 0.90 threshold.
+
+Validation:
+
+- Baseline regeneration:
+  `run_logs/language_gate_mixed_rag_qa_20260708.json`, exit code 0. Scorecard
+  remains recall@10 0.821, completeness 0.720, V2 faithfulness 1.000, and
+  citation alignment 1.000.
+- Calibration regeneration:
+  `run_logs/language_gate_mixed_answer_quality_calibration_20260708.json`, exit
+  code 0. Best observed candidate threshold 0.90, accuracy 1.0, false allow 0,
+  false block 0, decision margin 0.030.
+
+Follow-up correction (2026-07-08): the initial hard
+`language_alignment == 1.0` rule was replaced after review because legitimate
+algorithm answers can contain large Latin formula/variable/term spans. The gate
+now permits `mixed_acceptable` and blocks only true mismatch.
+
+Rollback: restore `phase5.answer_quality.v2`, remove the language-adaptation
+subscore/status gate, and restore the previous baseline/calibration fixtures.
+This reopens the known risk that a faithful and complete answer can pass while
+using the wrong main language for the prompt.
